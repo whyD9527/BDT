@@ -15,8 +15,8 @@ android {
     defaultConfig {
         targetSdk = 36
         applicationId = "com.whyd9527.bilibilias"
-        versionCode = 323
-        versionName = "3.2.3"
+        versionCode = 324
+        versionName = "3.2.4"
         testInstrumentationRunner = "androidx.test.runner.AndroidJUnitRunner"
         ndk {
             abiFilters += listOf("armeabi-v7a", "arm64-v8a","x86_64")
