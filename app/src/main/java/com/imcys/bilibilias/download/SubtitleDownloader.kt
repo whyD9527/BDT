@@ -5,7 +5,7 @@ import com.imcys.bilibilias.common.utils.download.CCJsonToAss
 import com.imcys.bilibilias.common.utils.download.CCJsonToSrt
 import com.imcys.bilibilias.common.utils.toHttps
 import com.imcys.bilibilias.data.model.download.CCFileType
-import com.imcys.bilibilias.data.model.download.lowercase
+import com.imcys.bilibilias.data.download.subtitle.SubtitleFileNameRules
 import com.imcys.bilibilias.data.repository.VideoInfoRepository
 import com.imcys.bilibilias.network.NetWorkResult
 import com.imcys.bilibilias.network.model.video.BILIVideoCCInfo
@@ -72,7 +72,14 @@ class SubtitleDownloader(
             val finalUrl = if (!url.contains("https")) "https:" else ""
             val videoCCInfo = videoInfoRepository.getVideoCCInfo((finalUrl + url).toHttps())
             val content = convertCc(videoCCInfo, ccFileType)
-            val fileName = "${title}_${cc.lan}_${ccFileType.lowercase()}"
+            // ⚠️ 后缀必须拼上：这里拼出来的名字**直接就是下载目录里的显示名**，
+            // 中间没有哪一层会补后缀。原先是 `"${title}_${cc.lan}_${ccFileType.lowercase()}"`，
+            // 于是落盘的是没有后缀的 `某番剧_第1话_zh-CN`（弹幕/媒体那两条路都自带后缀）。
+            val fileName = SubtitleFileNameRules.build(
+                title = title,
+                language = cc.lan,
+                ccFileTypeName = ccFileType.name,
+            )
 
             val subtitleType = when (ccFileType) {
                 CCFileType.ASS -> FileOutputManager.SubtitleType.ASS

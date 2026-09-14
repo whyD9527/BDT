@@ -77,7 +77,7 @@ val appModule = module {
     viewModelOf(::WebParserViewModel)
     viewModelOf(::ParsePlatformViewModel)
 
-    single { VideoInfoFetcher(get(), get(), get()) }
+    single { VideoInfoFetcher(get(), get()) }
     single { FileOutputManager(androidApplication()) }
     single { DownloadExecutor(get(qualifier = named("DownloadHttpClient")), get()) }
     single { FfmpegMerger(androidApplication(),get()) }

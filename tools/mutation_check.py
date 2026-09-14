@@ -42,6 +42,10 @@ STARTUP = REPO / "core/data/src/main/java/com/imcys/bilibilias/data/download/sta
 CANCEL = REPO / "core/data/src/main/java/com/imcys/bilibilias/data/download/cancel"
 RESUME = REPO / "core/data/src/main/java/com/imcys/bilibilias/data/download/resume"
 CLIPBOARD = REPO / "core/data/src/main/java/com/imcys/bilibilias/data/clipboard"
+NAMING = REPO / "core/data/src/main/java/com/imcys/bilibilias/data/download/naming"
+SUBTITLE = REPO / "core/data/src/main/java/com/imcys/bilibilias/data/download/subtitle"
+BVID = REPO / "core/data/src/main/java/com/imcys/bilibilias/data/download/bvid"
+EMBED_CACHE = REPO / "core/data/src/main/java/com/imcys/bilibilias/data/download/cache"
 UTIL = REPO / "core/data/src/main/java/com/imcys/bilibilias/data/util"
 
 # (名字, 文件, 原串, 替换成)  —— 原串必须在文件里**恰好出现一次**，否则跳过并报警
@@ -251,6 +255,39 @@ MUTATIONS = [
      CLIPBOARD / "ClipboardHandlingRules.kt",
      "        !text.isNullOrBlank() && text != lastHandledText",
      "        !text.isNullOrBlank()"),
+    # ---- 第 8 批：字幕文件名 / 命名规则 / bvid 兜底 / 内嵌缓存 ----
+    ("47 字幕文件名又丢掉扩展名（下到下载目录的文件没有后缀）",
+     SUBTITLE / "SubtitleFileNameRules.kt",
+     '        return "${title}_${language}.$ext"',
+     '        return "${title}_${language}"'),
+    ("48 字幕后缀一律回落 srt（ASS 字幕被写成 .srt）",
+     SUBTITLE / "SubtitleFileNameRules.kt",
+     '        "ass" -> "ass"',
+     '        "ass" -> "srt"'),
+    ("49 命名规则又对整串 collapse（标题里的下划线被吃掉，就是那个 bug）",
+     NAMING / "NamingConventionRenderer.kt",
+     '                var literal = part.text.replace(runsOfSeparators, "_")',
+     '                var literal = part.text'),
+    ("50 取值为空时不吃掉留下的分隔下划线（模板里出现双下划线）",
+     NAMING / "NamingConventionRenderer.kt",
+     '                    literal = literal.removePrefix("_")',
+     '                    literal = literal'),
+    ("51 平台 JSON 没有 bvid 字段时不落到节点上（兜底又变回死代码）",
+     BVID / "DownloadBvIdResolver.kt",
+     "        return nodePlatformId?.takeIf { this.isValidBvId(it) }",
+     "        return null"),
+    ("52 bvid 不校验形状（数字 CID 被当成 BV 号发出去）",
+     BVID / "DownloadBvIdResolver.kt",
+     '    private val bvIdPattern = Regex("^BV[0-9A-Za-z]{10}$")',
+     '    private val bvIdPattern = Regex("^.*$")'),
+    ("53 内嵌缓存不校验目录（别处的同名文件也会被删）",
+     EMBED_CACHE / "EmbedCacheRules.kt",
+     "        if (parentDirName !in dirNames) return false",
+     "        if (false) return false"),
+    ("54 内嵌缓存不校验文件名前缀（整目录的东西都会被删）",
+     EMBED_CACHE / "EmbedCacheRules.kt",
+     '        return fileName.startsWith(EMBED_PREFIX) && fileName.length > EMBED_PREFIX.length',
+     '        return true'),
 ]
 
 DEFAULT_TEST_TASK = ":core:data:testDebugUnitTest"

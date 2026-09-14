@@ -14,6 +14,7 @@ import androidx.annotation.RequiresPermission
 import com.imcys.bilibilias.common.event.sendToastEvent
 import com.imcys.bilibilias.common.utils.download.DanmakuXmlUtil
 import com.imcys.bilibilias.common.utils.toHttps
+import com.imcys.bilibilias.data.download.cache.EmbedCacheRules
 import com.imcys.bilibilias.data.download.merge.DownloadSuccessorRules
 import com.imcys.bilibilias.data.download.predecessor.DownloadPredecessorRules
 import com.imcys.bilibilias.data.download.queue.DownloadQueueRules
@@ -219,6 +220,61 @@ class NewDownloadManager(
         if (discarded > 0) {
             Log.d(TAG, "启动清理: 丢弃 $discarded 条未完成记录，删除 $cleanedFiles 个临时文件")
             runCatching { sendToastEvent("已清理 $discarded 个上次未完成的下载") }
+        }
+
+        sweepEmbedCacheDirs()
+    }
+
+    /**
+     * 清掉应用缓存里残留的内嵌封面 / 内嵌字幕。
+     *
+     * 这两类临时件只在"前置任务 → 合并"这段时间里有意义，合并完就没用了。
+     * 它们原先**只有**「存储管理 → 清空缓存」会删，于是下一集、下一集地攒，
+     * 用户也不知道该去清（第十八轮审查的低危项）。
+     *
+     * 放在启动时扫：这时还没有任何合并在进行，整目录都是上次会话的残留。
+     * 正在下、被中断的那些临时件由 [DownloadStartupRules] 按状态处理，
+     * 与这里扫的目录不同（那些在 `files/video` / `files/audio`）。
+     */
+    private fun sweepEmbedCacheDirs() {
+        var deleted = 0
+        EmbedCacheRules.dirNames.forEach { dirName ->
+            val dir = File(context.externalCacheDir, dirName)
+            dir.listFiles()?.forEach { file ->
+                if (EmbedCacheRules.isEmbedCacheFile(dirName, file.name) && file.delete()) {
+                    deleted++
+                }
+            }
+        }
+        if (deleted > 0) {
+            Log.d(TAG, "启动清理: 删除 $deleted 个内嵌封面/字幕临时文件")
+        }
+    }
+
+    /**
+     * 删掉某个任务写出来的内嵌封面 / 内嵌字幕临时文件。
+     *
+     * 只认领 `TaskRuntimeInfo` 里记着的**本任务自己的**路径，不做任何模式匹配 ——
+     * 这样即使目录里同时躺着别的任务的临时件也不会被误删。
+     * 失败路径也调用它：合并已经结束了（成功或失败），留着这两份临时件没有意义。
+     */
+    private fun cleanupEmbedCache(task: AppDownloadTask) {
+        val paths = EmbedCacheRules.taskOwnedPaths(
+            coverPath = task.taskRuntimeInfo.coverPath,
+            subtitlePaths = task.taskRuntimeInfo.subtitles.map { it.path },
+            parentDirNameOf = { path ->
+                path.substringBeforeLast('/', missingDelimiterValue = "")
+                    .substringAfterLast('/', missingDelimiterValue = "")
+            },
+        )
+        var deleted = 0
+        paths.forEach { path ->
+            val file = File(path)
+            if (file.exists() && file.delete()) deleted++
+        }
+        if (deleted > 0) {
+            Log.d(TAG, "清理内嵌封面/字幕临时文件: $deleted 个 platformId=" +
+                "${task.downloadSegment.platformId}")
         }
     }
 
@@ -705,6 +761,9 @@ class NewDownloadManager(
             )
         } catch (e: Exception) {
             tempOutputFile.deleteIfExists()
+            // 合并失败也要收拾内嵌临时件：合并这一步已经结束了，
+            // 留下封面/字幕文件只会在缓存目录里攒着（下次重试会重新下载它们）。
+            cleanupEmbedCache(task)
             throw e
         }
 
@@ -718,6 +777,7 @@ class NewDownloadManager(
                 subTaskPaths = task.downloadSubTasks.map { it.savePath },
                 tempOutputPath = abandonedTemp,
             ).forEach { File(it).deleteIfExists() }
+            cleanupEmbedCache(task)
             failTask(task, "合并后找不到下载记录（本地数据库异常）")
             return
         }
@@ -753,6 +813,7 @@ class NewDownloadManager(
                 subTaskPaths = task.downloadSubTasks.map { it.savePath },
                 tempOutputPath = tempOutputFile.absolutePath,
             ).forEach { File(it).deleteIfExists() }
+            cleanupEmbedCache(task)
             failTask(
                 task,
                 "文件移入下载目录失败（存储空间不足、目录被占用或缺权限）"
@@ -777,6 +838,10 @@ class NewDownloadManager(
             subTaskPaths = task.downloadSubTasks.map { it.savePath },
             tempOutputPath = tempOutputFile.absolutePath,
         ).forEach { File(it).deleteIfExists() }
+
+        // 合并已经彻底结束（产物都进下载目录了），内嵌封面/字幕的临时件就没用了。
+        // 原先它们要等用户去点「存储管理 → 清空缓存」才会消失，等于不清理。
+        cleanupEmbedCache(task)
     }
 
     /**
