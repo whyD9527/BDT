@@ -1,0 +1,28 @@
+name: 💡 问题咨询
+description: 提出一个使用相关的问题
+title: "[Question]: "
+labels: ["question"]
+body:
+  - type: markdown
+    attributes:
+      value: |
+        在提问之前，请确保您已经查看过项目文档和常见问题（FAQ）。
+
+  - type: textarea
+    id: question
+    attributes:
+      label: 您的问题
+      description: 请描述您遇到的问题
+      placeholder: |
+        1. 遇到了什么问题？
+        2. 已经尝试过什么方法？
+    validations:
+      required: true
+
+  - type: textarea
+    id: system_info
+    attributes:
+      label: 系统信息
+      description: 如果是3.0.0的版本可以在APP的设置页面查看系统信息，那里提供了一键复制粘贴功能。如果是2.x及以下版本请描述你的安卓系统版本和机型及正在使用的版本。
+    validations:
+      required: true

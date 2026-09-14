@@ -1,0 +1,26 @@
+*.iml
+.gradle
+/local.properties
+.idea
+.DS_Store
+/build
+/captures
+.externalNativeBuild
+.cxx
+local.properties
+.kotlin
+/common/build
+app/release
+app/alpha
+app/debug
+app/beta
+app/official
+/build-logic/build/
+.claude
+CLAUDE.md
+# 签名密钥（绝不能提交）
+*.jks
+*.keystore
+keystore.base64.txt
+__pycache__/
+*.pyc

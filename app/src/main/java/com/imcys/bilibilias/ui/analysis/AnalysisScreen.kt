@@ -1,0 +1,1608 @@
+package com.imcys.bilibilias.ui.analysis
+
+import ClipboardAutoHandler
+import android.Manifest.permission
+import android.content.pm.PackageManager
+import android.os.Build
+import android.text.method.LinkMovementMethod
+import android.widget.TextView
+import androidx.activity.compose.rememberLauncherForActivityResult
+import androidx.activity.result.contract.ActivityResultContracts
+import androidx.compose.animation.AnimatedContent
+import androidx.compose.animation.AnimatedContentScope
+import androidx.compose.animation.AnimatedVisibility
+import androidx.compose.animation.ExperimentalSharedTransitionApi
+import androidx.compose.animation.SharedTransitionLayout
+import androidx.compose.animation.SharedTransitionScope
+import androidx.compose.animation.animateContentSize
+import androidx.compose.foundation.clickable
+import androidx.compose.foundation.combinedClickable
+import androidx.compose.foundation.layout.Arrangement
+import androidx.compose.foundation.layout.Box
+import androidx.compose.foundation.layout.Column
+import androidx.compose.foundation.layout.ColumnScope
+import androidx.compose.foundation.layout.FlowRow
+import androidx.compose.foundation.layout.PaddingValues
+import androidx.compose.foundation.layout.Row
+import androidx.compose.foundation.layout.Spacer
+import androidx.compose.foundation.layout.aspectRatio
+import androidx.compose.foundation.layout.fillMaxHeight
+import androidx.compose.foundation.layout.fillMaxWidth
+import androidx.compose.foundation.layout.height
+import androidx.compose.foundation.layout.imePadding
+import androidx.compose.foundation.layout.padding
+import androidx.compose.foundation.layout.size
+import androidx.compose.foundation.layout.width
+import androidx.compose.foundation.lazy.LazyRow
+import androidx.compose.foundation.lazy.items
+import androidx.compose.foundation.rememberScrollState
+import androidx.compose.foundation.shape.CircleShape
+import androidx.compose.foundation.shape.RoundedCornerShape
+import androidx.compose.foundation.verticalScroll
+import androidx.compose.material.icons.Icons
+import androidx.compose.material.icons.outlined.Check
+import androidx.compose.material.icons.outlined.Download
+import androidx.compose.material.icons.outlined.ErrorOutline
+import androidx.compose.material.icons.outlined.Image
+import androidx.compose.material.icons.outlined.Info
+import androidx.compose.material.icons.outlined.NorthEast
+import androidx.compose.material.icons.outlined.Search
+import androidx.compose.material3.AlertDialog
+import androidx.compose.material3.ButtonDefaults
+import androidx.compose.material3.CardDefaults
+import androidx.compose.material3.CircularWavyProgressIndicator
+import androidx.compose.material3.ContainedLoadingIndicator
+import androidx.compose.material3.ExperimentalMaterial3Api
+import androidx.compose.material3.ExperimentalMaterial3ExpressiveApi
+import androidx.compose.material3.ExtendedFloatingActionButton
+import androidx.compose.material3.FilterChip
+import androidx.compose.material3.FloatingActionButton
+import androidx.compose.material3.FloatingActionButtonDefaults
+import androidx.compose.material3.Icon
+import androidx.compose.material3.MaterialTheme
+import androidx.compose.material3.Scaffold
+import androidx.compose.material3.Surface
+import androidx.compose.material3.Text
+import androidx.compose.material3.TopAppBarDefaults
+import androidx.compose.material3.windowsizeclass.WindowWidthSizeClass
+import androidx.compose.runtime.Composable
+import androidx.compose.runtime.LaunchedEffect
+import androidx.compose.runtime.collectAsState
+import androidx.compose.runtime.getValue
+import androidx.compose.runtime.mutableStateOf
+import androidx.compose.runtime.remember
+import androidx.compose.runtime.rememberCoroutineScope
+import androidx.compose.runtime.saveable.rememberSaveable
+import androidx.compose.runtime.setValue
+import androidx.compose.ui.Alignment
+import androidx.compose.ui.Modifier
+import androidx.compose.ui.graphics.Color
+import androidx.compose.ui.graphics.toArgb
+import androidx.compose.ui.hapticfeedback.HapticFeedbackType
+import androidx.compose.ui.platform.LocalContext
+import androidx.compose.ui.platform.LocalHapticFeedback
+import androidx.compose.ui.res.stringResource
+import androidx.compose.ui.text.style.TextOverflow
+import androidx.compose.ui.unit.dp
+import androidx.compose.ui.unit.sp
+import androidx.compose.ui.viewinterop.AndroidView
+import androidx.core.content.ContextCompat
+import androidx.core.text.HtmlCompat
+import com.imcys.bilibilias.R
+import com.imcys.bilibilias.common.event.sendToastEventOnBlocking
+import com.imcys.bilibilias.common.utils.copyText
+import com.imcys.bilibilias.common.utils.toHttps
+import com.imcys.bilibilias.database.entity.download.MediaContainer
+import com.imcys.bilibilias.data.model.download.CCFileType
+import com.imcys.bilibilias.data.model.download.DownloadViewInfo
+import com.imcys.bilibilias.database.entity.download.audioContainer
+import com.imcys.bilibilias.data.model.video.ASLinkResultType
+import com.imcys.bilibilias.database.entity.download.DownloadMode
+import com.imcys.bilibilias.database.entity.download.videoContainer
+import com.imcys.bilibilias.datastore.AppSettings
+import com.imcys.bilibilias.datastore.AppSettingsSerializer
+import com.imcys.bilibilias.network.ApiStatus
+import com.imcys.bilibilias.network.NetWorkResult
+import com.imcys.bilibilias.network.emptyNetWorkResult
+import com.imcys.bilibilias.network.model.user.BILIUserSpaceAccInfo
+import com.imcys.bilibilias.network.model.video.BILIDonghuaPlayerInfo
+import com.imcys.bilibilias.network.model.video.BILIDonghuaSeasonInfo
+import com.imcys.bilibilias.network.model.video.BILIVideoDash
+import com.imcys.bilibilias.network.model.video.BILIVideoPlayerInfo
+import com.imcys.bilibilias.network.model.video.BILIVideoPlayerInfoV2
+import com.imcys.bilibilias.network.model.video.BILIVideoViewInfo
+import com.imcys.bilibilias.network.model.video.SelectEpisodeType
+import com.imcys.bilibilias.ui.analysis.components.DongmhuaDownloadScreen
+import com.imcys.bilibilias.ui.analysis.components.VideoDownloadScreen
+import com.imcys.bilibilias.ui.analysis.navigation.AnalysisRoute
+import com.imcys.bilibilias.ui.utils.rememberWidthSizeClass
+import com.imcys.bilibilias.ui.widget.ASAlertDialog
+import com.imcys.bilibilias.ui.widget.ASAsyncImage
+import com.imcys.bilibilias.ui.widget.ASCardTextField
+import com.imcys.bilibilias.ui.widget.ASIconButton
+import com.imcys.bilibilias.ui.widget.ASTextButton
+import com.imcys.bilibilias.ui.widget.ASTopAppBar
+import com.imcys.bilibilias.ui.widget.AsBackIconButton
+import com.imcys.bilibilias.ui.widget.BILIBILIASTopAppBarStyle
+import com.imcys.bilibilias.ui.widget.SurfaceColorCard
+import com.imcys.bilibilias.ui.widget.shimmer.shimmer
+import com.imcys.bilibilias.ui.widget.tip.ASErrorTip
+import com.imcys.bilibilias.ui.widget.tip.ASWarringTip
+import com.imcys.bilibilias.widget.ASCommonExposedDropdownMenu
+import com.imcys.bilibilias.widget.AsAutoError
+import com.imcys.bilibilias.widget.AsUserInfoRow
+import com.imcys.bilibilias.widget.CommonError
+import com.imcys.bilibilias.widget.dialog.PermissionRequestTipDialog
+import kotlinx.coroutines.launch
+
+private typealias SendIntent = (AnalysisIntent) -> Unit
+
+@OptIn(ExperimentalSharedTransitionApi::class)
+@Composable
+fun AnalysisScreen(
+    analysisRoute: AnalysisRoute,
+    vm: AnalysisViewModel,
+    sharedTransitionScope: SharedTransitionScope,
+    animatedContentScope: AnimatedContentScope,
+    onToBack: () -> Unit,
+    goToUser: (mid: Long) -> Unit,
+    onToVideoCodingInfo: () -> Unit,
+    onToLogin: () -> Unit
+) {
+
+    val uiState by vm.uiState.collectAsState()
+    val isSelectSingleModel = uiState.isSelectSingleModel
+    val episodeListMode = uiState.episodeListMode
+    val appSettings by vm.appSettings.collectAsState(AppSettingsSerializer.appSettingsDefault)
+    val windowsWidthSize = rememberWidthSizeClass()
+
+    LaunchedEffect(analysisRoute.asInputText) {
+        // 解析分享内容
+        vm.updateInputAsText(analysisRoute.asInputText)
+    }
+
+    // 监听剪贴板
+    ClipboardAutoHandler(
+        appSettings = appSettings,
+    ) { text ->
+        vm.updateInputAsText(text)
+    }
+
+
+    AnalysisScaffold(
+        uiState.asLinkResultType,
+        uiState.downloadInfo,
+        onDownload = {
+            vm.createDownloadTask()
+        },
+        onToBack = onToBack
+    ) {
+        Column(Modifier.padding(it)) {
+            with(sharedTransitionScope) {
+                Column(
+                    modifier = Modifier
+                        .fillMaxWidth()
+                        .padding(horizontal = 15.dp)
+                ) {
+                    ASCardTextField(
+                        modifier = Modifier.sharedElement(
+                            sharedTransitionScope.rememberSharedContentState(key = "card-input-analysis"),
+                            animatedVisibilityScope = animatedContentScope
+                        ),
+                        elevation = CardDefaults.cardElevation(0.dp),
+                        value = uiState.inputAsText,
+                        onValueChange = { value ->
+                            vm.updateInputAsText(value)
+                        },
+                        leadingIcon = {
+                            Icon(
+                                modifier = Modifier.sharedElement(
+                                    sharedTransitionScope.rememberSharedContentState(
+                                        key = "icon-input-analysis"
+                                    ),
+                                    animatedVisibilityScope = animatedContentScope
+                                ),
+                                imageVector = Icons.Outlined.Search,
+                                contentDescription = "视频解析",
+                            )
+                        }
+                    )
+                    Spacer(Modifier.height(16.dp))
+                }
+            }
+            // 解析失败时给一张**带重试**的错误卡片。
+            // 原先五条失败路径全是空的（`onFailure {}` / `null -> {}` / `else -> {}`），
+            // 页面就停在只有输入框的空白上 —— 用户分不清"没识别出来"、"被风控"还是"App 卡死了"。
+            //
+            // ⚠️ 错误卡片**优先于**旧结果：换一段链接解析失败时 asLinkResultType 仍留着上一次的结果，
+            // 若只在"没有结果"时才显示错误，用户看到的会是上一个视频的卡片，错误被整个盖住。
+            val parsedType = uiState.asLinkResultType
+            val parseErrorMessage = uiState.parseErrorMessage
+            if (parseErrorMessage != null) {
+                Column(
+                    modifier = Modifier
+                        .fillMaxWidth()
+                        .padding(horizontal = 15.dp)
+                ) {
+                    CommonError(errorMsg = parseErrorMessage, onRetry = { vm.retryParse() })
+                }
+            } else if (parsedType != null) {
+                SharedTransitionLayout {
+                    AnimatedContent(
+                        windowsWidthSize,
+                        label = "screen-change"
+                    ) { targetState ->
+                        when (targetState) {
+                            WindowWidthSizeClass.Compact, WindowWidthSizeClass.Medium -> {
+                                VerticalAnalysisVideoCardList(
+                                    uiState.downloadInfo,
+                                    parsedType,
+                                    uiState.isBILILogin,
+                                    uiState.analysisBaseInfo,
+                                    animatedContentScope = this@AnimatedContent,
+                                    sharedTransitionScope = this@SharedTransitionLayout,
+                                    isSelectSingleModel = isSelectSingleModel,
+                                    episodeListMode = episodeListMode,
+                                    viewModel = vm,
+                                    goToUser = goToUser,
+                                    onToVideoCodingInfo = onToVideoCodingInfo,
+                                    onToLogin = onToLogin
+                                )
+                            }
+
+                            else -> {
+                                HorizontalAnalysisVideoCardList(
+                                    uiState.downloadInfo,
+                                    parsedType,
+                                    uiState.isBILILogin,
+                                    uiState.analysisBaseInfo,
+                                    animatedContentScope = this@AnimatedContent,
+                                    sharedTransitionScope = this@SharedTransitionLayout,
+                                    isSelectSingleModel = isSelectSingleModel,
+                                    episodeListMode = episodeListMode,
+                                    viewModel = vm,
+                                    goToUser = goToUser,
+                                    onToVideoCodingInfo = onToVideoCodingInfo,
+                                    onToLogin = onToLogin
+                                )
+                            }
+                        }
+                    }
+                }
+            }
+
+        }
+    }
+
+    CreateDownloadTaskLoadingDialog(
+        uiState.isCreateDownloadLoading,
+    )
+
+//    VideoFreezeTip(
+//        uiState.appOldSoFreezeBean,
+//        onDismiss = {
+//            vm.closeShowVideoFreezeTip()
+//        }
+//    )
+
+}
+
+@OptIn(ExperimentalMaterial3ExpressiveApi::class)
+@Composable
+fun CreateDownloadTaskLoadingDialog(show: Boolean) {
+    if (show) {
+        AlertDialog(
+            onDismissRequest = { },
+            title = { Text(text = "创建下载任务") },
+            text = {
+                Column(
+                    Modifier
+                        .fillMaxWidth()
+                        .padding(16.dp),
+                    verticalArrangement = Arrangement.spacedBy(8.dp),
+                    horizontalAlignment = Alignment.CenterHorizontally
+                ) {
+                    ContainedLoadingIndicator()
+                    Text(text = "正在创建任务，创建过程中请勿挂后台...")
+                }
+            },
+            confirmButton = {},
+            dismissButton = {},
+        )
+    }
+}
+
+@OptIn(ExperimentalSharedTransitionApi::class)
+@Composable
+fun ColumnScope.HorizontalAnalysisVideoCardList(
+    downloadInfo: DownloadViewInfo?,
+    asLinkResultType: ASLinkResultType,
+    isBILILogin: Boolean,
+    analysisBaseInfo: AnalysisBaseInfo,
+    isSelectSingleModel: Boolean,
+    episodeListMode: AppSettings.EpisodeListMode,
+    viewModel: AnalysisViewModel,
+    goToUser: (Long) -> Unit,
+    onToVideoCodingInfo: () -> Unit,
+    onToLogin: () -> Unit,
+    animatedContentScope: AnimatedContentScope,
+    sharedTransitionScope: SharedTransitionScope,
+) {
+    val context = LocalContext.current
+
+    Row(
+        Modifier
+            .padding(horizontal = 15.dp)
+            .weight(1f),
+    ) {
+        with(sharedTransitionScope) {
+            Column(
+                modifier = Modifier
+                    .weight(6f)
+                    .verticalScroll(rememberScrollState())
+                    .fillMaxHeight(),
+                verticalArrangement = Arrangement.spacedBy(16.dp),
+            ) {
+                Column(
+                    Modifier.sharedElement(
+                        sharedTransitionScope.rememberSharedContentState(
+                            key = "as-video-card"
+                        ),
+                        animatedVisibilityScope = animatedContentScope
+                    )
+                ) {
+                    AnalysisVideoCard(asLinkResultType, isBILILogin, analysisBaseInfo, savePic = {
+                        viewModel.downloadImageToAlbum(context, it, "BiliDownloader")
+                    }, goToUser, onToLogin, onRetry = { viewModel.retryParse() })
+                    Spacer(Modifier.height(15.dp))
+                }
+            }
+
+            Spacer(Modifier.width(15.dp))
+
+            Column(
+                modifier = Modifier
+                    .sharedElement(
+                        sharedTransitionScope.rememberSharedContentState(
+                            key = "as-video-download-config"
+                        ),
+                        animatedVisibilityScope = animatedContentScope
+                    )
+                    .weight(4f)
+                    .verticalScroll(rememberScrollState())
+                    .fillMaxHeight(),
+                verticalArrangement = Arrangement.spacedBy(16.dp),
+            ) {
+                AnalysisDownloadConfigContent(
+                    downloadInfo,
+                    asLinkResultType,
+                    isSelectSingleModel,
+                    episodeListMode,
+                    viewModel,
+                    onToVideoCodingInfo
+                )
+
+                Spacer(Modifier.height(15.dp))
+            }
+
+
+        }
+
+    }
+}
+
+@OptIn(ExperimentalSharedTransitionApi::class)
+@Composable
+fun ColumnScope.VerticalAnalysisVideoCardList(
+    downloadInfo: DownloadViewInfo?,
+    asLinkResultType: ASLinkResultType,
+    isBILILogin: Boolean,
+    analysisBaseInfo: AnalysisBaseInfo,
+    isSelectSingleModel: Boolean,
+    episodeListMode: AppSettings.EpisodeListMode,
+    viewModel: AnalysisViewModel,
+    goToUser: (Long) -> Unit,
+    onToVideoCodingInfo: () -> Unit,
+    onToLogin: () -> Unit,
+    animatedContentScope: AnimatedContentScope,
+    sharedTransitionScope: SharedTransitionScope,
+) {
+
+    val context = LocalContext.current
+    Column(
+        modifier = Modifier
+            .weight(1f)
+            .verticalScroll(rememberScrollState())
+            .fillMaxWidth()
+            .padding(horizontal = 15.dp),
+        verticalArrangement = Arrangement.spacedBy(16.dp),
+    ) {
+        with(sharedTransitionScope) {
+            Column(
+                Modifier.sharedElement(
+                    sharedTransitionScope.rememberSharedContentState(
+                        key = "as-video-card"
+                    ),
+                    animatedVisibilityScope = animatedContentScope
+                ),
+            ) {
+                AnalysisVideoCard(asLinkResultType, isBILILogin, analysisBaseInfo, savePic = {
+                    viewModel.downloadImageToAlbum(context, it, "BiliDownloader")
+                }, goToUser, onToLogin, onRetry = { viewModel.retryParse() })
+            }
+
+            Column(
+                Modifier.sharedElement(
+                    sharedTransitionScope.rememberSharedContentState(
+                        key = "as-video-download-config"
+                    ),
+                    animatedVisibilityScope = animatedContentScope
+                ),
+                verticalArrangement = Arrangement.spacedBy(16.dp)
+            ) {
+                AnalysisDownloadConfigContent(
+                    downloadInfo,
+                    asLinkResultType,
+                    isSelectSingleModel,
+                    episodeListMode,
+                    viewModel,
+                    onToVideoCodingInfo
+                )
+
+            }
+
+            Spacer(Modifier.height(15.dp))
+        }
+    }
+
+}
+
+/**
+ * 检查输入
+ */
+@Composable
+fun CheckInputASTextTip() {
+    ASWarringTip {
+        Row(
+            Modifier.fillMaxWidth(),
+            verticalAlignment = Alignment.CenterVertically
+        ) {
+            Text(
+                "输入的视频不存在哦~请检查后重新输入",
+                fontSize = 14.sp,
+            )
+        }
+    }
+}
+
+/**
+ * 下载视频的高级设置
+ */
+@OptIn(ExperimentalMaterial3ExpressiveApi::class, ExperimentalMaterial3Api::class)
+@Composable
+private fun AdvancedSetting(
+    isSelectSingleModel: Boolean,
+    videoInfo: NetWorkResult<BILIVideoViewInfo?>,
+    downloadInfo: DownloadViewInfo?,
+    playerInfo: NetWorkResult<Any?>,
+    dash: BILIVideoDash?,
+    onCheckCoverDownload: (Boolean) -> Unit,
+    onCheckDownloadDanmaku: (Boolean) -> Unit,
+    onCheckMediaDownload: (Boolean) -> Unit,
+    onSelectCCId: (Boolean, CCFileType) -> Unit = { _, _ -> },
+    onSelectDownloadMode: (DownloadMode) -> Unit,
+    updateEmbedCover: (Boolean) -> Unit,
+    updateEmbedCC: (Boolean) -> Unit,
+    updateEmbedDanmaku: (Boolean) -> Unit,
+    sendIntent: SendIntent
+) {
+
+    var downloadModeExpanded by rememberSaveable { mutableStateOf(false) }
+    var selectDownloadMode by rememberSaveable { mutableStateOf(DownloadMode.AUDIO_VIDEO) }
+
+    val downloadModeList by remember(dash) {
+        mutableStateOf(DownloadMode.entries.filter {
+            // 如果没有音频资源，则不显示音视频分离选项
+            if (dash?.audio.isNullOrEmpty() && (it == DownloadMode.AUDIO_VIDEO || it == DownloadMode.AUDIO_ONLY)) {
+                false
+            } else true
+        })
+    }
+
+    LaunchedEffect(dash?.audio) {
+        if (dash != null && dash.audio.isEmpty()) {
+            selectDownloadMode = DownloadMode.VIDEO_ONLY
+            onSelectDownloadMode(selectDownloadMode)
+        }
+    }
+
+
+    // 选择是否合并下载
+    AsAutoError(playerInfo, onSuccessContent = {
+        if (dash == null && playerInfo.status != ApiStatus.LOADING) return@AsAutoError
+        SurfaceColorCard {
+            Column(
+                Modifier
+                    .shimmer(playerInfo.status != ApiStatus.SUCCESS)
+                    .padding(16.dp)
+                    .fillMaxWidth()
+                    .animateContentSize(),
+                verticalArrangement = Arrangement.spacedBy(16.dp)
+            ) {
+                Text(stringResource(R.string.analysis_cache_config))
+                Column {
+                    ASCommonExposedDropdownMenu(
+                        modifier = Modifier.fillMaxWidth(),
+                        values = downloadModeList,
+                        onValue = { it.title },
+                        label = stringResource(R.string.analysis_select_cache_mode),
+                        text = selectDownloadMode.title,
+                        onSelect = {
+                            selectDownloadMode = it
+                            onSelectDownloadMode(it)
+                        }
+                    )
+                    Spacer(Modifier.height(4.dp))
+                    Row(horizontalArrangement = Arrangement.spacedBy(10.dp)) {
+                        if (selectDownloadMode != DownloadMode.AUDIO_ONLY){
+                            ASCommonExposedDropdownMenu(
+                                modifier = Modifier.weight(1f),
+                                values = videoContainer,
+                                onValue = { it.extension },
+                                label = "视频封装格式",
+                                text = downloadInfo?.mediaContainerConfig?.videoContainer?.extension
+                                    ?: MediaContainer.M4A.extension,
+                                onSelect = {
+                                    sendIntent(AnalysisIntent.UpdateVideoContainer(it))
+                                }
+                            )
+                        }
+
+                        if (selectDownloadMode != DownloadMode.VIDEO_ONLY){
+                            ASCommonExposedDropdownMenu(
+                                modifier = Modifier
+                                    .weight(1f),
+                                values = audioContainer,
+                                onValue = { it.extension },
+                                label = "音频封装格式",
+                                text = downloadInfo?.mediaContainerConfig?.audioContainer?.extension
+                                    ?: MediaContainer.M4A.extension,
+                                onSelect = {
+                                    sendIntent(AnalysisIntent.UpdateAudioContainer(it))
+                                }
+                            )
+                        }
+                    }
+                    Spacer(Modifier.height(4.dp))
+                    ASWarringTip {
+                        Row(
+                            Modifier.fillMaxWidth(),
+                            verticalAlignment = Alignment.CenterVertically
+                        ) {
+                            Text(
+                                "注意：如果选中的子集没有音视频分离资源，将无法单独进行下载。",
+                                fontSize = 14.sp,
+                            )
+                        }
+                    }
+                }
+
+                Column {
+                    Text(stringResource(R.string.analysis_download_content))
+                    ExtraCache(
+                        isSelectSingleModel,
+                        downloadInfo,
+                        downloadInfo?.videoPlayerInfoV2,
+                        playerInfo,
+                        onCheckCoverDownload = onCheckCoverDownload,
+                        onCheckDownloadDanmaku = onCheckDownloadDanmaku,
+                        onCheckMediaDownload = onCheckMediaDownload,
+                        onSelectCCId = onSelectCCId,
+                    )
+                }
+
+                AnimatedVisibility(downloadInfo?.downloadMedia == true) {
+                    Column {
+                        Text("内嵌配置")
+                        InlayConfig(
+                            downloadInfo,
+                            downloadInfo?.videoPlayerInfoV2,
+                            playerInfo,
+                            updateEmbedCover,
+                            updateEmbedCC,
+                            updateEmbedDanmaku
+                        )
+                    }
+                }
+
+            }
+        }
+    })
+}
+
+
+/**
+ * 内嵌配置
+ */
+@Composable
+private fun InlayConfig(
+    downloadInfo: DownloadViewInfo?,
+    playerInfoV2: NetWorkResult<BILIVideoPlayerInfoV2?>?,
+    playerInfo: NetWorkResult<Any?>,
+    updateEmbedCover: (Boolean) -> Unit,
+    updateEmbedCC: (Boolean) -> Unit,
+    updateEmbedDanmaku: (Boolean) -> Unit,
+) {
+    FlowRow(
+        horizontalArrangement = Arrangement.spacedBy(10.dp)
+    ) {
+        FilterChip(
+            label = {
+                Text("封面", fontSize = 12.sp)
+            },
+            selected = downloadInfo?.embedCover == true,
+            leadingIcon = {
+                if (downloadInfo?.embedCover == true) {
+                    SelectedIcon()
+                }
+            },
+            onClick = {
+                downloadInfo?.let { info ->
+                    updateEmbedCover(!info.embedCover)
+                }
+            },
+        )
+        FilterChip(
+            label = {
+                Text("字幕", fontSize = 12.sp)
+            },
+            selected = downloadInfo?.embedCC == true,
+            leadingIcon = {
+                if (downloadInfo?.embedCC == true) {
+                    SelectedIcon()
+                }
+            },
+            onClick = {
+                downloadInfo?.let { info ->
+                    updateEmbedCC(!info.embedCC)
+                }
+            },
+        )
+    }
+}
+
+
+@Composable
+private fun SelectedIcon() {
+    Icon(
+        Icons.Outlined.Check,
+        contentDescription = "已选中图标",
+        modifier = Modifier.size(15.dp)
+    )
+}
+
+@Composable
+private fun ExtraCache(
+    isSelectSingleModel: Boolean,
+    downloadInfo: DownloadViewInfo?,
+    playerInfoV2: NetWorkResult<BILIVideoPlayerInfoV2?>?,
+    playerInfo: NetWorkResult<Any?>,
+    onCheckCoverDownload: (Boolean) -> Unit,
+    onCheckDownloadDanmaku: (Boolean) -> Unit,
+    onCheckMediaDownload: (Boolean) -> Unit,
+    onSelectCCId: (Boolean, CCFileType) -> Unit = { _, _ -> },
+) {
+
+    val isDonghua = playerInfo.data is BILIDonghuaPlayerInfo
+    val isVideo = playerInfo.data is BILIVideoPlayerInfo
+    var selectACCDownload by remember(downloadInfo?.downloadCC)
+    { mutableStateOf(downloadInfo?.downloadCC == true) }
+
+    FlowRow(
+        horizontalArrangement = Arrangement.spacedBy(10.dp)
+    ) {
+
+        FilterChip(
+            label = {
+                Text(stringResource(R.string.analysis_stream_download), fontSize = 12.sp)
+            },
+            selected = downloadInfo?.downloadMedia == true,
+            leadingIcon = {
+                if (downloadInfo?.downloadMedia == true) {
+                    Icon(
+                        Icons.Outlined.Check,
+                        contentDescription = "已选中图标",
+                        modifier = Modifier.size(15.dp)
+                    )
+                }
+            },
+            onClick = {
+                onCheckMediaDownload(!(downloadInfo?.downloadMedia ?: false))
+            },
+        )
+
+
+
+        FilterChip(
+            label = {
+                Text(stringResource(R.string.analysis_cover_download), fontSize = 12.sp)
+            },
+            selected = downloadInfo?.downloadCover == true,
+            leadingIcon = {
+                if (downloadInfo?.downloadCover == true) {
+                    Icon(
+                        Icons.Outlined.Check,
+                        contentDescription = "已选中图标",
+                        modifier = Modifier.size(15.dp)
+                    )
+                }
+            },
+            onClick = {
+                onCheckCoverDownload(!(downloadInfo?.downloadCover ?: false))
+            },
+        )
+
+        FilterChip(
+            label = {
+                Text(stringResource(R.string.analysis_download_subtitle), fontSize = 12.sp)
+            },
+            selected = selectACCDownload,
+            leadingIcon = {
+                if (selectACCDownload) {
+                    Icon(
+                        Icons.Outlined.Check,
+                        contentDescription = "已选中图标",
+                        modifier = Modifier.size(15.dp)
+                    )
+                }
+            },
+            onClick = {
+                onSelectCCId(!selectACCDownload, downloadInfo?.ccFileType ?: CCFileType.SRT)
+            },
+        )
+
+        FilterChip(
+            label = {
+                Text(stringResource(R.string.analysis_danmaku_download), fontSize = 12.sp)
+            },
+            selected = downloadInfo?.downloadDanmaku == true,
+            leadingIcon = {
+                if (downloadInfo?.downloadDanmaku == true) {
+                    Icon(
+                        Icons.Outlined.Check,
+                        contentDescription = "已选中图标",
+                        modifier = Modifier.size(15.dp)
+                    )
+                }
+            },
+            onClick = {
+                onCheckDownloadDanmaku(!(downloadInfo?.downloadDanmaku ?: false))
+            },
+        )
+    }
+
+    if (selectACCDownload) {
+        Text(stringResource(R.string.analysis_download_subtitle))
+        Spacer(Modifier.height(5.dp))
+        SelectACCCard(downloadInfo, onSelectCCId = onSelectCCId)
+    }
+
+}
+
+@OptIn(ExperimentalMaterial3Api::class)
+@Composable
+fun SelectACCCard(
+    downloadInfo: DownloadViewInfo?,
+    onSelectCCId: (Boolean, CCFileType) -> Unit = { _, _ -> },
+) {
+    var selectType by rememberSaveable { mutableStateOf(CCFileType.SRT) }
+    Column {
+        ASCommonExposedDropdownMenu(
+            modifier = Modifier
+                .fillMaxWidth(),
+            text = selectType.name,
+            values = CCFileType.entries,
+            label = stringResource(R.string.analysis_select_subtitle_type),
+            onSelect = {
+                selectType = it
+                onSelectCCId(true, selectType)
+            },
+            onValue = { it.name }
+        )
+    }
+}
+
+
+@Composable
+fun AnalysisVideoCard(
+    asLinkResultType: ASLinkResultType,
+    isBILILogin: Boolean,
+    analysisBaseInfo: AnalysisBaseInfo,
+    savePic: suspend (String?) -> Unit,
+    goToUser: (Long) -> Unit,
+    onToLogin: () -> Unit,
+    // 卡片自己的错误框（AsAutoError → CommonError）原先没有重试按钮：
+    // 解析失败后用户只能退出页面重进。重试走 vm.retryParse()（同一段文本会真的重新解析）。
+    onRetry: () -> Unit,
+) {
+    when (asLinkResultType) {
+        is ASLinkResultType.BILI.Video -> {
+            BILIVideoCard(
+                asLinkResultType,
+                asLinkResultType.viewInfo,
+                analysisBaseInfo,
+                isBILILogin,
+                savePic = savePic,
+                goToUser = goToUser,
+                onToLogin = onToLogin,
+                onRetry = onRetry,
+            )
+        }
+
+        is ASLinkResultType.BILI.User -> {
+            BILIUserSpaceCard(asLinkResultType.userInfo, goToUser, onRetry = onRetry)
+        }
+
+        is ASLinkResultType.BILI.Donghua -> {
+            BILIDonghuaCard(
+                asLinkResultType.donghuaViewInfo,
+                asLinkResultType.currentEpId,
+                analysisBaseInfo,
+                isBILILogin,
+                savePic = savePic,
+                onToLogin = onToLogin,
+                onRetry = onRetry,
+            )
+        }
+    }
+}
+
+@OptIn(ExperimentalMaterial3ExpressiveApi::class)
+@Composable
+fun BILIDonghuaCard(
+    donghuaViewInfo: NetWorkResult<BILIDonghuaSeasonInfo?>,
+    currentEpId: Long,
+    analysisBaseInfo: AnalysisBaseInfo,
+    isBILILogin: Boolean,
+    savePic: suspend (String?) -> Unit,
+    onToLogin: () -> Unit,
+    onRetry: () -> Unit,
+) {
+    val coroutineScope = rememberCoroutineScope()
+    val context = LocalContext.current
+    val haptics = LocalHapticFeedback.current
+
+    val episodeInfo = remember(donghuaViewInfo, currentEpId) {
+        donghuaViewInfo.data?.episodes?.firstOrNull { it.epId == currentEpId }
+            ?: donghuaViewInfo.data?.section?.run lastRun@{
+                map { it.episodes }.forEach {
+                    it.forEach { info ->
+                        if (info.epId == currentEpId) {
+                            return@lastRun info
+                        }
+                    }
+                }
+                donghuaViewInfo.data?.episodes?.firstOrNull()
+            }
+    }
+
+    var picSaving by rememberSaveable { mutableStateOf(false) }
+
+    AsAutoError(
+        netWorkResult = donghuaViewInfo,
+        onRetry = onRetry,
+        onSuccessContent = {
+            Column(Modifier.fillMaxWidth()) {
+                SurfaceColorCard {
+                    Column(
+                        Modifier
+                            .padding(16.dp)
+                            .fillMaxWidth()
+                    ) {
+                        Box(
+                            modifier = Modifier
+                                .fillMaxWidth()
+                                .aspectRatio(16f / 9f)
+                                .shimmer(donghuaViewInfo.status != ApiStatus.SUCCESS),
+                        ) {
+                            ASAsyncImage(
+                                if (analysisBaseInfo.enabledSelectInfo) analysisBaseInfo.cover else
+                                    "${episodeInfo?.cover?.toHttps()}",
+                                modifier = Modifier
+                                    .fillMaxWidth(),
+                                contentDescription = "视频封面",
+                                shape = CardDefaults.shape
+                            )
+
+
+                            Surface(
+                                modifier = Modifier
+                                    .align(Alignment.TopEnd)
+                                    .padding(5.dp),
+                                color = MaterialTheme.colorScheme.primaryContainer,
+                                shape = CardDefaults.shape
+                            ) {
+                                Text(
+                                    stringResource(R.string.analysis_bangumi),
+                                    Modifier.padding(5.dp)
+                                )
+                            }
+
+
+                            ExtendedFloatingActionButton(
+                                modifier = Modifier
+                                    .align(Alignment.BottomEnd)
+                                    .padding(5.dp)
+                                    .animateContentSize(),
+                                onClick = click@{
+                                    if (picSaving) return@click
+                                    picSaving = true
+                                    coroutineScope.launch {
+                                        savePic.invoke(
+                                            if (analysisBaseInfo.enabledSelectInfo) {
+                                                analysisBaseInfo.cover
+                                            } else {
+                                                episodeInfo?.cover?.toHttps()
+                                            }
+                                        )
+                                        picSaving = false
+                                    }
+                                },
+                                elevation = FloatingActionButtonDefaults.elevation(0.dp),
+                                containerColor = Color(0xffD8FFC0),
+                                contentColor = MaterialTheme.colorScheme.scrim,
+                            ) {
+                                if (picSaving) {
+                                    CircularWavyProgressIndicator()
+                                } else {
+                                    Icon(Icons.Outlined.Image, contentDescription = "下载封面")
+                                    Spacer(Modifier.size(ButtonDefaults.IconSpacing))
+                                    Text(stringResource(R.string.analysis_download_cover))
+                                }
+                            }
+                        }
+                        Spacer(Modifier.height(16.dp))
+                        val title =
+                            if (analysisBaseInfo.enabledSelectInfo) analysisBaseInfo.title else
+                                episodeInfo?.longTitle?.ifEmpty { episodeInfo.title } ?: "视频标题"
+                        Text(
+                            title,
+                            fontSize = 22.sp,
+                            modifier = Modifier
+                                .animateContentSize()
+                                .shimmer(donghuaViewInfo.status != ApiStatus.SUCCESS)
+                                .combinedClickable(
+                                    onClick = {},
+                                    onLongClick = {
+                                        title.copyText(context, "视频标题")
+                                    }
+                                ),
+                        )
+                    }
+                }
+
+                Spacer(Modifier.height(16.dp))
+                if (!isBILILogin) {
+                    ASWarringTip(
+                        modifier = Modifier.padding(horizontal = 12.dp),
+                        enabledPadding = false
+                    ) {
+                        Row(
+                            Modifier.fillMaxWidth(),
+                            verticalAlignment = Alignment.CenterVertically
+                        ) {
+                            Text(
+                                "你当前还未绑定B站账号，缓存权益受限哦。",
+                                fontSize = 14.sp,
+                            )
+                            Spacer(Modifier.weight(1f))
+                            ASIconButton(onClick = onToLogin) {
+                                Icon(Icons.Outlined.NorthEast, contentDescription = "去登录")
+                            }
+                        }
+                    }
+                }
+            }
+        }
+    )
+}
+
+@Composable
+fun BILIUserSpaceCard(
+    userInfo: NetWorkResult<BILIUserSpaceAccInfo?>,
+    goToUser: (Long) -> Unit,
+    onRetry: () -> Unit,
+) {
+    AsAutoError(
+        netWorkResult = userInfo,
+        onRetry = onRetry,
+        onSuccessContent = {
+            SurfaceColorCard(modifier = Modifier.clickable {
+                goToUser(userInfo.data?.mid ?: 0)
+            }) {
+                AsUserInfoRow(
+                    Modifier
+                        .padding(16.dp),
+                    userInfo,
+                    userInfo.status == ApiStatus.LOADING
+                )
+            }
+        }
+    )
+}
+
+@OptIn(ExperimentalMaterial3ExpressiveApi::class)
+@Composable
+fun BILIVideoCard(
+    asLinkResultType: ASLinkResultType.BILI.Video,
+    videoInfo: NetWorkResult<BILIVideoViewInfo?>,
+    analysisBaseInfo: AnalysisBaseInfo,
+    isBILILogin: Boolean,
+    savePic: suspend (String?) -> Unit,
+    goToUser: (Long) -> Unit,
+    onToLogin: () -> Unit,
+    onRetry: () -> Unit,
+) {
+    val coroutineScope = rememberCoroutineScope()
+    var picSaving by rememberSaveable { mutableStateOf(false) }
+    val context = LocalContext.current
+
+    // 拦截未查到视频的错误
+    if (asLinkResultType.isNotFound()) {
+        return
+    }
+
+    AsAutoError(
+        netWorkResult = videoInfo,
+        onRetry = onRetry,
+        onSuccessContent = {
+            Column(Modifier.fillMaxWidth()) {
+                SurfaceColorCard {
+                    Column(
+                        Modifier
+                            .padding(16.dp)
+                            .fillMaxWidth()
+
+                    ) {
+                        Box(
+                            modifier = Modifier
+                                .fillMaxWidth()
+                                .aspectRatio(16f / 9f)
+                        ) {
+                            ASAsyncImage(
+                                if (analysisBaseInfo.enabledSelectInfo) analysisBaseInfo.cover else
+                                    "${
+                                        videoInfo.data?.pic?.toHttps()
+                                    }",
+                                modifier = Modifier
+                                    .fillMaxWidth()
+                                    .shimmer(videoInfo.status == ApiStatus.LOADING),
+                                contentDescription = "视频封面",
+                                shape = CardDefaults.shape
+                            )
+
+                            if (videoInfo.data?.isUpowerExclusive == true) {
+                                Surface(
+                                    modifier = Modifier
+                                        .align(Alignment.TopEnd)
+                                        .padding(5.dp),
+                                    color = MaterialTheme.colorScheme.primaryContainer,
+                                    shape = CardDefaults.shape
+                                ) {
+                                    Text(
+                                        stringResource(R.string.analysis_charged_video),
+                                        Modifier.padding(5.dp)
+                                    )
+                                }
+                            }
+
+
+                            ExtendedFloatingActionButton(
+                                modifier = Modifier
+                                    .align(Alignment.BottomEnd)
+                                    .padding(5.dp),
+                                onClick = click@{
+                                    if (picSaving) return@click
+                                    picSaving = true
+                                    coroutineScope.launch {
+                                        savePic.invoke(
+                                            if (analysisBaseInfo.enabledSelectInfo) {
+                                                analysisBaseInfo.cover
+                                            } else {
+                                                videoInfo.data?.pic?.toHttps()
+                                            }
+                                        )
+                                        picSaving = false
+                                    }
+                                },
+                                elevation = FloatingActionButtonDefaults.elevation(0.dp),
+                                containerColor = Color(0xffD8FFC0),
+                                contentColor = MaterialTheme.colorScheme.scrim
+                            ) {
+                                if (picSaving) {
+                                    CircularWavyProgressIndicator()
+                                } else {
+                                    Icon(Icons.Outlined.Image, contentDescription = "下载封面")
+                                    Spacer(Modifier.size(ButtonDefaults.IconSpacing))
+                                    Text(stringResource(R.string.analysis_download_cover))
+                                }
+                            }
+                        }
+
+                        AuthorInfoContent(videoInfo, goToUser)
+
+                        val title =
+                            if (analysisBaseInfo.enabledSelectInfo) analysisBaseInfo.title else
+                                videoInfo.data?.title ?: "视频标题"
+                        Text(
+                            title,
+                            fontSize = 22.sp,
+                            modifier = Modifier
+                                .animateContentSize()
+                                .combinedClickable(
+                                    onClick = {},
+                                    onLongClick = {
+                                        title.copyText(context, "视频标题")
+                                    }
+                                ),
+                        )
+                    }
+                }
+
+
+                // 如果是充电视频，提示用户充电
+                if (!asLinkResultType.isCanPlay()) {
+                    Spacer(Modifier.height(16.dp))
+                    ASWarringTip {
+                        Row(
+                            Modifier.fillMaxWidth(),
+                            verticalAlignment = Alignment.CenterVertically,
+                        ) {
+                            Text(
+                                "当前视频属充电视频，请充电后申请缓存。",
+                                fontSize = 14.sp,
+                            )
+                        }
+                    }
+
+                }
+
+
+                // 如果未登录B站账号，提示用户登录
+                if (!isBILILogin) {
+                    Spacer(Modifier.height(11.dp))
+                    ASWarringTip(
+                        modifier = Modifier.padding(horizontal = 12.dp),
+                        enabledPadding = false
+                    ) {
+                        Row(
+                            Modifier.fillMaxWidth(),
+                            verticalAlignment = Alignment.CenterVertically
+                        ) {
+                            Text(
+                                "你当前还未绑定B站账号，缓存权益受限哦。",
+                                fontSize = 14.sp,
+                            )
+                            Spacer(Modifier.weight(1f))
+                            ASIconButton(onClick = onToLogin) {
+                                Icon(Icons.Outlined.NorthEast, contentDescription = "去登录")
+                            }
+                        }
+                    }
+                }
+            }
+        }
+    )
+}
+
+@Composable
+fun AuthorInfoContent(
+    result: NetWorkResult<BILIVideoViewInfo?>,
+    goToUser: (Long) -> Unit
+) {
+    val videoInfo = result.data
+    val authorList = when {
+        videoInfo?.staff.isNullOrEmpty() -> videoInfo?.owner?.let { listOf(it) } ?: emptyList()
+        else -> videoInfo.staff.filter { it.mid != 0L }
+    }
+
+    LazyRow(
+        horizontalArrangement = Arrangement.spacedBy(10.dp),
+        modifier = Modifier.fillMaxWidth().run {
+            if (authorList.size == 1) {
+                clickable { goToUser(authorList.first().mid) }
+            } else this
+        }
+    ) {
+        items(authorList, key = { it.mid }) { user ->
+            Surface(
+                shape = RoundedCornerShape(4.dp),
+                onClick = { goToUser(user.mid) },
+            ) {
+                Row(
+                    verticalAlignment = Alignment.CenterVertically
+                ) {
+                    ASAsyncImage(
+                        model = user.face,
+                        contentDescription = "up头像",
+                        shape = CircleShape,
+                        modifier = Modifier
+                            .size(22.dp)
+                            .aspectRatio(1f)
+                    )
+                    Spacer(Modifier.width(8.dp))
+                    Text(
+                        user.name,
+                        maxLines = 1,
+                        overflow = TextOverflow.Ellipsis,
+                    )
+                }
+            }
+        }
+    }
+}
+
+@OptIn(ExperimentalMaterial3Api::class)
+@Composable
+fun AnalysisScaffold(
+    asResultType: ASLinkResultType?,
+    downloadInfo: DownloadViewInfo?,
+    onToBack: () -> Unit,
+    onDownload: () -> Unit,
+    content: @Composable (PaddingValues) -> Unit
+) {
+    val haptics = LocalHapticFeedback.current
+
+    var showDownloadTip by rememberSaveable { mutableStateOf(false) }
+
+    var showRequestPermissionTip by rememberSaveable { mutableStateOf(false) }
+
+    val permissionsToRequest = arrayOf(
+        permission.READ_EXTERNAL_STORAGE,
+        permission.WRITE_EXTERNAL_STORAGE
+    )
+
+
+    val context = LocalContext.current
+    var hasSavePermissions by remember {
+        // 在开始时检查权限状态
+        mutableStateOf(
+            Build.VERSION.SDK_INT >= Build.VERSION_CODES.P || permissionsToRequest.all {
+                ContextCompat.checkSelfPermission(context, it) == PackageManager.PERMISSION_GRANTED
+            }
+        )
+    }
+    Scaffold(
+        containerColor = MaterialTheme.colorScheme.surfaceContainer,
+        topBar = {
+            Column {
+                ASTopAppBar(
+                    style = BILIBILIASTopAppBarStyle.Small,
+                    title = {
+                        Text(stringResource(R.string.analysis_parse_video))
+                    },
+                    colors = TopAppBarDefaults.topAppBarColors(
+                        containerColor = MaterialTheme.colorScheme.surfaceContainer,
+                    ),
+                    navigationIcon = {
+                        AsBackIconButton(onClick = {
+                            onToBack.invoke()
+                        })
+                    },
+                    actions = {
+                        ASIconButton(onClick = {
+                            showDownloadTip = true
+                        }) {
+                            Icon(
+                                Icons.Outlined.Info,
+                                contentDescription = "问题提示"
+                            )
+                        }
+                    }
+                )
+            }
+        },
+        floatingActionButton = {
+            val isCanPlay =
+                if (asResultType is ASLinkResultType.BILI.Video) asResultType.isCanPlay() else true
+            val visible = (downloadInfo?.selectedCid?.isNotEmpty() == true ||
+                    downloadInfo?.selectedEpId?.isNotEmpty() == true) && asResultType != null && isCanPlay
+
+            AnimatedVisibility(
+                visible = visible,
+            ) {
+                FloatingActionButton(
+                    modifier = Modifier.imePadding(),
+                    onClick = {
+                        haptics.performHapticFeedback(HapticFeedbackType.ContextClick)
+                        if (Build.VERSION.SDK_INT <= Build.VERSION_CODES.P) {
+                            when {
+                                !hasSavePermissions -> {
+                                    showRequestPermissionTip = true
+                                }
+
+                                else -> {
+                                    onDownload()
+                                }
+                            }
+                        } else {
+                            onDownload()
+                        }
+                    },
+                ) {
+                    Icon(Icons.Outlined.Download, "下载视频")
+                }
+            }
+        }
+    ) {
+        content.invoke(it)
+    }
+
+    if (showDownloadTip) {
+        DownloadTipDialog(
+            onDismiss = { showDownloadTip = false },
+            onDownload = {
+                showDownloadTip = false
+            }
+        )
+    }
+
+    if (showRequestPermissionTip && !hasSavePermissions) {
+        WritePermissionRequestTipDialog(permissionsToRequest, onDismiss = {
+            showRequestPermissionTip = false
+        }, onRequest = {
+            hasSavePermissions = permissionsToRequest.all {
+                ContextCompat.checkSelfPermission(context, it) == PackageManager.PERMISSION_GRANTED
+            }
+            // 存储权限
+            if (hasSavePermissions) {
+                onDownload.invoke()
+            }
+        })
+    }
+
+}
+
+
+@Composable
+private fun WritePermissionRequestTipDialog(
+    permissionsToRequest: Array<String>,
+    onDismiss: () -> Unit,
+    onRequest: () -> Unit
+) {
+    val context = LocalContext.current
+    val launcher = rememberLauncherForActivityResult(
+        contract = ActivityResultContracts.RequestMultiplePermissions()
+    ) { result ->
+        val allGranted = result.values.all { it }
+        if (allGranted) {
+            onRequest()
+        } else {
+            sendToastEventOnBlocking("权限未被授予")
+        }
+    }
+    PermissionRequestTipDialog(
+        show = true,
+        message = "需要存储权限以保存下载内容，是否继续？",
+        onConfirm = {
+            launcher.launch(permissionsToRequest)
+            onRequest()
+            onDismiss()
+        },
+        onDismiss = onDismiss
+    )
+}
+
+
+@Composable
+private fun DownloadTipDialog(onDismiss: () -> Unit, onDownload: () -> Unit) {
+    AlertDialog(
+        onDismissRequest = onDismiss,
+        title = { Text(stringResource(R.string.analysis_download_hint)) },
+        text = {
+            Text(
+                """
+                    可以选择的分辨率取决于你当前B站账号的大会员状态和当前解析视频的实际可选分辨率。
+                    因此建议选择合集/分P内分辨率最高的视频进行解析，同时开通大会员可享受更高的分辨率缓存。
+                """.trimIndent()
+            )
+        },
+        confirmButton = {
+            ASTextButton(onClick = onDownload) {
+                Text(stringResource(R.string.common_understand))
+            }
+        },
+    )
+}
+
+
+/**
+ * 下载配置内容
+ */
+@OptIn(ExperimentalSharedTransitionApi::class)
+@Composable
+private fun AnalysisDownloadConfigContent(
+    downloadInfo: DownloadViewInfo?,
+    asLinkResultType: ASLinkResultType,
+    isSelectSingleModel: Boolean,
+    episodeListMode: AppSettings.EpisodeListMode,
+    viewModel: AnalysisViewModel,
+    onToVideoCodingInfo: () -> Unit,
+) {
+    val donghuaPlayerInfo by viewModel.donghuaPlayerInfo.collectAsState()
+    val videoPlayerInfo by viewModel.videoPlayerInfo.collectAsState()
+    val currentUserInfo by viewModel.currentUserInfo.collectAsState()
+    val interactiveVideo by viewModel.interactiveVideo.collectAsState()
+
+    when (asLinkResultType) {
+        is ASLinkResultType.BILI.Donghua -> {
+            DongmhuaDownloadScreen(
+                downloadInfo,
+                donghuaPlayerInfo,
+                currentUserInfo,
+                isSelectSingleModel,
+                episodeListMode,
+                asLinkResultType.currentEpId,
+                asLinkResultType.donghuaViewInfo,
+                onSelectSeason = {
+                    viewModel.updateSelectSeason(it)
+                },
+                onUpdateSelectedEpId = { epId, selectType, title, cover ->
+                    if (isSelectSingleModel) {
+                        viewModel.clearSelectedEpIdList()
+                        viewModel.updateSelectedPlayerInfo(
+                            epId ?: 0L,
+                            selectType,
+                            title,
+                            cover
+                        )
+                        if (selectType is SelectEpisodeType.EPID) {
+                            viewModel.updateSelectedEpIdList(epId)
+                        }
+                    } else {
+                        viewModel.updateSelectedEpIdList(epId)
+                    }
+                },
+                onVideoQualityChange = {
+                    viewModel.updateVideoQualityId(it)
+                },
+                onVideoCodeChange = {
+                    viewModel.updateVideoCode(it)
+                },
+                onAudioQualityChange = {
+                    viewModel.updateAudioQualityId(it)
+                },
+                onSelectSingleModel = {
+                    viewModel.updateSelectSingleModel(it)
+                    if (it) {
+                        val lastEpId = downloadInfo?.selectedEpId?.lastOrNull()
+                        viewModel.clearSelectedEpIdList()
+                        viewModel.updateSelectedEpIdList(lastEpId)
+                    }
+                },
+                onToVideoCodingInfo = onToVideoCodingInfo,
+                onUpdateEpisodeListMode = {
+                    viewModel.updateEpisodeListMode(it)
+                },
+                onUpdateSelectedEpList = {
+                    viewModel.onUpdateSelectEpIdList(it)
+                }
+            )
+        }
+
+        is ASLinkResultType.BILI.Video -> {
+            if (asLinkResultType.isNotFound()) {
+                CheckInputASTextTip()
+                return
+            }
+
+            VideoDownloadScreen(
+                downloadInfo,
+                videoPlayerInfo,
+                isSelectSingleModel,
+                episodeListMode,
+                asLinkResultType.currentBvId,
+                asLinkResultType.viewInfo,
+                interactiveVideo,
+                onUpdateSelectedCid = { cid, selectType, title, cover ->
+                    if (isSelectSingleModel) {
+                        viewModel.clearSelectedCidList()
+                        viewModel.updateSelectedPlayerInfo(
+                            cid ?: 0L,
+                            selectType,
+                            title,
+                            cover
+                        )
+                        viewModel.updateSelectedCidList(cid)
+                    } else {
+                        viewModel.updateSelectedCidList(cid)
+                    }
+                },
+                onVideoQualityChange = {
+                    viewModel.updateVideoQualityId(it)
+                },
+                onVideoCodeChange = {
+                    viewModel.updateVideoCode(it)
+                },
+                onAudioQualityChange = {
+                    viewModel.updateAudioQualityId(it)
+                },
+                onSelectSingleModel = {
+                    viewModel.updateSelectSingleModel(it)
+                    if (it) {
+                        val lastCid = downloadInfo?.selectedCid?.lastOrNull()
+                        viewModel.clearSelectedCidList()
+                        viewModel.updateSelectedCidList(lastCid)
+                    }
+                },
+                onToVideoCodingInfo = onToVideoCodingInfo,
+                onUpdateEpisodeListMode = {
+                    viewModel.updateEpisodeListMode(it)
+                },
+                onUpdateAudioLanguage = {
+                    viewModel.updateAudioLanguage(it)
+                },
+                onUpdateSelectCidList = {
+                    viewModel.onUpdateSelectCidList(it)
+                }
+            )
+        }
+
+        else -> {}
+    }
+
+    when (asLinkResultType) {
+        is ASLinkResultType.BILI.Donghua -> {
+            AdvancedSetting(
+                isSelectSingleModel,
+                emptyNetWorkResult(),
+                downloadInfo,
+                donghuaPlayerInfo,
+                donghuaPlayerInfo.data?.dash,
+                onCheckCoverDownload = {
+                    viewModel.updateDownloadCover(it)
+                },
+                onCheckDownloadDanmaku = {
+                    viewModel.updateDownloadDanmaku(it)
+                },
+                onCheckMediaDownload = {
+                    viewModel.updateDownloadMedia(it)
+                },
+                onSelectDownloadMode = viewModel::updateDownloadMode,
+                updateEmbedCC = viewModel::updateEmbedCC,
+                updateEmbedCover = viewModel::updateEmbedCover,
+                updateEmbedDanmaku = viewModel::updateEmbedDanmaku,
+                sendIntent = viewModel::sendUIIntent
+            )
+        }
+
+        is ASLinkResultType.BILI.Video -> {
+            AdvancedSetting(
+                isSelectSingleModel,
+                asLinkResultType.viewInfo,
+                downloadInfo,
+                videoPlayerInfo,
+                videoPlayerInfo.data?.dash,
+                onCheckCoverDownload = {
+                    viewModel.updateDownloadCover(it)
+                },
+                onCheckDownloadDanmaku = {
+                    viewModel.updateDownloadDanmaku(it)
+                },
+                onCheckMediaDownload = {
+                    viewModel.updateDownloadMedia(it)
+                },
+                onSelectCCId = { state, type ->
+                    viewModel.updateSelectDownloadCC(state, type)
+                },
+                onSelectDownloadMode = viewModel::updateDownloadMode,
+                updateEmbedCC = viewModel::updateEmbedCC,
+                updateEmbedCover = viewModel::updateEmbedCover,
+                updateEmbedDanmaku = viewModel::updateEmbedDanmaku,
+                sendIntent = viewModel::sendUIIntent
+            )
+        }
+
+        else -> {}
+    }
+}

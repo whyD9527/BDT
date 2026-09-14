@@ -1,0 +1,105 @@
+name: Build APK (Alpha)
+
+on:
+  push:
+    branches: [main]
+    # 只改文档/工具时不必出包（每次构建约 5-6 分钟）。
+    # 注意：**故意不忽略 `.github/**`** —— 改了 workflow 本身必须跑一次来验证它还能用。
+    # 需要强制出包时用 workflow_dispatch。
+    paths-ignore:
+      - '**/*.md'
+      - 'docs/**'
+      - 'tools/**'
+  pull_request:
+    branches: [main]
+    paths-ignore:
+      - '**/*.md'
+      - 'docs/**'
+      - 'tools/**'
+  workflow_dispatch:
+
+concurrency:
+  group: ${{ github.workflow }}-${{ github.ref }}
+  cancel-in-progress: true
+
+jobs:
+  build:
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Set up JDK 21
+        uses: actions/setup-java@v4
+        with:
+          distribution: zulu
+          java-version: '21'
+
+      - name: Setup Gradle
+        uses: gradle/actions/setup-gradle@v4
+
+      - name: Grant execute permission for gradlew
+        run: chmod +x ./gradlew
+
+      # ------------------------------------------------------------------
+      # 固定签名密钥
+      #
+      # GitHub Actions 每次都是全新虚拟机，debug 签名每次都会重新生成。
+      # 实测连续 8 次构建产出了 8 个互不相同的签名证书，后果是用户每次
+      # 升级都必须先卸载（登录状态与设置全部丢失）。
+      #
+      # 在仓库 Settings → Secrets and variables → Actions 里配置以下 4 项
+      # 即可获得稳定签名；未配置时会自动回落到 debug 签名，构建不会失败。
+      #   ALPHA_KEYSTORE_BASE64   密钥库文件的 base64
+      #   ALPHA_KEYSTORE_PASSWORD 密钥库口令
+      #   ALPHA_KEY_ALIAS         别名
+      #   ALPHA_KEY_PASSWORD      别名口令
+      # ------------------------------------------------------------------
+      - name: Check signing secret
+        id: signcheck
+        run: |
+          if [ -n "${{ secrets.ALPHA_KEYSTORE_BASE64 }}" ]; then
+            echo "has_keystore=true" >> "$GITHUB_OUTPUT"
+            echo "已检测到签名密钥，将使用固定签名。"
+          else
+            echo "has_keystore=false" >> "$GITHUB_OUTPUT"
+            echo "未配置签名密钥，回落到 debug 签名（每次构建签名都不同，无法覆盖升级）。"
+          fi
+
+      - name: Decode signing keystore
+        if: steps.signcheck.outputs.has_keystore == 'true'
+        run: printf '%s' "${{ secrets.ALPHA_KEYSTORE_BASE64 }}" | base64 -d > "$RUNNER_TEMP/mxjs-debug.jks"
+
+      - name: Export signing secrets
+        if: steps.signcheck.outputs.has_keystore == 'true'
+        run: |
+          echo "ALPHA_KEYSTORE_PASSWORD=${{ secrets.ALPHA_KEYSTORE_PASSWORD }}" >> "$GITHUB_ENV"
+          echo "ALPHA_KEY_ALIAS=${{ secrets.ALPHA_KEY_ALIAS }}" >> "$GITHUB_ENV"
+          echo "ALPHA_KEY_PASSWORD=${{ secrets.ALPHA_KEY_PASSWORD }}" >> "$GITHUB_ENV"
+
+      # 单元测试（纯 JVM，不需要设备）。**故意放在打包之前**：
+      # 2026-09 的 wbi 签名回归（漏掉 .take(32) → 所有 wbi 签名失效）能通过编译和
+      # 打包，却会被这里的 WebiTokenUtilsTest 拦住。测试失败就别出包。
+      - name: Run unit tests
+        run: ./gradlew testDebugUnitTest --stacktrace
+
+      - name: Assemble alphaRelease
+        id: release_build
+        continue-on-error: true
+        run: ./gradlew :app:assembleAlphaRelease --stacktrace
+
+      # Release（R8 压缩）万一失败，退回到 Debug 出包，保证一定有 APK
+      - name: Fallback to alphaDebug
+        if: steps.release_build.outcome == 'failure'
+        run: ./gradlew :app:assembleAlphaDebug --stacktrace
+
+      - name: List outputs
+        run: find app/build/outputs/apk -name "*.apk" -type f -exec ls -lh {} \;
+
+      - name: Upload APKs
+        uses: actions/upload-artifact@v4
+        with:
+          name: bilibilias-alpha-apk
+          path: app/build/outputs/apk/**/*.apk
+          if-no-files-found: error

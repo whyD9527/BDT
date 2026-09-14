@@ -1,0 +1,155 @@
+[versions]
+agp = "9.0.0"
+junit = "4.13.2"
+coroutinesVersion = "1.10.2"   # 与本仓库实际解析到的 kotlinx-coroutines-core 一致（见 :core:data:dependencies）
+kotlin = "2.3.0"
+coreKtx = "1.17.0"
+lifecycleRuntimeKtx = "2.10.0"
+activityCompose = "1.12.2"
+composeBom = "2026.01.00"
+androidTools = "32.0.0"
+androidDesugarJdkLibs = "2.1.5"
+koinBom = "4.1.1"
+viewmodelCompose = "2.10.0"
+ksp = "2.3.4"
+room = "2.8.4"
+datastore = "1.2.0"
+protobufPlugin = "0.9.6"
+protobuf = "4.29.2"
+firebase = "34.6.0"
+gms = "4.4.4"
+firebase-crashlytics-plugin = "3.0.6"
+firebase-perf-plugin = "2.0.2"
+konfetti-compose-version = "2.0.5"
+ktorVersion = "3.3.3"
+coil = "3.3.0"
+zxing = "3.5.3"
+material3Android = "1.5.0-alpha10"
+cloudy = "0.4.0"
+nav3Core = "1.0.0"
+lifecycleViewmodelNav3 = "2.10.0"
+paging = "3.3.6"
+playAppUpdate = "2.1.0"
+playAppReview = "2.0.2"
+kolor = "4.0.3"
+deviceCompat = "2.0"
+shizuku = "13.1.5"
+xposed = "82"
+window = "1.5.1"
+adaptive = "1.2.0"
+adaptiveNavigation3 = "1.3.0-alpha06"
+documentfile = "1.1.0"
+ffmpegCommand = "1.3.6-beta"
+ffmpegKitX6kb = "6.1.1"
+
+
+[libraries]
+androidx-core-ktx = { group = "androidx.core", name = "core-ktx", version.ref = "coreKtx" }
+androidx-lifecycle-runtime-ktx = { group = "androidx.lifecycle", name = "lifecycle-runtime-ktx", version.ref = "lifecycleRuntimeKtx" }
+androidx-activity-compose = { group = "androidx.activity", name = "activity-compose", version.ref = "activityCompose" }
+androidx-compose-bom = { group = "androidx.compose", name = "compose-bom", version.ref = "composeBom" }
+androidx-ui = { group = "androidx.compose.ui", name = "ui" }
+androidx-ui-android = { group = "androidx.compose.ui", name = "ui-android" }
+androidx-ui-graphics = { group = "androidx.compose.ui", name = "ui-graphics" }
+androidx-ui-tooling = { group = "androidx.compose.ui", name = "ui-tooling" }
+androidx-ui-tooling-preview = { group = "androidx.compose.ui", name = "ui-tooling-preview" }
+androidx-ui-test-manifest = { group = "androidx.compose.ui", name = "ui-test-manifest" }
+androidx-ui-test-junit4 = { group = "androidx.compose.ui", name = "ui-test-junit4" }
+junit = { group = "junit", name = "junit", version.ref = "junit" }
+# 只用于测试：用**虚拟时间**验"防抖"这类真实时间行为，避免测试随机器负载随机红（第二十六轮）
+kotlinx-coroutines-test = { group = "org.jetbrains.kotlinx", name = "kotlinx-coroutines-test", version.ref = "coroutinesVersion" }
+androidx-material3 = { group = "androidx.compose.material3", name = "material3" }
+androidx-material3-window-size = { group = "androidx.compose.material3", name = "material3-window-size-class-android" }
+androidx-material-icons-extended = { group = "androidx.compose.material", name = "material-icons-extended" }
+android-desugarJdkLibs = { group = "com.android.tools", name = "desugar_jdk_libs", version.ref = "androidDesugarJdkLibs" }
+androidx-room-ktx = { group = "androidx.room", name = "room-ktx", version.ref = "room" }
+androidx-room-compiler = { group = "androidx.room", name = "room-compiler", version.ref = "room" }
+androidx-room-runtime = { group = "androidx.room", name = "room-runtime", version.ref = "room" }
+ffmpeg-command = { module = "com.github.AnJoiner.FFmpegCommand:ffmpeg", version.ref = "ffmpegCommand" }
+ffmpeg-kit-x6kb = { module = "com.moizhassan.ffmpeg:ffmpeg-kit-16kb", version.ref = "ffmpegKitX6kb" }
+koin-bom = { group = "io.insert-koin", name = "koin-bom", version.ref = "koinBom" }
+koin-android = { module = "io.insert-koin:koin-android" }
+koin-compose = { module = "io.insert-koin:koin-androidx-compose" }
+lifecycle-viewmodel-compose = { group = "androidx.lifecycle", name = "lifecycle-viewmodel-compose", version.ref = "viewmodelCompose" }
+androidx-datastore = { group = "androidx.datastore", name = "datastore", version.ref = "datastore" }
+androidx-datastore-core = { group = "androidx.datastore", name = "datastore-core", version.ref = "datastore" }
+protobuf-kotlin-lite = { group = "com.google.protobuf", name = "protobuf-kotlin-lite", version.ref = "protobuf" }
+androidx-material3-android = { group = "androidx.compose.material3", name = "material3-android", version.ref = "material3Android" }
+androidx-window = {module = "androidx.window:window", version.ref = "window"}
+androidx-adaptive = {module = "androidx.compose.material3.adaptive:adaptive", version.ref = "adaptive"}
+androidx-adaptive-layout = {module = "androidx.compose.material3.adaptive:adaptive-layout", version.ref = "adaptive"}
+androidx-adaptive-navigation = {module = "androidx.compose.material3.adaptive:adaptive-navigation",version.ref = "adaptive"}
+protobuf-protoc = { group = "com.google.protobuf", name = "protoc", version.ref = "protobuf" }
+firebase-bom = { group = "com.google.firebase", name = "firebase-bom", version.ref = "firebase" }
+firebase-analytics = { group = "com.google.firebase", name = "firebase-analytics" }
+firebase-crashlytics = { group = "com.google.firebase", name = "firebase-crashlytics" }
+firebase-inappmessaging-display = { group = "com.google.firebase", name = "firebase-inappmessaging-display" }
+firebase-messaging = { group = "com.google.firebase", name = "firebase-messaging" }
+firebase-config = { group = "com.google.firebase", name = "firebase-config" }
+firebase-crashlytics-ndk = { group = "com.google.firebase", name = "firebase-crashlytics-ndk" }
+firebase-perf = { group = "com.google.firebase", name = "firebase-perf" }
+konfetti-compose = { group = "nl.dionsegijn", name = "konfetti-compose", version.ref = "konfetti-compose-version" }
+ktor-client-core = { group = "io.ktor", name = "ktor-client-core", version.ref = "ktorVersion" }
+ktor-client-okhttp = { group = "io.ktor", name = "ktor-client-okhttp", version.ref = "ktorVersion" }
+ktor-client-cio = { group = "io.ktor", name = "ktor-client-cio", version.ref = "ktorVersion" }
+
+ktor-client-content-negotiation = { group = "io.ktor", name = "ktor-client-content-negotiation", version.ref = "ktorVersion" }
+# 仅供本地/CI 的 JVM 单测使用（不参与生产包）：用内存假服务器验证分片下载的字节级正确性
+ktor-client-mock = { group = "io.ktor", name = "ktor-client-mock", version.ref = "ktorVersion" }
+ktor-serialization-kotlinx-json = { group = "io.ktor", name = "ktor-serialization-kotlinx-json", version.ref = "ktorVersion" }
+ktor-serialization-kotlinx-protobuf = { group = "io.ktor", name = "ktor-serialization-kotlinx-protobuf", version.ref = "ktorVersion" }
+ktor-client-logging = { group = "io.ktor", name = "ktor-client-logging", version.ref = "ktorVersion" }
+coil-compose = { group = "io.coil-kt.coil3", name = "coil-compose", version.ref = "coil" }
+coil-network-okhttp = { group = "io.coil-kt.coil3", name = "coil-network-okhttp", version.ref = "coil" }
+zxing-core = { group = "com.google.zxing", name = "core", version.ref = "zxing" }
+android-gradlePlugin = { group = "com.android.tools.build", name = "gradle", version.ref = "agp" }
+android-tools-common = { group = "com.android.tools", name = "common", version.ref = "androidTools" }
+compose-gradlePlugin = { module = "org.jetbrains.kotlin:compose-compiler-gradle-plugin", version.ref = "kotlin" }
+compose-cloudy = { module = "com.github.skydoves:cloudy", version.ref = "cloudy" }
+paging-compose = { group = "androidx.paging", name = "paging-compose-android", version.ref = "paging" }
+play-app-update-kts = { module = "com.google.android.play:app-update-ktx", version.ref = "playAppUpdate" }
+play-app-review-kts = { module = "com.google.android.play:review-ktx", version.ref = "playAppReview" }
+material-kolor = { module = "com.materialkolor:material-kolor", version.ref = "kolor" }
+
+# Core Navigation 3 libraries
+androidx-navigation3-runtime = { module = "androidx.navigation3:navigation3-runtime", version.ref = "nav3Core" }
+androidx-navigation3-ui = { module = "androidx.navigation3:navigation3-ui", version.ref = "nav3Core" }
+androidx-navigation3-adaptive = { group = "androidx.compose.material3.adaptive", name = "adaptive-navigation3", version.ref = "adaptiveNavigation3" }
+
+# Optional add-on libraries
+androidx-lifecycle-viewmodel-navigation3 = { module = "androidx.lifecycle:lifecycle-viewmodel-navigation3", version.ref = "lifecycleViewmodelNav3" }
+
+device-compat = { module = "com.github.getActivity:DeviceCompat", version.ref = "deviceCompat" }
+
+shizuku-api = { module = "dev.rikka.shizuku:api", version.ref = "shizuku" }
+shizuku-provider = { module = "dev.rikka.shizuku:provider", version.ref = "shizuku" }
+
+xposed-api = { module = "de.robv.android.xposed:api", version.ref = "xposed" }
+androidx-documentfile = { group = "androidx.documentfile", name = "documentfile", version.ref = "documentfile" }
+
+[plugins]
+android-application = { id = "com.android.application", version.ref = "agp" }
+kotlin-android = { id = "org.jetbrains.kotlin.android", version.ref = "kotlin" }
+kotlin-compose = { id = "org.jetbrains.kotlin.plugin.compose", version.ref = "kotlin" }
+android-library = { id = "com.android.library", version.ref = "agp" }
+ksp = { id = "com.google.devtools.ksp", version.ref = "ksp" }
+protobuf = { id = "com.google.protobuf", version.ref = "protobufPlugin" }
+gms-google-services = { id = "com.google.gms.google-services", version.ref = "gms" }
+firebase-crashlytics = { id = "com.google.firebase.crashlytics", version.ref = "firebase-crashlytics-plugin" }
+firebase-perf = { id = "com.google.firebase.firebase-perf", version.ref = "firebase-perf-plugin" }
+kotlin-plugin-serialization = { id = "org.jetbrains.kotlin.plugin.serialization", version.ref = "kotlin" }
+kotlin-parcelize = {id = "kotlin-parcelize"}
+
+bilibilias-android-library = { id = "bilibilias.android.library" }
+bilibilias-android-application = { id = "bilibilias.android.application" }
+bilibilias-android-koin = { id = "bilibilias.android.koin" }
+bilibilias-android-ffmpegVerification = { id = "bilibilias.android.ffmpegVerification" }
+
+[bundles]
+compose = [
+    "androidx-activity-compose", "androidx-ui-graphics", "androidx-material3",
+    "androidx-material3-window-size",
+    "androidx-material-icons-extended", "androidx-ui", "androidx-ui-android",
+    "androidx-material3-android", "androidx-navigation3-runtime", "androidx-navigation3-ui",
+    "androidx-lifecycle-viewmodel-navigation3","androidx-navigation3-adaptive"
+]

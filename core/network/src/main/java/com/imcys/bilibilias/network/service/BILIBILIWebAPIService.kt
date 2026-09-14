@@ -1,0 +1,521 @@
+package com.imcys.bilibilias.network.service
+
+import android.se.omapi.Session
+import com.imcys.bilibilias.network.FlowNetWorkResult
+import com.imcys.bilibilias.network.config.ACCESS_ID
+import com.imcys.bilibilias.network.config.AID
+import com.imcys.bilibilias.network.config.API.BILIBILI.SPACE_BASE_URL
+import com.imcys.bilibilias.network.config.API.BILIBILI.WEB_BANGUMI_FOLLOW_URL
+import com.imcys.bilibilias.network.config.API.BILIBILI.WEB_COIN_LIST_URL
+import com.imcys.bilibilias.network.config.API.BILIBILI.WEB_DANMAKU_URL
+import com.imcys.bilibilias.network.config.API.BILIBILI.WEB_FOLDER_FAV_LIST_URL
+import com.imcys.bilibilias.network.config.API.BILIBILI.WEB_FOLDER_LIST_URL
+import com.imcys.bilibilias.network.config.API.BILIBILI.WEB_HISTORY_CURSOR_URL
+import com.imcys.bilibilias.network.config.API.BILIBILI.WEB_LIKE_LIST_URL
+import com.imcys.bilibilias.network.config.API.BILIBILI.WEB_LOGIN_INFO_URL
+import com.imcys.bilibilias.network.config.API.BILIBILI.WEB_LOGOUT_URL
+import com.imcys.bilibilias.network.config.API.BILIBILI.WEB_OGV_PLAYER_URL
+import com.imcys.bilibilias.network.config.API.BILIBILI.WEB_PGC_PLAYER_URL
+import com.imcys.bilibilias.network.config.API.BILIBILI.WEB_PLAY_INFO_V2_URL
+import com.imcys.bilibilias.network.config.API.BILIBILI.WEB_QRCODE_GENERATE_URL
+import com.imcys.bilibilias.network.config.API.BILIBILI.WEB_QRCODE_POLL_URL
+import com.imcys.bilibilias.network.config.API.BILIBILI.WEB_RELATION_STAT_URL
+import com.imcys.bilibilias.network.config.API.BILIBILI.WEB_SPACE_ARC_SEARCH
+import com.imcys.bilibilias.network.config.API.BILIBILI.WEB_SPACE_UPSTAT_URL
+import com.imcys.bilibilias.network.config.API.BILIBILI.WEB_SPI_URL
+import com.imcys.bilibilias.network.config.API.BILIBILI.WEB_STEIN_EDGE_INFO_V2_URL
+import com.imcys.bilibilias.network.config.API.BILIBILI.WEB_VIDEO_PLAYER_URL
+import com.imcys.bilibilias.network.config.API.BILIBILI.WEB_WEBI_ACC_INFO_URL
+import com.imcys.bilibilias.network.config.API.BILIBILI.WEB_WEBI_PGC_SEASON_VIEW
+import com.imcys.bilibilias.network.config.API.BILIBILI.WEB_WEBI_VIDEO_VIEW
+import com.imcys.bilibilias.network.config.BROWSER_FINGERPRINT
+import com.imcys.bilibilias.network.config.BVID
+import com.imcys.bilibilias.network.config.CID
+import com.imcys.bilibilias.network.config.EP_ID
+import com.imcys.bilibilias.network.config.FNVAL
+import com.imcys.bilibilias.network.config.FOURK
+import com.imcys.bilibilias.network.config.MEDIA_ID
+import com.imcys.bilibilias.network.config.MID
+import com.imcys.bilibilias.network.config.PLATFORM
+import com.imcys.bilibilias.network.config.PN
+import com.imcys.bilibilias.network.config.PS
+import com.imcys.bilibilias.network.config.QN
+import com.imcys.bilibilias.network.config.REFERER
+import com.imcys.bilibilias.network.config.SEASON_ID
+import com.imcys.bilibilias.network.config.TRY_LOOK
+import com.imcys.bilibilias.network.config.VMID
+import com.imcys.bilibilias.network.config.W_WEBID
+import com.imcys.bilibilias.network.httpRequest
+import com.imcys.bilibilias.network.model.BILILoginUserInfo
+import com.imcys.bilibilias.network.model.BiliApiResponse
+import com.imcys.bilibilias.network.model.QRCodeInfo
+import com.imcys.bilibilias.network.model.QRCodePollInfo
+import com.imcys.bilibilias.network.model.WebSpiInfo
+import com.imcys.bilibilias.network.model.danmuku.DanmakuElem
+import com.imcys.bilibilias.network.model.danmuku.DmSegMobileReply
+import com.imcys.bilibilias.network.model.user.BILISpaceArchiveInfo
+import com.imcys.bilibilias.network.model.user.BILIUserBangumiFollowInfo
+import com.imcys.bilibilias.network.model.user.BILIUserFolderDetailInfo
+import com.imcys.bilibilias.network.model.user.BILIUserFolderListInfo
+import com.imcys.bilibilias.network.model.user.BILIUserHistoryPlayInfo
+import com.imcys.bilibilias.network.model.user.BILIUserSpaceAccInfo
+import com.imcys.bilibilias.network.model.user.BILIUserRelationStatInfo
+import com.imcys.bilibilias.network.model.user.BILIUserSpaceUpStat
+import com.imcys.bilibilias.network.model.user.BILIUserVideoLikeInfo
+import com.imcys.bilibilias.network.model.user.LikeAndCoinItemData
+import com.imcys.bilibilias.network.model.video.BILIDonghuaOgvPlayerInfo
+import com.imcys.bilibilias.network.model.video.BILIDonghuaPlayerInfo
+import com.imcys.bilibilias.network.model.video.BILIDonghuaSeasonInfo
+import com.imcys.bilibilias.network.model.video.BILISteinEdgeInfo
+import com.imcys.bilibilias.network.model.video.BILIVideoCCInfo
+import com.imcys.bilibilias.network.model.video.BILIVideoPlayerInfo
+import com.imcys.bilibilias.network.model.video.BILIVideoPlayerInfoV2
+import com.imcys.bilibilias.network.model.video.BILIVideoViewInfo
+import com.imcys.bilibilias.network.model.video.OgvExpInfo
+import com.imcys.bilibilias.network.model.video.OgvPlayerParam
+import com.imcys.bilibilias.network.model.video.OgvVideoIndex
+import com.imcys.bilibilias.network.model.video.OgvVideoParam
+import com.imcys.bilibilias.network.model.video.RequestOgvPlayerInfoData
+import com.imcys.bilibilias.network.utils.WebiTokenUtils.encWbi
+import io.ktor.client.HttpClient
+import io.ktor.client.call.body
+import io.ktor.client.request.forms.formData
+import io.ktor.client.request.get
+import io.ktor.client.request.header
+import io.ktor.client.request.parameter
+import io.ktor.client.request.post
+import io.ktor.client.request.setBody
+import io.ktor.client.statement.bodyAsText
+import io.ktor.client.statement.request
+import io.ktor.http.ContentType
+import io.ktor.http.HttpHeaders
+import io.ktor.http.contentType
+import io.ktor.http.decodeURLPart
+import kotlinx.coroutines.Dispatchers
+import kotlinx.coroutines.flow.Flow
+import kotlinx.coroutines.withContext
+import kotlinx.serialization.json.Json
+import kotlinx.serialization.json.jsonObject
+import kotlinx.serialization.json.jsonPrimitive
+
+/**
+ * Web平台API
+ */
+class BILIBILIWebAPIService(
+    val httpClient: HttpClient,
+) {
+
+    /**
+     * 请求二维码
+     */
+    suspend fun qrcodeGenerate(): FlowNetWorkResult<QRCodeInfo> = httpClient.httpRequest {
+        get(WEB_QRCODE_GENERATE_URL)
+    }
+
+    /**
+     * 检查扫码状态
+     */
+    suspend fun qrcodePoll(qrcodeKey: String): FlowNetWorkResult<QRCodePollInfo> =
+        httpClient.httpRequest {
+            get(WEB_QRCODE_POLL_URL) {
+                parameter("qrcode_key", qrcodeKey)
+            }
+        }
+
+    /**
+     * 获取登录信息
+     */
+    suspend fun getLoginUserInfo(): FlowNetWorkResult<BILILoginUserInfo> =
+        httpClient.httpRequest {
+            get(WEB_LOGIN_INFO_URL)
+        }
+
+    /**
+     * 获取登录信息
+     */
+    suspend fun checkLoginUserInfo(): BILILoginUserInfo = httpClient.get(WEB_LOGIN_INFO_URL).body()
+
+
+
+    /**
+     * 获取WebI签名信息
+     */
+    suspend fun getWebIInfoNoCheckLogin(): BiliApiResponse<BILILoginUserInfo> =
+        httpClient.get(WEB_LOGIN_INFO_URL).body()
+
+
+    /**
+     * 获取签名:仅Web有
+     */
+    suspend fun getWebSpiInfo(): FlowNetWorkResult<WebSpiInfo> =
+        httpClient.httpRequest {
+            get(WEB_SPI_URL)
+        }
+
+
+    /**
+     * 获取签名:仅Web有，TV共用
+     */
+    suspend fun getUserAccInfo(mid: Long): FlowNetWorkResult<BILIUserSpaceAccInfo> =
+        httpClient.httpRequest {
+            val newMap = mapOf(
+                MID to mid.toString(),
+            ) + BROWSER_FINGERPRINT + accessUserSpaceGetRenderData(mid)
+            get(WEB_WEBI_ACC_INFO_URL) {
+                header(REFERER, "${SPACE_BASE_URL}${mid}")
+                encWbi(newMap).forEach { (k, v) ->
+                    parameter(k, v)
+                }
+            }
+        }
+
+
+    suspend fun getSpaceUpStat(mid: Long): FlowNetWorkResult<BILIUserSpaceUpStat> =
+        httpClient.httpRequest {
+            get(WEB_SPACE_UPSTAT_URL) {
+                parameter(MID, mid)
+            }
+        }
+
+    suspend fun getRelationStat(mid: Long): FlowNetWorkResult<BILIUserRelationStatInfo> =
+        httpClient.httpRequest {
+            get(WEB_RELATION_STAT_URL) {
+                parameter("vmid", mid)
+            }
+        }
+
+
+    /**
+     * 获取投稿视频：Web和TV共用
+     */
+    suspend fun getSpaceArchiveInfo(
+        mid: Long,
+        pn: Int = 1,
+        ps: Int = 2,
+        keyword: String? = null,
+    ): FlowNetWorkResult<BILISpaceArchiveInfo> =
+        httpClient.httpRequest {
+            val newMap = mutableMapOf(
+                MID to mid.toString(),
+                "pn" to pn.toString(),
+                "ps" to ps.toString(),
+                "platform" to "web",
+                "index" to "0",
+                "order" to "pubdate"
+            ).apply {
+                keyword?.let { put("keyword", it) }
+            } + BROWSER_FINGERPRINT + accessUserSpaceGetRenderData(mid)
+            get(WEB_SPACE_ARC_SEARCH) {
+                encWbi(newMap).forEach { (k, v) ->
+                    parameter(k, v)
+                }
+            }
+        }
+
+    /**
+     * 获取视频详情：通用接口
+     */
+    suspend fun getVideoView(
+        bvId: String?,
+        aid: String?
+    ): FlowNetWorkResult<BILIVideoViewInfo> = httpClient.httpRequest {
+        val newMap = mutableMapOf<String, String>().apply {
+            bvId?.let { put(BVID, it) }
+            aid?.let { put(AID, it) }
+        } + BROWSER_FINGERPRINT
+        get(WEB_WEBI_VIDEO_VIEW) {
+            encWbi(newMap).forEach { (k, v) ->
+                parameter(k, v)
+            }
+        }
+    }
+
+
+    suspend fun getDonghuaSeasonViewInfo(
+        epId: Long?,
+        seasonId: Long?
+    ): FlowNetWorkResult<BILIDonghuaSeasonInfo> = httpClient.httpRequest {
+        val newMap = mutableMapOf<String, String>().apply {
+            epId?.let { put(EP_ID, it.toString()) }
+            seasonId?.let { put(SEASON_ID, it.toString()) }
+        }
+        get(WEB_WEBI_PGC_SEASON_VIEW) {
+            newMap.forEach { (k, v) ->
+                parameter(k, v)
+            }
+        }
+    }
+
+    suspend fun getDonghuaPlayerInfo(
+        epId: Long?,
+        seasonId: Long?,
+        fnval: Int = 12240,
+        qn: Int = 116,
+    ): FlowNetWorkResult<BILIDonghuaPlayerInfo> = httpClient.httpRequest {
+
+        val newMap = mutableMapOf<String, String>().apply {
+            epId?.let { put(EP_ID, it.toString()) }
+            seasonId?.let { put(SEASON_ID, it.toString()) }
+            put(QN, qn.toString())
+            put(FNVAL, fnval.toString())
+            put(FOURK, "1")
+        }
+
+        get(WEB_PGC_PLAYER_URL) {
+            newMap.forEach { (k, v) ->
+                parameter(k, v)
+            }
+        }
+    }
+
+    suspend fun getDonghuaOgvPlayerInfo(
+        epId: Long?,
+        seasonId: Long?,
+        fnval: Int = 4048,
+        qn: Int = 116,
+        csrf: String? = null,
+    ): FlowNetWorkResult<BILIDonghuaOgvPlayerInfo> {
+        val body = RequestOgvPlayerInfoData(
+            expInfo = OgvExpInfo(
+                deviceSupportHdr = true,
+                ogvHalfPay = true,
+            ),
+            playerParam = OgvPlayerParam(
+                drmTechType = 2,
+                fnval = fnval,
+                fnver = 0,
+            ),
+            videoParam = OgvVideoParam(
+                qn = qn,
+            ),
+            videoIndex = OgvVideoIndex(
+                ogvEpisodeId = epId,
+                ogvSeasonId = seasonId,
+            ),
+            scene = "normal"
+        )
+        return httpClient.httpRequest {
+            post(WEB_OGV_PLAYER_URL) {
+                contentType(ContentType.Application.Json)
+                csrf?.let { parameter("csrf", it) }
+                setBody(body)
+            }
+        }
+    }
+
+    suspend fun getVideoPlayerInfo(
+        cid: Long,
+        bvId: String?,
+        aid: Long? = null,
+        fnval: Int = 4048,
+        qn: Int = 127,
+        curLanguage: String? = null,
+        curProductionType: Int? = null,
+        tryLook: String? = null
+    ): FlowNetWorkResult<BILIVideoPlayerInfo> = httpClient.httpRequest {
+        val newMap = mutableMapOf<String, String>().apply {
+            bvId?.let { put(BVID, it) }
+            aid?.let { put(AID, it.toString()) }
+            put(CID, cid.toString())
+            put(QN, qn.toString())
+            put(FNVAL, fnval.toString())
+            put(FOURK, "1")
+            curLanguage?.let { put("cur_language", it) }
+            curProductionType?.let { put("cur_production_type", it.toString()) }
+        } + BROWSER_FINGERPRINT
+
+        get(WEB_VIDEO_PLAYER_URL) {
+            encWbi(newMap).forEach { (k, v) ->
+                parameter(k, v)
+            }
+        }
+    }
+
+    suspend fun getBangumiFollowInfo(
+        vmid: Long,
+        type: Int = 1,
+        pn: Int = 1,
+        ps: Int = 20
+    ): FlowNetWorkResult<BILIUserBangumiFollowInfo> = httpClient.httpRequest {
+        val newMap = mutableMapOf<String, String>().apply {
+            put(VMID, vmid.toString())
+            put("type", type.toString())
+            put(PN, pn.toString())
+            put(PS, ps.toString())
+            put(PLATFORM, "web")
+        }
+        get(WEB_BANGUMI_FOLLOW_URL) {
+            encWbi(newMap).forEach { (k, v) ->
+                parameter(k, v)
+            }
+        }
+    }
+
+    /**
+     * 收藏夹
+     */
+    suspend fun getFolderList(mid: Long): FlowNetWorkResult<BILIUserFolderListInfo> =
+        httpClient.httpRequest {
+            val newMap = mutableMapOf<String, String>().apply {
+                put("up_mid", mid.toString())
+            }
+            get(WEB_FOLDER_LIST_URL) {
+                newMap.forEach { (k, v) ->
+                    parameter(k, v)
+                }
+            }
+        }
+
+    suspend fun getFolderFavList(
+        mediaId: Long,
+        pn: Int = 1,
+        ps: Int = 40
+    ): FlowNetWorkResult<BILIUserFolderDetailInfo> =
+        httpClient.httpRequest {
+            val newMap = mutableMapOf<String, String>().apply {
+                put(MEDIA_ID, mediaId.toString())
+                put(PN, pn.toString())
+                put(PS, ps.toString())
+                put(PLATFORM, "web")
+            }
+            get(WEB_FOLDER_FAV_LIST_URL) {
+                newMap.forEach { (k, v) ->
+                    parameter(k, v)
+                }
+            }
+        }
+
+    suspend fun getLikeVideoList(
+        mid: Long,
+    ): FlowNetWorkResult<BILIUserVideoLikeInfo> =
+        httpClient.httpRequest {
+            get(WEB_LIKE_LIST_URL) {
+                hashMapOf(VMID to mid).forEach { (k, v) ->
+                    parameter(k, v)
+                }
+            }
+        }
+
+    suspend fun getCoinVideoList(
+        mid: Long,
+    ): FlowNetWorkResult<List<LikeAndCoinItemData>> =
+        httpClient.httpRequest {
+            get(WEB_COIN_LIST_URL) {
+                hashMapOf(VMID to mid).forEach { (k, v) ->
+                    parameter(k, v)
+                }
+            }
+        }
+
+    suspend fun getVideoPlayerInfoV2(
+        cid: Long,
+        bvId: String?,
+        aid: Long? = null,
+    ): FlowNetWorkResult<BILIVideoPlayerInfoV2> = httpClient.httpRequest {
+        val newMap = mutableMapOf<String, String>().apply {
+            bvId?.let { put(BVID, it) }
+            aid?.let { put(AID, it.toString()) }
+            put(CID, cid.toString())
+        } + BROWSER_FINGERPRINT
+
+        get(WEB_PLAY_INFO_V2_URL) {
+            encWbi(newMap).forEach { (k, v) ->
+                parameter(k, v)
+            }
+        }
+    }
+
+    suspend fun getVideoCCInfo(url: String): BILIVideoCCInfo = httpClient.get(url).body()
+
+    /**
+     * 用来解析正确的地址
+     */
+    suspend fun shortLink(url: String): String = httpClient.get(url)
+        .request
+        .url
+        .toString()
+
+
+    /**
+     * 互动视频
+     */
+    suspend fun getSteinEdgeInfoV2(
+        bvId: String? = null,
+        aid: String? = null,
+        graphVersion: Long?,
+        edgeId: Long? = 0
+    ): FlowNetWorkResult<BILISteinEdgeInfo> =
+        httpClient.httpRequest {
+            val newMap = mutableMapOf<String, String>().apply {
+                bvId?.let { put(BVID, it) }
+                aid?.let { put(AID, it) }
+                graphVersion?.let { put("graph_version", it.toString()) }
+                put("edge_id", edgeId.toString())
+            }
+            get(WEB_STEIN_EDGE_INFO_V2_URL) {
+                newMap.forEach { (k, v) ->
+                    parameter(k, v)
+                }
+            }
+        }
+
+    suspend fun getHistoryCursor(
+        max: Long = 0L,
+        viewAt: Long = 0L,
+        ps: Int = 20,
+        type: String = "archive",
+    ): FlowNetWorkResult<BILIUserHistoryPlayInfo> = httpClient.httpRequest {
+        get(WEB_HISTORY_CURSOR_URL) {
+            parameter("max", max)
+            parameter("view_at", viewAt)
+            parameter("type", type)
+            parameter(PS, ps)
+        }
+    }
+
+    suspend fun logout(biliJct: String): FlowNetWorkResult<String> = httpClient.httpRequest {
+        post(WEB_LOGOUT_URL) {
+            formData {
+                append("bili_jct", biliJct)
+            }
+        }
+    }
+
+    suspend fun getDanmaku(
+        pid: Long? = null,
+        oid: Long,
+        segmentIndex: Int = 1,
+        type: Int = 1
+    ): Result<DmSegMobileReply> = runCatching {
+        val newMap = mutableMapOf(
+            "oid" to oid.toString(),
+            "type" to type.toString(),
+            "segment_index" to segmentIndex.toString(),
+        ).apply {
+            pid?.let { put("pid", it.toString()) }
+        } + BROWSER_FINGERPRINT
+        httpClient.get(WEB_DANMAKU_URL) {
+            encWbi(newMap).forEach { (k, v) ->
+                parameter(k, v)
+            }
+        }.body()
+    }
+
+
+    private suspend fun accessUserSpaceGetRenderData(mid: Long): Map<String, String> = withContext(
+        Dispatchers.IO
+    ) {
+        val result = runCatching {
+            val response = httpClient.get(SPACE_BASE_URL + mid).bodyAsText()
+            val regex = "\"__RENDER_DATA__\" type=\"application/json\">(.*)</script>".toRegex()
+            val result =
+                regex.find(response)?.groupValues?.get(1)?.ifEmpty { return@runCatching emptyMap() }
+                    ?: return@runCatching emptyMap()
+            val accessId =
+                Json.parseToJsonElement(result.decodeURLPart()).jsonObject[ACCESS_ID]?.jsonPrimitive?.content
+                    ?: ""
+            mapOf(W_WEBID to accessId)
+        }
+        result.getOrNull() ?: emptyMap()
+    }
+}

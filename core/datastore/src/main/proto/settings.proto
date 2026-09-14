@@ -1,0 +1,111 @@
+syntax = "proto3";
+
+option java_package = "com.imcys.bilibilias.datastore";
+option java_multiple_files = true;
+
+message AppSettings {
+  AgreePrivacyPolicyState agree_privacy_policy = 1;
+
+  KnowAboutApp know_about_app = 2;
+
+  bool enabled_roam = 3;
+
+  bool enabled_dynamic_color = 4;
+
+  message HomeLayoutItem {
+    HomeLayoutType type = 1;
+    bool is_hidden = 2;
+  }
+
+  repeated HomeLayoutItem home_layout_typeset = 5;
+
+  // 最后一次跳过更新的版本code
+  int32 last_skip_update_version_code = 6;
+  // 最后一次跳过的版本名称
+  string last_skip_update_version = 7;
+  // 最后一次记录不看的公告内容
+  string last_bulletin_content = 8;
+
+  string download_uri = 9;
+
+  EpisodeListMode episode_list_mode = 10;
+
+  // 视频命名规则
+  string video_naming_rule = 11;
+  // 番剧命名规则
+  string bangumi_naming_rule = 12;
+
+  // bilibili线路配置
+  string bili_line_host = 13;
+
+  // 使用过的工具记录
+  repeated string use_tool_history = 14;
+
+  // 启用剪贴板自动处理
+  optional bool enabled_clipboard_auto_handling = 15;
+
+  // 视频解析平台
+  optional VideoParsePlatform video_parse_platform = 16;
+
+
+  enum VideoParsePlatform{
+    // Web
+    Web = 0;
+    // TV
+    TV = 1;
+    // 手机
+    Mobile = 2;
+  }
+
+
+  enum EpisodeListMode{
+    EpisodeListMode_Grid = 0;
+    EpisodeListMode_List = 1;
+  }
+
+  enum HomeLayoutType {
+    Banner = 0 ;
+    Announcement = 1 ;
+    UpdateInfo = 2;
+    Tools = 3 ;
+    DownloadList = 4;
+  }
+
+  enum KnowAboutApp{
+    NotKnow = 0;
+    Know = 1;
+  }
+
+  enum AgreePrivacyPolicyState {
+    Default = 0;
+    NotAgreed = 1;
+    Agreed = 2;
+    Refuse = 3;
+  }
+
+  // 下载完成列表排序方式
+  DownloadSortType download_sort_type = 17;
+
+  enum DownloadSortType {
+    DownloadSort_TimeDesc = 0;  // 时间降序（默认）
+    DownloadSort_TimeAsc = 1;   // 时间升序
+    DownloadSort_TitleAsc = 2;  // 标题 A→Z
+    DownloadSort_TitleDesc = 3; // 标题 Z→A
+    DownloadSort_SizeDesc = 4;  // 文件大小降序
+    DownloadSort_SizeAsc = 5;   // 文件大小升序
+  }
+
+  string use_video_container = 18;
+  string use_audio_container = 19;
+
+  // 多线程分片下载（2026-09-12，第十五轮之后）。
+  //
+  // 两个字段都用 `optional`（proto3 显式存在性），因为**"用户没设置过"和"用户关掉了"必须区分**：
+  //   - 没设置过 → 按默认值走（默认**开**、并发 **4**），这样加了设置项也不会让老用户
+  //     悄悄失去已经能用、而且实测通过的功能；
+  //   - 显式关掉 → 才走单连接。
+  // 若用普通 bool（默认 false），一升级就会把功能默认关掉，属于静默的行为回归。
+  optional bool segmented_download_enabled = 20;
+  optional int32 segmented_download_concurrency = 21;
+
+}

@@ -1,0 +1,44 @@
+name: 🐛 Bug 报告
+description: 帮助我们改进现有功能
+title: "[Bug]: "
+labels: ["bug"]
+body:
+  - type: markdown
+    attributes:
+      value: |
+        感谢您花时间填写这份 Bug 报告！请尽可能详细地填写以下信息，这将帮助我们更快地定位和解决问题。
+
+  - type: textarea
+    id: system_info
+    attributes:
+      label: 系统信息
+      description: 如果是3.0.0的版本可以在APP的设置页面查看系统信息，那里提供了一键复制粘贴功能。如果是2.x及以下版本请描述你的安卓系统版本和机型及正在使用的版本。
+    validations:
+      required: true
+
+  - type: textarea
+    id: what-happened
+    attributes:
+      label: 遇到了什么问题？
+      description: 请详细描述您遇到的问题，包括如何复现这个问题。
+    validations:
+      required: true
+
+  - type: dropdown
+    id: contribution
+    attributes:
+      label: 贡献意向
+      description: 您是否有意向为该问题的修复提供进一步贡献？（无论您的选择如何，我们都非常欢迎您的反馈！）
+      options:
+        - 没有意向，仅报告问题
+        - 可以提供更详细的问题重现步骤
+        - 愿意参与讨论和解决方案设计
+        - 愿意协助该改动影响的相关功能测试
+        - 有兴趣参与部分代码修复
+        - 可以完整负责此问题的修复
+
+  - type: textarea
+    id: additional
+    attributes:
+      label: 补充信息
+      description: 还有什么其他信息需要补充的吗？

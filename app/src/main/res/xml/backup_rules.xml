@@ -1,0 +1,11 @@
+<?xml version="1.0" encoding="utf-8"?>
+<!--
+  备份规则（作用于 API 31 以下设备）。
+  登录凭据（Cookie / access_token）以明文存放在 Room 数据库与 Proto DataStore 中，
+  因此这里全部排除，避免被云备份或 adb backup 带出设备。
+-->
+<full-backup-content>
+    <exclude domain="database" path="." />
+    <exclude domain="sharedpref" path="." />
+    <exclude domain="file" path="datastore" />
+</full-backup-content>
