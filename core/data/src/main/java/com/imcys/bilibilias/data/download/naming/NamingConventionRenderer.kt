@@ -40,8 +40,16 @@ package com.imcys.bilibilias.data.download.naming
  */
 object NamingConventionRenderer {
 
-    /** 模板里所有形如 `{xxx}` 的片段（真实占位符全是小写字母 + 下划线） */
-    private val placeholderPattern = Regex("\\{[a-z_]+}")
+    /**
+     * 模板里所有形如 `{xxx}` 的片段（真实占位符全是小写字母 + 下划线）。
+     *
+     * ⚠️ **右花括号也必须转义**（`\}`）。写成 `"\\{[a-z_]+}"` 在 **JDK 上能跑、在 Android 上直接崩**：
+     * 设备用的是 ICU 正则引擎，`Pattern` 的解析比 JDK 严 —— 未转义的 `}` 会报
+     * `PatternSyntaxException: Syntax error in regexp pattern near index 10`，
+     * 而这类静态初始化的异常是 `ExceptionInInitializerError`，**整条下载线程直接挂掉**
+     * （第三十一轮真机第一次点下载就崩了；本机单测全绿也照样漏 —— 见交接文档第八节第 20 条）。
+     */
+    private val placeholderPattern = Regex("\\{[a-z_]+\\}")
 
     /** 模板字面段里的连续下划线（只对本段生效，见类的说明） */
     private val runsOfSeparators = Regex("_+")
