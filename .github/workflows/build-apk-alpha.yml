@@ -78,6 +78,26 @@ jobs:
           echo "ALPHA_KEY_ALIAS=${{ secrets.ALPHA_KEY_ALIAS }}" >> "$GITHUB_ENV"
           echo "ALPHA_KEY_PASSWORD=${{ secrets.ALPHA_KEY_PASSWORD }}" >> "$GITHUB_ENV"
 
+      # 把签名证书的指纹打到日志里。**这是公开信息** —— 每个已发布的 APK 里都带着
+      # 这张证书，任何人都能解出来，所以不算泄密（导出工作流里也是同样理由）。
+      #
+      # 为什么要打：以前要回答"这次构建到底用的是不是固定签名"，只能把 139MB 的
+      # artifact 下下来、装到设备上再提签名 —— 代价太大，于是这一步常常就不做了。
+      # 打到日志里之后，核对只需要看一眼 CI 页面；而且 **Secrets 填错（口令/别名不对）
+      # 会当场暴露**，而不是等用户发现装不上才发现。
+      #
+      # 期望值：72:2D:A0:56:6C:73:E7:08:F4:88:BC:95:6C:75:AA:91:CD:64:18:56:17:7A:4B:66:A6:87:CE:71:E3:03:CF:06
+      - name: Print signing certificate fingerprint
+        if: steps.signcheck.outputs.has_keystore == 'true'
+        env:
+          KS_PASS: ${{ secrets.ALPHA_KEYSTORE_PASSWORD }}
+          KEY_ALIAS: ${{ secrets.ALPHA_KEY_ALIAS }}
+        run: |
+          keytool -list -v -keystore "$RUNNER_TEMP/mxjs-debug.jks" \
+            -storepass "$KS_PASS" -alias "$KEY_ALIAS" 2>/dev/null \
+            | grep -E "SHA1:|SHA256:" \
+            || echo "::warning::读取签名证书失败，请核对 ALPHA_KEYSTORE_PASSWORD 与 ALPHA_KEY_ALIAS"
+
       # 单元测试（纯 JVM，不需要设备）。**故意放在打包之前**：
       # 2026-09 的 wbi 签名回归（漏掉 .take(32) → 所有 wbi 签名失效）能通过编译和
       # 打包，却会被这里的 WebiTokenUtilsTest 拦住。测试失败就别出包。
