@@ -11,6 +11,7 @@ import android.provider.MediaStore
 import android.util.Log
 import androidx.core.net.toUri
 import com.imcys.bilibilias.data.download.record.DownloadRecordReuseRules
+import com.imcys.bilibilias.data.download.output.FinalNameVerifyRules
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.withContext
 import java.io.File
@@ -190,33 +191,90 @@ class FileOutputManager(
             return null
         }
 
-        // 到这一步新文件已经完整落盘，删除同名旧文件才是安全的
+        // ⚠️ 顺序（2026-09-15 真机复现后重写）：**先把暂存名改成正式名，再去删同名旧文件**。
+        //
+        // 原来反着来（先 deleteExistingSameName、再 rename），真机上观察到两步都没生效：
+        //   15:03  xxx.mp3   → 15:08  xxx (1).mp3  → 15:14  xxx (2).mp3
+        //   W 改名后 MediaStore 里的名字不是预期值: 期望=xxx.mp3 实际=xxx.mp3.part.mp3
+        // 也就是**改名静默失败**（回读还是 `.part`）、**旧文件也没被删掉**，两个失败叠在一起，
+        // 用户每重下一次就多攒一份整集大小的副本。旧代码只把这两件事各打一条日志就当成功了。
+        //
+        // 现在：改名 → 删旧 → **回读校验**，不对就重试一轮删旧文件；最终仍不对就
+        // **删掉这次的新文件并返回 null**（宁可让上层报"移动失败"，也不留副本、不报假成功）。
+        renameStaging(resolver, uri, fileName, stagingName)
         deleteExistingSameName(resolver, fileName, relativePath)
+        if (!verifyFinalName(resolver, uri, stagingName, fileName)) {
+            // 重试一轮：把同名旧文件（含 MediaStore 自动加出来的 `xxx (1).mp3`）再删一遍
+            Log.w(TAG, "第一次交付后名字不符，重试删除同名旧文件: 期望=$fileName")
+            deleteExistingSameName(resolver, fileName, relativePath)
+        }
 
-        // 把临时名改成正式名；改不动就保留临时名（文件照样能打开，只是名字难看）
-        val renamed = runCatching {
-            resolver.update(
-                uri,
-                ContentValues().apply { put(MediaStore.Downloads.DISPLAY_NAME, fileName) },
-                null,
-                null,
-            ) > 0
-        }.getOrDefault(false)
-        if (!renamed) {
-            Log.w(TAG, "MediaStore 改名未生效，保留临时名 $stagingName（文件本身可用）")
-        } else if (storedDisplayName(resolver, uri) != fileName) {
-            // 兜底观测：删旧文件没成功时 MediaStore 会**自动**把新文件改名成 "xxx (1).mp4"，
-            // 于是下载目录里会留下同名副本。这里明确报出来，别让它悄悄发生。
-            Log.w(
+        val verdict = finalNameVerdict(resolver, uri, fileName, stagingName)
+        if (verdict != FinalNameVerifyRules.Verdict.OK) {
+            Log.e(
                 TAG,
-                "改名后 MediaStore 里的名字不是预期值（可能又生成了同名副本）: " +
-                    "期望=$fileName 实际=${storedDisplayName(resolver, uri)}",
+                "交付失败（$verdict）：期望=$fileName 回读=${storedDisplayName(resolver, uri)}",
             )
+            runCatching { resolver.delete(uri, null, null) }
+            return null
         }
 
         file.delete()
         return uri.toString()
     }
+
+    /** 把刚插入的暂存名改成正式名（失败只记日志，由后面的回读校验统一判定） */
+    private fun renameStaging(
+        resolver: android.content.ContentResolver,
+        uri: android.net.Uri,
+        fileName: String,
+        stagingName: String,
+    ) {
+        val rows = runCatching {
+            resolver.update(
+                uri,
+                ContentValues().apply { put(MediaStore.Downloads.DISPLAY_NAME, fileName) },
+                null,
+                null,
+            )
+        }.getOrDefault(0)
+        if (rows <= 0) {
+            Log.w(TAG, "MediaStore 改名未生效（影响 $rows 行）: $stagingName → $fileName")
+        }
+    }
+
+    /** 交付结果判定：先看回读到的 DISPLAY_NAME，再用目录里实际存在的名字兜一层 */
+    private fun finalNameVerdict(
+        resolver: android.content.ContentResolver,
+        uri: android.net.Uri,
+        fileName: String,
+        stagingName: String,
+    ): FinalNameVerifyRules.Verdict {
+        val stored = storedDisplayName(resolver, uri)
+        if (FinalNameVerifyRules.displayNameMatches(fileName, stored)) {
+            return FinalNameVerifyRules.Verdict.OK
+        }
+        return FinalNameVerifyRules.verify(fileName, stagingName, siblingNames(uri))
+    }
+
+    /** 目录里与本次交付同目录的、名字相关的文件（用于判定残留 / 副本） */
+    private fun siblingNames(uri: android.net.Uri): List<String> {
+        val path = runCatching {
+            context.contentResolver
+                .query(uri, arrayOf(MediaStore.Downloads.DATA), null, null, null)
+                ?.use { c -> if (c.moveToFirst()) c.getString(0) else null }
+        }.getOrNull() ?: return emptyList()
+        val dir = File(path).parentFile ?: return emptyList()
+        return dir.listFiles()?.map { it.name } ?: emptyList()
+    }
+
+    private fun verifyFinalName(
+        resolver: android.content.ContentResolver,
+        uri: android.net.Uri,
+        stagingName: String,
+        fileName: String,
+    ): Boolean = finalNameVerdict(resolver, uri, fileName, stagingName) ==
+        FinalNameVerifyRules.Verdict.OK
 
     /** 读回某个 MediaStore 行当前的 DISPLAY_NAME（仅用于观测/兜底日志） */
     private fun storedDisplayName(
@@ -254,6 +312,7 @@ class FileOutputManager(
             while (cursor.moveToNext()) {
                 ids += cursor.getLong(cursor.getColumnIndexOrThrow(MediaStore.Downloads._ID))
             }
+            var deleted = 0
             ids.forEach { id ->
                 runCatching {
                     resolver.delete(
@@ -261,8 +320,11 @@ class FileOutputManager(
                         null,
                         null,
                     )
-                }
+                }.onSuccess { deleted += it }
             }
+            // ⚠️ 这条日志是必须的：删除**静默 no-op** 正是这次踩的坑
+            //（查询条件匹配不上时它什么都不删、也不报错，看起来毫无异常）。
+            Log.d(TAG, "删除同名旧文件: $fileName 命中=${ids.size} 实际删除=$deleted 路径=${pathForms.joinToString()}")
         }
     }
 
