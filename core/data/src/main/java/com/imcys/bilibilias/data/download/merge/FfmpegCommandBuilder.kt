@@ -1,5 +1,6 @@
 package com.imcys.bilibilias.data.download.merge
 
+import com.imcys.bilibilias.data.download.execution.EmbedStreamMappingRules
 import com.imcys.bilibilias.data.model.download.DownloadSubTask
 import com.imcys.bilibilias.data.model.download.MediaContainerConfig
 import com.imcys.bilibilias.database.entity.download.DownloadMode
@@ -60,7 +61,30 @@ object FfmpegCommandBuilder {
 
         val audioFileStartIdx = videoFileCount
         val subFileStartIdx = mediaInputs.size
-        val coverIdx = if (coverPath.isNotBlank()) mediaInputs.size + subtitles.size else -1
+
+        // ---- 内嵌音轨 / 字幕 / 封面的映射决策（纯规则，见 EmbedStreamMappingRules）----
+        // 两个洞都是"用了 -map 就只输出被映射的流"的直接后果：
+        // ① durl 单文件 + 仅视频：补映射原来挂在 `audioEnabled` 下，而"仅视频"时它是 false
+        //    → 音轨整条丢掉（无声视频 + COMPLETED）；
+        // ② 纯音频容器里硬塞字幕/封面：字幕下标指向的其实是音频流、容器又没有字幕编码器
+        //    → ffmpeg 必然失败，这一集永远下不下来。
+        val mapEmbeddedAudio = EmbedStreamMappingRules.shouldMapEmbeddedAudio(
+            mediaInputCount = mediaInputs.size,
+            hasSeparateAudioInput = audioFileCount > 0,
+        )
+        val mapSubtitles = EmbedStreamMappingRules.canMapSubtitles(
+            containerSupportsSubtitle = mediaContainerConfig.videoContainer.canEmbedSubtitle(),
+            videoEnabled = videoEnabled,
+        ) && subtitles.isNotEmpty()
+        val mapCover = EmbedStreamMappingRules.canMapCover(
+            containerSupportsCover = if (videoEnabled) {
+                mediaContainerConfig.videoContainer.canEmbedCover()
+            } else {
+                mediaContainerConfig.audioContainer.canEmbedCover()
+            },
+        ) && coverPath.isNotBlank()
+
+        val coverIdx = if (mapCover) mediaInputs.size + subtitles.size else -1
 
         return buildList {
             // 基础参数
@@ -73,11 +97,13 @@ object FfmpegCommandBuilder {
                 add("-i")
                 add(it)
             }
-            subtitles.forEach {
-                add("-i")
-                add(it.path)
+            if (mapSubtitles) {
+                subtitles.forEach {
+                    add("-i")
+                    add(it.path)
+                }
             }
-            if (coverIdx >= 0) {
+            if (mapCover) {
                 add("-i")
                 add(coverPath)
             }
@@ -87,27 +113,28 @@ object FfmpegCommandBuilder {
                 add("-map")
                 add("0:v:0")
             }
-            if (audioEnabled) {
-                if (audioFileCount > 0) {
-                    repeat(audioFileCount) { i ->
-                        add("-map")
-                        add("${audioFileStartIdx + i}:a:$i")
-                    }
-                } else if (mediaInputs.size == 1) {
-                    // durl（渐进式单文件）资源：音轨就在**同一个输入文件**里。
-                    // 这类稿件只会生成 1 个 VIDEO 子任务，于是 audioFileCount == 0 ——
-                    // 而 ffmpeg 一旦用了 `-map` 就**只输出被映射的流**，内嵌音轨会被整条丢掉：
-                    // 用户拿到一个无声视频、状态却是「已完成」、源文件也已经删了，根本无从察觉。
-                    // 末尾的 `?` = "有就映射、没有也不报错"。
+            if (audioEnabled && audioFileCount > 0) {
+                repeat(audioFileCount) { i ->
                     add("-map")
-                    add("0:a:0?")
+                    add("${audioFileStartIdx + i}:a:$i")
                 }
             }
-            subtitles.forEachIndexed { sIdx, _ ->
+            if (mapEmbeddedAudio) {
+                // durl（渐进式单文件）资源：音轨就在**同一个输入文件**里，
+                // 而 ffmpeg 一旦用了 `-map` 就只输出被映射的流。
+                // 末尾的 `?` = "有就映射、没有也不报错"。
+                // ⚠️ 这一条**不挂在 `audioEnabled` 下**（H3 的教训）：仅视频 + 单文件时
+                // `audioEnabled` 是 false，挂在下面就等于没写。
                 add("-map")
-                add("${subFileStartIdx + sIdx}:s:0")
+                add("0:a:0?")
             }
-            if (coverIdx >= 0) {
+            if (mapSubtitles) {
+                subtitles.forEachIndexed { sIdx, _ ->
+                    add("-map")
+                    add("${subFileStartIdx + sIdx}:s:0")
+                }
+            }
+            if (mapCover) {
                 add("-map")
                 add("$coverIdx:v:0")
             }
@@ -123,7 +150,7 @@ object FfmpegCommandBuilder {
             }
 
             // 字幕元数据
-            if (subtitles.isNotEmpty() && videoEnabled) {
+            if (mapSubtitles) {
                 add("-c:s")
                 if (mediaContainerConfig.videoContainer != MediaContainer.MKV) {
                     add("mov_text")
@@ -139,7 +166,7 @@ object FfmpegCommandBuilder {
             }
 
             // 封面配置
-            if (coverIdx >= 0) {
+            if (mapCover) {
                 val coverStreamIndex = if (videoEnabled) 1 else 0
                 add("-c:v:$coverStreamIndex")
                 add("mjpeg")

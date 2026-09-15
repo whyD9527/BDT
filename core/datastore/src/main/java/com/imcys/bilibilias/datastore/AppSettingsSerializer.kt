@@ -58,7 +58,14 @@ object AppSettingsSerializer : Serializer<AppSettings> {
                 modified = true
             }
             if (parsed.useVideoContainer.isNullOrEmpty()){
-                builder.setVideoParsePlatform(defaultValue.videoParsePlatform)
+                // ⚠️ 这行原先写的是 `setVideoParsePlatform(...)`（复制粘贴漏改）——
+                // 后果有两条，都很隐蔽（2026-09-14 全量审计 H7）：
+                // ① `useVideoContainer` 永远补不成默认值，而消费方
+                //    `AppSettingsRepository.storeMediaContainerFromExtension` 用
+                //    `MediaContainer.entries.first { it.extension == "" }` 取容器 → 抛
+                //    NoSuchElementException → 进解析页即崩；
+                // ② 顺带把用户选好的「TV 解析平台」在每个读取周期静默改回 Web。
+                builder.setUseVideoContainer(defaultValue.useVideoContainer)
                 modified = true
             }
             if (parsed.useAudioContainer.isNullOrEmpty()){

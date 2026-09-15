@@ -272,9 +272,19 @@ class AppSettingsRepository(
         }
     }
 
-    fun storeMediaContainerFromExtension(extension: String): MediaContainer {
-        return  MediaContainer.entries.first { it.extension == extension }
-    }
+    /**
+     * 把磁盘上的扩展名字符串翻译回容器枚举。
+     *
+     * ⚠️ 原写法是 `MediaContainer.entries.first { it.extension == extension }` ——
+     * 一旦扩展名为空或是个不认识的历史脏值（例如老版本 pb 里字段缺失、或用户回滚版本），
+     * `first` 会抛 `NoSuchElementException`，而它在 `AnalysisViewModel` 的 settings 收集协程里
+     * **没有任何捕获** → 进解析页直接崩（2026-09-14 全量审计 H7）。
+     *
+     * 现在取不到就**回落默认容器**：设置项读不出来时应该退化成"老样子"，而不是崩。
+     */
+    fun storeMediaContainerFromExtension(extension: String): MediaContainer =
+        MediaContainer.entries.firstOrNull { it.extension.equals(extension, ignoreCase = true) }
+            ?: MediaContainer.MP4
 }
 
 

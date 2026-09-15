@@ -46,6 +46,8 @@ NAMING = REPO / "core/data/src/main/java/com/imcys/bilibilias/data/download/nami
 SUBTITLE = REPO / "core/data/src/main/java/com/imcys/bilibilias/data/download/subtitle"
 BVID = REPO / "core/data/src/main/java/com/imcys/bilibilias/data/download/bvid"
 EMBED_CACHE = REPO / "core/data/src/main/java/com/imcys/bilibilias/data/download/cache"
+EXEC_RULES = REPO / "core/data/src/main/java/com/imcys/bilibilias/data/download/execution"
+DATASTORE = REPO / "core/datastore/src/main/java/com/imcys/bilibilias/datastore"
 UTIL = REPO / "core/data/src/main/java/com/imcys/bilibilias/data/util"
 
 # (名字, 文件, 原串, 替换成)  —— 原串必须在文件里**恰好出现一次**，否则跳过并报警
@@ -123,10 +125,13 @@ MUTATIONS = [
      QUEUE / "DownloadQueueRules.kt",
      "            .indexOfFirst { (id, state) -> state == DownloadState.WAITING && id !in activeIds }",
      "            .indexOfFirst { (_, state) -> state == DownloadState.WAITING }"),
+    # ⚠️ 第 9 批（H3）把这段逻辑挪进了 `EmbedStreamMappingRules`，原来那条变异串
+    #    （`} else if (mediaInputs.size == 1) {`）已经定位不到 → 变成了 SKIP。
+    #    现在改成"把内嵌音轨的映射目标换掉"：等价、能编译、且确实产出无声视频。
     ("20 durl 单文件不映射内嵌音轨（产出无声视频却标已完成）",
      MERGE / "FfmpegCommandBuilder.kt",
-     "                } else if (mediaInputs.size == 1) {",
-     "                } else if (false) {"),
+     '                add("0:a:0?")',
+     '                add("0:v:0")'),
     ("19 PAUSE 不算收工（有暂停任务时队列永不退出 → 前台服务与通知常驻）",
      QUEUE / "DownloadQueueRules.kt",
      """        DownloadState.CANCELLED,
@@ -288,6 +293,36 @@ MUTATIONS = [
      EMBED_CACHE / "EmbedCacheRules.kt",
      '        return fileName.startsWith(EMBED_PREFIX) && fileName.length > EMBED_PREFIX.length',
      '        return true'),
+    # ---- 第 9 批：全量审计高危 H1~H7（v3.2.5）----
+    ("55 不核对实收字节数（CDN 提前断流时半截文件当成品交付）",
+     EXEC_RULES / "DownloadCompletionRules.kt",
+     "        expectedLength > 0 && receivedLength < expectedLength -> Outcome.INCOMPLETE",
+     "        false -> Outcome.INCOMPLETE"),
+    ("56 改名失败也算成功（目标文件不存在却报成功）",
+     EXEC_RULES / "DownloadCompletionRules.kt",
+     "        !renamed -> Outcome.RENAME_FAILED",
+     "        false -> Outcome.RENAME_FAILED"),
+    ("57 durl 补内嵌音轨的判断又挂回 audioEnabled 等价条件（无声视频）",
+     EXEC_RULES / "EmbedStreamMappingRules.kt",
+     "    ): Boolean = mediaInputCount == 1 && !hasSeparateAudioInput",
+     "    ): Boolean = mediaInputCount == 1 && !hasSeparateAudioInput && false"),
+    ("58 纯音频容器也允许映射字幕（合并必然失败）",
+     EXEC_RULES / "EmbedStreamMappingRules.kt",
+     "    ): Boolean = containerSupportsSubtitle && videoEnabled",
+     "    ): Boolean = containerSupportsSubtitle"),
+    ("59 Cookie 解码失败不回退（裸百分号又崩进程）",
+     EXEC_RULES / "CookieParsingRules.kt",
+     "    }.getOrDefault(value)",
+     "    }.getOrThrow()"),
+    ("60 Cookie 解析不跳过没有等号的片段",
+     EXEC_RULES / "CookieParsingRules.kt",
+     "                if (parts.size != 2) return@mapNotNull null",
+     "                if (parts.size < 1) return@mapNotNull null"),
+    ("61 设置兜底又写错字段（容器永远补不成默认值）",
+     DATASTORE / "AppSettingsSerializer.kt",
+     "                builder.setUseVideoContainer(defaultValue.useVideoContainer)",
+     "                builder.setVideoParsePlatform(defaultValue.videoParsePlatform)",
+     ":core:datastore:testDebugUnitTest"),
 ]
 
 DEFAULT_TEST_TASK = ":core:data:testDebugUnitTest"

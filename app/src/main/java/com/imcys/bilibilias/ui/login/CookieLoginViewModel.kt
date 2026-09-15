@@ -13,13 +13,13 @@ import com.imcys.bilibilias.database.entity.LoginPlatform
 import com.imcys.bilibilias.datastore.AppSettings
 import com.imcys.bilibilias.datastore.source.UsersDataSource
 import com.imcys.bilibilias.network.AsCookiesStorage
+import com.imcys.bilibilias.data.download.execution.CookieParsingRules
 import com.imcys.bilibilias.network.NetWorkResult
 import com.imcys.bilibilias.network.emptyNetWorkResult
 import io.ktor.http.Cookie
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.asStateFlow
 import kotlinx.coroutines.launch
-import java.net.URLDecoder
 
 class CookieLoginViewModel(
     private val qrCodeLoginRepository: QRCodeLoginRepository,
@@ -38,22 +38,23 @@ class CookieLoginViewModel(
 
 
     fun checkCookies(cookiesStr: String) {
+        // ⚠️ 解析交给 CookieParsingRules（纯规则、有单测）：原实现直接
+        // `URLDecoder.decode(value, "UTF-8")`，而它遇到不完整/非法的百分号转义
+        // （裸 `%`、`%z`、`%2`）会抛 IllegalArgumentException —— 这个方法由输入框的
+        // `onValueChange` **每次按键**同步调用、链路无 try/catch，
+        // 于是用户每敲一个字符都可能让应用崩掉（2026-09-14 全量审计 H5）。
+        // 现在解码失败会退回原串，绝不抛。
         currentCookies.addAll(
-            cookiesStr
-                .split(";")
-                .mapNotNull { cookie ->
-                    val parts = cookie.trim().split("=", limit = 2)
-                    if (parts.size != 2) return@mapNotNull null
-                    val (name, value) = parts
-                    Cookie(
-                        name = name,
-                        value = value.urlDecode(),
-                        httpOnly = true,
-                        secure = true,
-                        domain = "bilibili.com",
-                        path = "/"
-                    )
-                }
+            CookieParsingRules.parse(cookiesStr).map { pair ->
+                Cookie(
+                    name = pair.name,
+                    value = pair.value,
+                    httpOnly = true,
+                    secure = true,
+                    domain = "bilibili.com",
+                    path = "/"
+                )
+            }
         )
         viewModelScope.launch {
             asCookiesStorage.updateAllCookies(currentCookies)
@@ -114,9 +115,6 @@ class CookieLoginViewModel(
 
 
     }
-
-    private fun String.urlDecode(): String =
-        URLDecoder.decode(this, "UTF-8").replace('+', ' ')
 
 
 }

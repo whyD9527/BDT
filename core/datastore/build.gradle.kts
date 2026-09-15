@@ -62,4 +62,9 @@ dependencies {
     api(libs.protobuf.kotlin.lite)
     api(libs.androidx.datastore)
     api(libs.androidx.datastore.core)
+
+    // 本地 JVM 单测（`sh gradlew :core:datastore:testDebugUnitTest`）：
+    // 这个模块以前没有单测，于是 `AppSettingsSerializer` 里"兜底写错字段"这种
+    // 复制粘贴级错误一直没人拦（2026-09-14 全量审计 H7）。
+    testImplementation(libs.junit)
 }

@@ -136,14 +136,26 @@ class FfmpegCommandBuilderTest {
     }
 
     @Test
-    fun `仅视频时不映射音频`() {
+    fun `仅视频的单文件资源仍要带上内嵌音轨（H3：这条原来被 audioEnabled 挡掉了）`() {
+        // 这是 2026-09-14 全量审计的 H3：第二十轮补的 `-map 0:a:0?` 写在
+        // `if (audioEnabled)` 里，而「仅视频」时 audioEnabled 为 false ——
+        // 补映射从不执行，命令只剩 -map 0:v:0，用户拿到**无声视频**。
         val args = build(
             subTasks = listOf(subTask("/v.mp4", DownloadSubTaskType.VIDEO)),
             downloadMode = DownloadMode.VIDEO_ONLY,
         )
         assertTrue(args.contains("0:v:0"))
-        assertFalse("VIDEO_ONLY 不该有音频映射", args.any { it.endsWith(":a:0") })
-        assertFalse(args.contains("-c:a"))
+        assertTrue("仅视频 + 单文件必须把内嵌音轨也映射出来", args.contains("0:a:0?"))
+        assertFalse("但没有独立音频输入，不该出现指向别的输入的音频映射", args.any { it == "1:a:0" })
+    }
+
+    @Test
+    fun `仅视频不主动重编码音频`() {
+        val args = build(
+            subTasks = listOf(subTask("/v.mp4", DownloadSubTaskType.VIDEO)),
+            downloadMode = DownloadMode.VIDEO_ONLY,
+        )
+        assertFalse("VIDEO_ONLY 不该带 -c:a", args.contains("-c:a"))
     }
 
     @Test
@@ -189,6 +201,54 @@ class FfmpegCommandBuilderTest {
         assertTrue(args.contains("mjpeg"))
         assertTrue(args.contains("attached_pic"))
         assertTrue(args.contains("title=Cover"))
+    }
+
+    @Test
+    fun `纯音频容器（mp3）不映射字幕（H4：原来会让合并必然失败）`() {
+        // 2026-09-14 全量审计 H4：字幕映射用 mediaInputs.size 当下标，
+        // 仅音频时它指向的是音频流；而 mp3 容器又没有字幕编码器 →
+        // ffmpeg 必然非 0 退出，这一集永远下不下来。
+        val args = build(
+            subTasks = listOf(subTask("/a.m4a", DownloadSubTaskType.AUDIO)),
+            downloadMode = DownloadMode.AUDIO_ONLY,
+            subtitles = listOf(SubtitleSpec("/s.srt", "zh-CN", "中文")),
+            config = MediaContainerConfig(
+                videoContainer = MediaContainer.MP4,
+                audioContainer = MediaContainer.MP3,
+            ),
+        )
+        assertFalse("mp3 容器不得映射字幕", args.any { it.endsWith(":s:0") })
+        assertFalse("没有视频轨就不该给 -c:s", args.contains("-c:s"))
+    }
+
+    @Test
+    fun `mp4 视频容器照旧映射字幕（别把修复做成一律不映射）`() {
+        val args = build(
+            subTasks = listOf(
+                subTask("/v.mp4", DownloadSubTaskType.VIDEO),
+                subTask("/a.m4a", DownloadSubTaskType.AUDIO),
+            ),
+            downloadMode = DownloadMode.AUDIO_VIDEO,
+            subtitles = listOf(SubtitleSpec("/s.srt", "zh-CN", "中文")),
+        )
+        assertTrue(args.any { it.endsWith(":s:0") })
+        assertTrue(args.contains("-c:s"))
+    }
+
+    @Test
+    fun `纯音频容器（mp3）不映射封面`() {
+        // MP3.canEmbedCover() 是 false（MediaContainer 里只有 M4A/MP4/MKV 声明支持封面）
+        val args = build(
+            subTasks = listOf(subTask("/a.m4a", DownloadSubTaskType.AUDIO)),
+            downloadMode = DownloadMode.AUDIO_ONLY,
+            coverPath = "/c.jpg",
+            config = MediaContainerConfig(
+                videoContainer = MediaContainer.MP4,
+                audioContainer = MediaContainer.MP3,
+            ),
+        )
+        assertFalse("mp3 容器不得映射封面", args.contains("/c.jpg"))
+        assertFalse(args.contains("attached_pic"))
     }
 
     @Test

@@ -2,6 +2,7 @@ package com.imcys.bilibilias.download
 
 import android.util.Log
 import com.imcys.bilibilias.data.download.cancel.DownloadCancellationRules
+import com.imcys.bilibilias.data.download.execution.DownloadCompletionRules
 import com.imcys.bilibilias.data.download.resume.SingleConnectionResumeRules
 import com.imcys.bilibilias.data.download.segmented.ContentRange
 import com.imcys.bilibilias.data.download.segmented.RemoteFileProbe
@@ -105,7 +106,7 @@ class DownloadExecutor(
             onProgress = onProgress,
         )
         if (segmentedResult is SegmentedDownloadResult.Success) {
-            if (file.exists()) file.delete()
+            // 同样先改名、成功后再删旧文件（H2：绝不能先删旧成品）
             if (!tempFile.renameTo(file)) {
                 Log.e(TAG, "分片下载完成后重命名失败: ${tempFile.name}")
                 return@withContext false
@@ -130,8 +131,18 @@ class DownloadExecutor(
             try {
                 val success = performDownload(segmentedUrl, tempFile, referer, onProgress)
                 if (success) {
-                    if (file.exists()) file.delete()
-                    tempFile.renameTo(file)
+                    // ⚠️ 顺序与判定都不能错（2026-09-14 全量审计 H2）：
+                    // 原写法先把旧成品删掉、再把 renameTo 的返回值丢掉、然后无条件返回 true ——
+                    // 改名一旦失败，目标文件不存在、旧成品又已经没了，任务却是"成功"。
+                    // 分片分支（上面那段）一直是有校验的，两条路必须一致。
+                    val renamed = tempFile.renameTo(file)
+                    if (!renamed) {
+                        Log.e(
+                            TAG,
+                            "下载完成但改名失败: ${tempFile.name} → ${file.name}",
+                        )
+                        return@withContext false
+                    }
                     return@withContext true
                 }
                 Log.w(TAG, "第 ${attempt + 1}/$MAX_RETRY_ATTEMPTS 次下载未成功: ${file.name}")
@@ -237,6 +248,30 @@ class DownloadExecutor(
                             onProgress(currentProgress)
                         }
                     }
+                }
+
+                // ⚠️ 写完**必须核对实收字节数**（2026-09-14 全量审计 H1）。
+                // 原写法只看"流结束了"就无条件返回 true，而 CDN 完全可能在发完
+                // Content-Length 之前断流 —— 于是半截文件被当成品交付、状态写 COMPLETED，
+                // 而合并侧只查"返回码 + 输出非空"，兜不住。分片路径本来就有这个校验
+                // （SegmentedDownloader 的 actualLength >= totalLength），
+                // 一回落单连接这道保证就被抹掉了。
+                val received = downloadedBytes
+                when (DownloadCompletionRules.judge(
+                    expectedLength = totalLength,
+                    receivedLength = received,
+                    renamed = true,
+                )) {
+                    DownloadCompletionRules.Outcome.SUCCESS -> Unit
+                    DownloadCompletionRules.Outcome.INCOMPLETE -> {
+                        Log.e(
+                            TAG,
+                            "下载不完整，丢弃本次: ${tempFile.name}  " +
+                                "实收=$received 期望=$totalLength",
+                        )
+                        return@execute false
+                    }
+                    DownloadCompletionRules.Outcome.RENAME_FAILED -> Unit
                 }
 
                 onProgress(1f)
