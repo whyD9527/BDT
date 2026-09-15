@@ -48,6 +48,7 @@ BVID = REPO / "core/data/src/main/java/com/imcys/bilibilias/data/download/bvid"
 EMBED_CACHE = REPO / "core/data/src/main/java/com/imcys/bilibilias/data/download/cache"
 EXEC_RULES = REPO / "core/data/src/main/java/com/imcys/bilibilias/data/download/execution"
 DATASTORE = REPO / "core/datastore/src/main/java/com/imcys/bilibilias/datastore"
+OUTPUT = REPO / "core/data/src/main/java/com/imcys/bilibilias/data/download/output"
 UTIL = REPO / "core/data/src/main/java/com/imcys/bilibilias/data/util"
 
 # (名字, 文件, 原串, 替换成)  —— 原串必须在文件里**恰好出现一次**，否则跳过并报警
@@ -323,6 +324,19 @@ MUTATIONS = [
      "                builder.setUseVideoContainer(defaultValue.useVideoContainer)",
      "                builder.setVideoParsePlatform(defaultValue.videoParsePlatform)",
      ":core:datastore:testDebugUnitTest"),
+    # ---- 第 10 批：重下同一集留下 (1)/(2) 副本（真机复现）----
+    ("62 只剩暂存名也当成交付成功（用户拿到 .part 名字的文件）",
+     OUTPUT / "FinalNameVerifyRules.kt",
+     "            hasStaging -> Verdict.KEPT_STAGING_NAME",
+     "            hasStaging -> Verdict.OK"),
+    ("63 出现同名副本也不报（用户目录里越攒越多 (1)/(2)）",
+     OUTPUT / "FinalNameVerifyRules.kt",
+     "            hasDuplicate -> Verdict.DUPLICATE_SUFFIX",
+     "            hasDuplicate -> Verdict.OK"),
+    ("64 回读名字不校验（改名失败也算成功）",
+     OUTPUT / "FinalNameVerifyRules.kt",
+     "        storedName == expectedName",
+     "        true"),
 ]
 
 DEFAULT_TEST_TASK = ":core:data:testDebugUnitTest"

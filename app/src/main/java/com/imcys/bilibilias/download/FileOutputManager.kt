@@ -202,10 +202,18 @@ class FileOutputManager(
         // 现在：改名 → 删旧 → **回读校验**，不对就重试一轮删旧文件；最终仍不对就
         // **删掉这次的新文件并返回 null**（宁可让上层报"移动失败"，也不留副本、不报假成功）。
         renameStaging(resolver, uri, fileName, stagingName)
+
+        // ① 先按**目录枚举**把同一份内容的旧文件删掉（真机上 MediaStore 那条"按名字查"命中=0，
+        //    只有这条路真的能删掉，详见 deleteSiblingCopies 的注释）
+        directoryOf(uri)?.let { dir -> deleteSiblingCopies(fileName, dir) }
+
+        // ② MediaStore 那条也照旧走一遍（能命中就命中，命中不了也不影响 ①）
         deleteExistingSameName(resolver, fileName, relativePath)
+
         if (!verifyFinalName(resolver, uri, stagingName, fileName)) {
-            // 重试一轮：把同名旧文件（含 MediaStore 自动加出来的 `xxx (1).mp3`）再删一遍
+            // 重试一轮：目录枚举再删一次（新插入的那一行可能刚被 MediaStore 标了名）
             Log.w(TAG, "第一次交付后名字不符，重试删除同名旧文件: 期望=$fileName")
+            directoryOf(uri)?.let { dir -> deleteSiblingCopies(fileName, dir) }
             deleteExistingSameName(resolver, fileName, relativePath)
         }
 
@@ -219,8 +227,61 @@ class FileOutputManager(
             return null
         }
 
+        // 磁盘上已经是正式名了，但**媒体库那一行**可能还记着暂存名
+        // （真机取证：改名返回 0 行、回读仍是 `xxx.mp3.part.mp3`）。
+        // 用户在图库/文件里看到的就是这个名字，所以必须把它也修好：
+        // 先试一次 update；还是不认就删掉这一行、让媒体扫描按磁盘上的真实名字重建。
+        val fixedUri = ensureStoredName(resolver, uri, fileName, directoryOf(uri))
         file.delete()
-        return uri.toString()
+        return fixedUri.toString()
+    }
+
+    /**
+     * 保证媒体库里那一行的 DISPLAY_NAME 与磁盘上的正式名一致。
+     *
+     * 返回可用的 uri（修不好时返回原 uri —— 文件本身是好的，不能让整次下载白费）。
+     */
+    private fun ensureStoredName(
+        resolver: android.content.ContentResolver,
+        uri: android.net.Uri,
+        fileName: String,
+        dir: File?,
+    ): android.net.Uri {
+        if (FinalNameVerifyRules.displayNameMatches(fileName, storedDisplayName(resolver, uri))) {
+            return uri
+        }
+        // 1) 再试一次改名
+        renameStaging(resolver, uri, fileName, storedDisplayName(resolver, uri) ?: "?")
+        if (FinalNameVerifyRules.displayNameMatches(fileName, storedDisplayName(resolver, uri))) {
+            return uri
+        }
+        // 2) 改名这条路在这台设备上不可靠 → 删掉这一行，扫一次目录让它重建
+        Log.w(TAG, "改名仍不生效，改为删行+重新扫描: 期望=$fileName")
+        runCatching { resolver.delete(uri, null, null) }
+        val target = dir?.let { File(it, fileName) }
+        if (target == null || !target.exists()) return uri
+        runCatching {
+            MediaScannerConnection.scanFile(context, arrayOf(target.absolutePath), null, null)
+        }
+        // 3) 按新扫描出来的行回读一次，拿到正确的 uri
+        return runCatching {
+            resolver.query(
+                MediaStore.Downloads.EXTERNAL_CONTENT_URI,
+                arrayOf(MediaStore.Downloads._ID, MediaStore.Downloads.DISPLAY_NAME),
+                "${MediaStore.Downloads.DISPLAY_NAME}=?",
+                arrayOf(fileName),
+                null,
+            )?.use { c ->
+                if (c.moveToFirst()) {
+                    android.content.ContentUris.withAppendedId(
+                        MediaStore.Downloads.EXTERNAL_CONTENT_URI,
+                        c.getLong(0),
+                    )
+                } else {
+                    uri
+                }
+            } ?: uri
+        }.getOrDefault(uri)
     }
 
     /** 把刚插入的暂存名改成正式名（失败只记日志，由后面的回读校验统一判定） */
@@ -254,18 +315,9 @@ class FileOutputManager(
         if (FinalNameVerifyRules.displayNameMatches(fileName, stored)) {
             return FinalNameVerifyRules.Verdict.OK
         }
-        return FinalNameVerifyRules.verify(fileName, stagingName, siblingNames(uri))
-    }
-
-    /** 目录里与本次交付同目录的、名字相关的文件（用于判定残留 / 副本） */
-    private fun siblingNames(uri: android.net.Uri): List<String> {
-        val path = runCatching {
-            context.contentResolver
-                .query(uri, arrayOf(MediaStore.Downloads.DATA), null, null, null)
-                ?.use { c -> if (c.moveToFirst()) c.getString(0) else null }
-        }.getOrNull() ?: return emptyList()
-        val dir = File(path).parentFile ?: return emptyList()
-        return dir.listFiles()?.map { it.name } ?: emptyList()
+        val dir = directoryOf(uri) ?: return FinalNameVerifyRules.Verdict.MISSING
+        val names = dir.listFiles()?.map { it.name } ?: emptyList()
+        return FinalNameVerifyRules.verify(fileName, stagingName, names)
     }
 
     private fun verifyFinalName(
@@ -275,6 +327,46 @@ class FileOutputManager(
         fileName: String,
     ): Boolean = finalNameVerdict(resolver, uri, fileName, stagingName) ==
         FinalNameVerifyRules.Verdict.OK
+
+    /**
+     * 按**目录枚举**删掉与 [fileName] 指向同一份内容的旧文件。
+     *
+     * 为什么不再走 MediaStore 的"按名字删"：2026-09-15 真机取证显示，
+     * 那条路在这台设备上**命中=0**（`删除同名旧文件: … 命中=0 实际删除=0`），
+     * 于是旧文件永远留着、新文件被 MediaStore 自动改名成 `xxx (1).mp3` / `(2)` / `(3)` —— 越攒越多。
+     * 而文件本来就在我们能直接枚举的目录里，所以**直接用 File 删**，
+     * 删完再用 `MediaScannerConnection` 让媒体库跟上（不让磁盘与媒体库分叉）。
+     *
+     * 返回真正删掉的个数。
+     */
+    private fun deleteSiblingCopies(expectedName: String, dir: File): Int {
+        val names = dir.listFiles()?.map { it.name } ?: return 0
+        val targets = FinalNameVerifyRules.siblingCopies(expectedName, names)
+        var deleted = 0
+        targets.forEach { name ->
+            if (File(dir, name).delete()) deleted++
+        }
+        if (deleted > 0) {
+            Log.d(TAG, "按目录删除同名旧文件: $expectedName 删除=$deleted 个")
+            // 让媒体库跟上（删完不通知的话，图库里会留一条指向不存在文件的记录）
+            runCatching {
+                MediaScannerConnection.scanFile(
+                    context,
+                    arrayOf(File(dir, expectedName).absolutePath),
+                    null,
+                    null,
+                )
+            }
+        }
+        return deleted
+    }
+
+    /** 从某个 content uri 取出它对应的真实路径所在目录 */
+    private fun directoryOf(uri: android.net.Uri): File? = runCatching {
+        context.contentResolver
+            .query(uri, arrayOf(MediaStore.Downloads.DATA), null, null, null)
+            ?.use { c -> if (c.moveToFirst()) c.getString(0) else null }
+    }.getOrNull()?.let { File(it).parentFile }
 
     /** 读回某个 MediaStore 行当前的 DISPLAY_NAME（仅用于观测/兜底日志） */
     private fun storedDisplayName(

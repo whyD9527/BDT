@@ -82,6 +82,18 @@ object FinalNameVerifyRules {
     }
 
     /**
+     * 与 [expectedName] 指向"同一份内容"的文件名：正式名 + MediaStore 自动加的 `xxx (1).mp3` 副本。
+     *
+     * ⚠️ 真机取证（2026-09-15）：重下同一集时旧文件既没被删、改名也没生效，
+     * 而**按名字去 MediaStore 查是"命中=0"** —— 也就是说那条链路在这台设备上整体不可靠。
+     * 既然文件就在我们能直接枚举的目录里，就**按目录枚举来判断"哪些是同一份内容"**，
+     * 不再依赖 MediaStore 的等值匹配（这正是 H8/RELATIVE_PATH 那类坑的同源教训：
+     * 匹配条件写错时，删除会**静默变成 no-op**）。
+     */
+    fun siblingCopies(expectedName: String, names: Collection<String>): List<String> =
+        names.filter { it == expectedName || isDuplicateNameOf(it, expectedName) }
+
+    /**
      * 回读到的 `DISPLAY_NAME` 是不是我们要的正式名。
      *
      * 真机上它读到的是暂存名 —— 调用方必须**据此判定改名失败**，

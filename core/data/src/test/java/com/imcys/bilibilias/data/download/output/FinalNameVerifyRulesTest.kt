@@ -77,6 +77,28 @@ class FinalNameVerifyRulesTest {
     }
 
     @Test
+    fun `按目录枚举挑出同一份内容的所有副本`() {
+        val names = listOf(
+            "别的文件.mp3",
+            "鸣潮 _ 先约电台EP.mp3",
+            "鸣潮 _ 先约电台EP (1).mp3",
+            "鸣潮 _ 先约电台EP (2).mp3",
+            "鸣潮 _ 先约电台EP.mp3.part",
+        )
+        assertEquals(
+            listOf("鸣潮 _ 先约电台EP.mp3", "鸣潮 _ 先约电台EP (1).mp3", "鸣潮 _ 先约电台EP (2).mp3"),
+            FinalNameVerifyRules.siblingCopies("鸣潮 _ 先约电台EP.mp3", names),
+        )
+    }
+
+    @Test
+    fun `没有同名文件时挑不出任何东西`() {
+        assertTrue(
+            FinalNameVerifyRules.siblingCopies("x.mp3", listOf("a.mp3", "b.mp3")).isEmpty(),
+        )
+    }
+
+    @Test
     fun `回读名字必须是正式名才算改名成功`() {
         assertTrue(FinalNameVerifyRules.displayNameMatches(name, name))
         assertFalse("真机上回读到的就是暂存名", FinalNameVerifyRules.displayNameMatches(name, staging))
