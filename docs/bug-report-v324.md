@@ -427,14 +427,22 @@
 |---|---|---|---|
 | H1 实收字节校验 | ✅ 已修 | 新 `DownloadCompletionRules`（:core:data）＋ `DownloadExecutor` 写完后按 `expectedLength/receivedLength/renamed` 判定 | 单测 6 条；变异 55 抓到。**真机未造出断流**，正常下载无回归 |
 | H2 rename 失败不算成功 | ✅ 已修 | 同上；两条分支都改成"**先改名、成功后才允许删旧文件**"（原来单连接分支是先删旧文件、还丢弃返回值） | 单测；变异 56 抓到 |
-| H3 durl 仅视频丢音轨 | ✅ 已修 | 新 `EmbedStreamMappingRules`＋ `FfmpegCommandBuilder`：`-map 0:a:0?` 不再挂在 `audioEnabled` 下 | 单测（`仅视频的单文件资源仍要带上内嵌音轨`）；变异 20/57 抓到。**真机待验**（需 durl 稿件） |
-| H4 音频容器硬塞字幕/封面 | ✅ 已修 | 同上：字幕要"容器支持 + 有视频轨"，封面按容器声明；把一直零调用的 `canEmbedSubtitle()/canEmbedCover()` 真正接上 | 单测 3 条；变异 58 抓到。**真机待验** |
+| H3 durl 仅视频丢音轨 | ✅ 已修 | 新 `EmbedStreamMappingRules`＋ `FfmpegCommandBuilder`：`-map 0:a:0?` 不再挂在 `audioEnabled` 下 | 单测（`仅视频的单文件资源仍要带上内嵌音轨`）；变异 20/57 抓到。**真机待验**：需要"解析结果只有 durl"的稿件，B 站现在几乎不给 durl，手头没有可复现的样本 → 只有单测＋变异 |
+| H4 音频容器硬塞字幕/封面 | ✅ 已修 | 同上：字幕要"容器支持 + 有视频轨"，封面按容器声明；把一直零调用的 `canEmbedSubtitle()/canEmbedCover()` 真正接上 | 单测 3 条；变异 58 抓到。真机：新构建在**仅音频+mp3＋勾选内嵌字幕**下跑通两次（`执行命令` 里**没有**任何 `:s:0` 映射、`合并完成` 正常）；但两次用的稿件**都没有字幕流**（ffmpeg 统计 `subtitle:0kB`、下载目录无 `.srt`），所以"**容器不支持时被拦住**"这一支**没有在真机上触发过** —— 它只有单测＋变异保证 |
 | H5 Cookie 解码崩溃 | ✅ 已修 | 新 `CookieParsingRules`（解不出**退回原串**、绝不抛）＋ `CookieLoginViewModel` | 单测 8 条；变异 59/60 抓到。**真机已验证 ✅**：在 Cookie 输入框里输入含裸 `%` 的文本，不再崩溃、App 正常 |
 | H7 设置兜底写错字段 | ✅ 已修 | `AppSettingsSerializer` 改回 `setUseVideoContainer`；另给 `storeMediaContainerFromExtension` 加 `firstOrNull` 回落（原 `first{}` 对空串抛异常 → 进解析页崩） | 新开 **:core:datastore 单测**（原本该模块 0 测试）5 条；变异 61 抓到 |
 
 **顺带修掉一个隐患**：第 9 批的改动让旧的**变异 20 失效**（它原本盯的那行被重构成 `EmbedStreamMappingRules`），
 全套跑下来它变成 `SKIP`。已按第八节第 11 条的要求把它改成"把内嵌音轨的映射目标换掉"（等价、能编译、确实产出无声视频），
 重跑后抓到 —— **失效的变异不能算"测过了"**。
+
+**真机顺带发现的新问题（已记，未修）**：
+1. **`.part` 残留 + 改名校验误报**：`FileOutputManager` 里 MediaStore 那条路径用 `<正式名>.part` 当暂存名，
+   改名后**回读 `DISPLAY_NAME` 校验**时读到的仍是带 `.part` 的临时名 → 打出
+   `改名后 MediaStore 里的名字不是预期值（可能又生成了同名副本）` 这条**误报**（日志里连续两次），
+   而且下载目录里真的留下了 `xxx.mp3` 与 `xxx (1).mp3` 两份 —— 说明"删同名旧文件"或"改名"仍有一步没生效。
+   这条不在第 1 批范围内，属**新一轮真机暴露**，建议并入第 2 批一起查。
+2. 下载目录里出现 `xxx (1).mp3` 副本（同上，重下同一集时旧文件没被替换掉）。
 
 **仍未做**：第 2 批（H12 命名信息写坏、H6 抽帧 OOM、H8/H9 附加内容拖垮整集、清缓存删工作文件）、
 第 3 批（M 系列）、第 4 批（事务/唯一约束、ffmpeg 语义）。
