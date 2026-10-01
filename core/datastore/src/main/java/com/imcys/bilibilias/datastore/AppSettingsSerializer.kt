@@ -29,8 +29,8 @@ val Context.userAppSettingsStore: DataStore<AppSettings> by dataStore(
 object AppSettingsSerializer : Serializer<AppSettings> {
 
     val appSettingsDefault = AppSettings.getDefaultInstance().toBuilder()
-        .setVideoNamingRule("{p_title}")
-        .setBangumiNamingRule("{episode_title}")
+        .setVideoNamingRule("{title}_{p_title}")
+        .setBangumiNamingRule("{season_title}/{episode_number}_{episode_title}")
         .addAllUseToolHistory(listOf("WebParser","FrameExtractor"))
         .setEnabledClipboardAutoHandling(true)
         .setVideoParsePlatform(AppSettings.VideoParsePlatform.Web)

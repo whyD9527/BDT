@@ -222,7 +222,7 @@ class QRCodeLoginViewModel(
 
         // 时间戳
         val fileName = "QR_${System.currentTimeMillis()}.jpeg"
-        val relativePath = "${Environment.DIRECTORY_PICTURES}/BiliDownloader"
+        val relativePath = "${Environment.DIRECTORY_PICTURES}/${com.imcys.bilibilias.download.DownloadDir.NAME}"
 
         if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.Q) {
             val contentValues = ContentValues().apply {
@@ -239,7 +239,7 @@ class QRCodeLoginViewModel(
         } else {
             val picturesDir =
                 Environment.getExternalStoragePublicDirectory(Environment.DIRECTORY_PICTURES)
-            val dir = File(picturesDir, "BiliDownloader")
+            val dir = File(picturesDir, com.imcys.bilibilias.download.DownloadDir.NAME)
             if (!dir.exists()) dir.mkdirs()
             val file = File(dir, fileName)
             try {

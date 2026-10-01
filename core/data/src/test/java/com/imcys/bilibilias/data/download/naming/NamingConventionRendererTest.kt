@@ -24,6 +24,17 @@ class NamingConventionRendererTest {
         ext: String = "mp4",
     ) = NamingConventionRenderer.render(template, videoPlaceholders, values, ext)
 
+    /** 番剧的占位符表（与 App 里 `donghuaNamingRules` 一致） */
+    private val donghuaPlaceholders = listOf(
+        "{title}", "{episode_title}", "{episode_number}", "{cid}", "{season_title}",
+    )
+
+    private fun renderDonghua(
+        template: String,
+        values: Map<String, String?>,
+        ext: String = "mp4",
+    ) = NamingConventionRenderer.render(template, donghuaPlaceholders, values, ext)
+
     @Test
     fun `标题里的下划线必须原样保留（这就是那个 bug）`() {
         val name = renderVideo(
@@ -214,5 +225,57 @@ class NamingConventionRendererTest {
         assertTrue("不能超过上限", name.toByteArray(Charsets.UTF_8).size <= 200)
         assertTrue("后缀必须保留", name.endsWith(".mp4"))
         assertTrue("前缀仍是标题内容", name.startsWith("很长的标题"))
+    }
+
+    // -------------------------------- 2026-10-01：新默认模板的行为（方案二）
+
+    @Test
+    fun `视频新默认模板：有分P就带上，没有分P也不多出下划线`() {
+        assertEquals(
+            "某视频_P2标题.mp4",
+            renderVideo("{title}_{p_title}", mapOf("{title}" to "某视频", "{p_title}" to "P2标题")),
+        )
+        // 单 P 视频：p_title 常为空 → 退化成标题本身，且**不会**留下多余的下划线
+        assertEquals(
+            "某视频.mp4",
+            renderVideo("{title}_{p_title}", mapOf("{title}" to "某视频", "{p_title}" to "")),
+        )
+    }
+
+    @Test
+    fun `番剧新默认模板：season_title 为空时不能渲染出以斜杠开头的名字`() {
+        // 模板是 `{season_title}/{episode_number}_{episode_title}`，而 season_title 经常为空。
+        // 老实现只吃 `_` 不吃 `/` → 会得到 "/第1话_某话.mp4"（交付时虽能兜住，
+        // 但字幕/弹幕名那些调用方没有拆目录+过滤空段这层保护）
+        assertEquals(
+            "第1话_某话.mp4",
+            renderDonghua(
+                "{season_title}/{episode_number}_{episode_title}",
+                mapOf("{season_title}" to "", "{episode_number}" to "第1话", "{episode_title}" to "某话"),
+            ),
+        )
+    }
+
+    @Test
+    fun `番剧新默认模板：有季名时用季名做子目录`() {
+        assertEquals(
+            "第一季/第1话_某话.mp4",
+            renderDonghua(
+                "{season_title}/{episode_number}_{episode_title}",
+                mapOf("{season_title}" to "第一季", "{episode_number}" to "第1话", "{episode_title}" to "某话"),
+            ),
+        )
+    }
+
+    @Test
+    fun `取值里的斜杠仍然会被换成下划线（模板里的斜杠才当子目录）`() {
+        assertEquals(
+            "A_B.mp4",
+            renderVideo("{title}", mapOf("{title}" to "A/B")),
+        )
+        assertEquals(
+            "合集/某视频.mp4",
+            renderVideo("{collection_title}/{title}", mapOf("{collection_title}" to "合集", "{title}" to "某视频")),
+        )
     }
 }

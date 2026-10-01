@@ -552,7 +552,7 @@ private fun HomeContent(
 
             item(key = "home_footer") {
                 Text(
-                    "请在Download/BiliDownloader目录下查看下载内容",
+                    "请在Download/${com.imcys.bilibilias.download.DownloadDir.NAME}目录下查看下载内容",
                     fontSize = 14.sp,
                     fontWeight = FontWeight(330),
                     modifier = Modifier

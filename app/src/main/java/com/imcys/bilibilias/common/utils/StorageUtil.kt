@@ -71,12 +71,14 @@ object StorageUtil: KoinComponent {
     }
 
     /**
-     * 获取Download/BiliDownloader文件夹占用空间（兼容原有方式）
+     * 获取下载目录占用空间（新目录 BDT + 旧目录 BiliDownloader，兼容改名前的文件）
      */
     private fun getDownloadUsedBytes(): Long {
-        val bilibiliasDir =
-            File(getExternalStoragePublicDirectory(DIRECTORY_DOWNLOADS), "BiliDownloader")
-        return getFolderSize(bilibiliasDir)
+        // ⚠️ 新目录与**旧目录都要算**：改名后不做搬移，老用户的文件还在 BiliDownloader 里，
+        // 只统计新目录会让"已下载"直接显示 0 B，像是文件被删了。
+        return DownloadDir.ALL_NAMES.sumOf { name ->
+            getFolderSize(File(getExternalStoragePublicDirectory(DIRECTORY_DOWNLOADS), name))
+        }
     }
 
     /**
@@ -200,7 +202,7 @@ object StorageUtil: KoinComponent {
     }
 
     /**
-     * 统计Download/BiliDownloader文件夹及其所有子文件夹的大小
+     * 统计下载目录及其所有子文件夹的大小（优先 SAF，否则传统方式）
      * 优先使用SAF权限统计，否则用传统方式
      */
     suspend fun getASDownloadFolderSize(context: Context): Long {

@@ -208,7 +208,7 @@ fun StorageManagementSuccessScreen(
                     ASIconButton(onClick = {
                         val downloadsDir =
                             Environment.getExternalStoragePublicDirectory(Environment.DIRECTORY_DOWNLOADS)
-                        val targetDir = File(downloadsDir, "BiliDownloader")
+                        val targetDir = File(downloadsDir, com.imcys.bilibilias.download.DownloadDir.NAME)
                         if (!targetDir.exists()) {
                             runCatching { targetDir.mkdirs() }
                         }
@@ -232,7 +232,7 @@ fun StorageManagementSuccessScreen(
             description = "已下载的音视频文件大小",
             onClick = {
                 val intent = Intent(Intent.ACTION_VIEW).apply {
-                    val targetDir = File(Environment.getExternalStoragePublicDirectory(Environment.DIRECTORY_DOWNLOADS), "BiliDownloader")
+                    val targetDir = com.imcys.bilibilias.download.DownloadDir.dir()
                         .apply {
                         if (!exists()) mkdirs()
                     }

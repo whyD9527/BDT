@@ -72,4 +72,15 @@ class AppSettingsSerializerTest {
         assertEquals(AppSettings.VideoParsePlatform.TV, read.videoParsePlatform)
         assertEquals("{title}", read.videoNamingRule)
     }
+
+    @Test
+    fun `默认命名模板就是推荐的那两套（改它等于改所有新装用户的行为）`() {
+        // 2026-10-01：老的默认值 `{p_title}` / `{episode_title}` 有撞名风险
+        // （多 P 视频的分 P 标题、跨番剧的"第1话"），已换成方案二。
+        assertEquals("{title}_{p_title}", AppSettingsSerializer.appSettingsDefault.videoNamingRule)
+        assertEquals(
+            "{season_title}/{episode_number}_{episode_title}",
+            AppSettingsSerializer.appSettingsDefault.bangumiNamingRule,
+        )
+    }
 }

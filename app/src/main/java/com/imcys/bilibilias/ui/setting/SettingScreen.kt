@@ -191,7 +191,7 @@ fun SettingScreen(
                 BaseSettingsItem(
                     painter = rememberVectorPainter(Icons.Outlined.Save),
                     text = "缓存目录",
-                    descriptionText = "Download/BiliDownloader",
+                    descriptionText = com.imcys.bilibilias.download.DownloadDir.RELATIVE_PATH,
                     onClick = {
                     }
                 )

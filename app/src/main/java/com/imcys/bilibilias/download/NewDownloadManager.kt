@@ -1023,7 +1023,7 @@ class NewDownloadManager(
                 return
             }
         }
-        val saved = downloadImageToAlbum(coverUrl.orEmpty(), fileName, "BiliDownloader")
+        val saved = downloadImageToAlbum(coverUrl.orEmpty(), fileName, DownloadDir.NAME)
         if (!saved) {
             // 如实记一笔：旧实现在写失败时静默 no-op，用户以为存进相册了（2026-09-15 复审 L15）
             Log.w(TAG, "封面写入相册失败: $fileName")

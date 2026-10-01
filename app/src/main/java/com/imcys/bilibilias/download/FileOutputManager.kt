@@ -37,7 +37,7 @@ class FileOutputManager(
             SubtitleType.ASS -> "text/x-ass"
             SubtitleType.SRT -> "application/x-subrip"
         }
-        return createDownloadOutputStream(fileName, mime, "BiliDownloader")
+        return createDownloadOutputStream(fileName, mime, DownloadDir.NAME)
     }
 
     /**
@@ -45,7 +45,7 @@ class FileOutputManager(
      */
     suspend fun createDanmakuOutputStream(fileName: String): OutputStream =
         withContext(Dispatchers.IO) {
-            createDownloadOutputStream(fileName, "application/xml", "BiliDownloader/Danmaku")
+            createDownloadOutputStream(fileName, "application/xml", "${DownloadDir.NAME}/Danmaku")
         }
 
     /**
@@ -78,9 +78,9 @@ class FileOutputManager(
         val actualFileName = parts.last()
         val folderPath = if (parts.size > 1) parts.dropLast(1).joinToString("/") else ""
         val relativePath = if (folderPath.isNotEmpty())
-            "${Environment.DIRECTORY_DOWNLOADS}/BiliDownloader/$folderPath"
+            "${Environment.DIRECTORY_DOWNLOADS}/${DownloadDir.NAME}/$folderPath"
         else
-            "${Environment.DIRECTORY_DOWNLOADS}/BiliDownloader"
+            "${Environment.DIRECTORY_DOWNLOADS}/${DownloadDir.NAME}"
 
         if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.Q) {
             moveToDownloadMediaStore(file, actualFileName, relativePath, mimeType)
@@ -252,7 +252,7 @@ class FileOutputManager(
         //  · 旧文件此时并没有被删除 → 写入失败就把名字改回去，用户的东西原样还在；
         //  · 我们自己的新文件在"挪开"这一步**还不存在** → 物理上不可能误删自己。
         // ⚠️ 目录要按 RELATIVE_PATH 的写法算（2026-10-01 真机复现）：
-        // 这里的 `relativePath` 是 **"Download/BiliDownloader"**（MediaStore 的相对路径，
+        // 这里的 `relativePath` 是 **"Download/BDT"**（MediaStore 的相对路径，
         // 自带 `Download/` 前缀），若再拼一次 Downloads 根目录就会变成
         // `.../Download/Download/BiliDownloader` —— 目录不存在 → `listFiles()` 为 null →
         // "挪开旧文件"整步**静默 no-op**（真机日志里连一条都没有，又踩了一次"静默失效"）。
@@ -675,7 +675,7 @@ class FileOutputManager(
     }
 
     /**
-     * 把 MediaStore 的 `RELATIVE_PATH`（如 `Download/BiliDownloader`）解析成磁盘目录。
+     * 把 MediaStore 的 `RELATIVE_PATH`（如 `Download/BDT`）解析成磁盘目录。
      *
      * ⚠️ 这里必须**去掉开头的 `Download/`**：公共下载目录本身就是 Downloads 根，
      * 再拼一次会得到 `Download/Download/...`（2026-10-01 真机复现：这直接让"挪开旧文件"
@@ -691,7 +691,7 @@ class FileOutputManager(
      * 用 **MediaStore** 枚举某个下载目录下的文件名。
      *
      * ⚠️⚠️ **绝不能用 `File(dir).listFiles()`**（2026-10-01 真机复现）：
-     * 这台 ROM 上 app 对 `Download/BiliDownloader` 的**目录列举被 scoped storage 拒掉**，
+     * 这台 ROM 上 app 对下载目录（`Download/BDT`）的**目录列举被 scoped storage 拒掉**，
      * `listFiles()` 返回 null —— 于是"重复文件检测"和"交付前挪开旧文件"**一起变成静默 no-op**
      * （真机表现：明明有两份同名文件，下载管理页却连"发现重复文件"的卡片都不出现）。
      * 而 MediaStore 本来就是这些文件的主人，问它最靠谱：先按 `RELATIVE_PATH` 前缀查，
@@ -1026,7 +1026,7 @@ class FileOutputManager(
     ): String? {
         val downloadsDir =
             Environment.getExternalStoragePublicDirectory(Environment.DIRECTORY_DOWNLOADS)
-        var targetDir = File(downloadsDir, "BiliDownloader")
+        var targetDir = File(downloadsDir, DownloadDir.NAME)
         if (!targetDir.exists()) targetDir.mkdirs()
 
         if (folderPath.isNotEmpty()) {

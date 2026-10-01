@@ -352,7 +352,7 @@ fun ColumnScope.HorizontalAnalysisVideoCardList(
                     )
                 ) {
                     AnalysisVideoCard(asLinkResultType, isBILILogin, analysisBaseInfo, savePic = {
-                        viewModel.downloadImageToAlbum(context, it, "BiliDownloader")
+                        viewModel.downloadImageToAlbum(context, it, com.imcys.bilibilias.download.DownloadDir.NAME)
                     }, goToUser, onToLogin, onRetry = { viewModel.retryParse() })
                     Spacer(Modifier.height(15.dp))
                 }
@@ -427,7 +427,7 @@ fun ColumnScope.VerticalAnalysisVideoCardList(
                 ),
             ) {
                 AnalysisVideoCard(asLinkResultType, isBILILogin, analysisBaseInfo, savePic = {
-                    viewModel.downloadImageToAlbum(context, it, "BiliDownloader")
+                    viewModel.downloadImageToAlbum(context, it, com.imcys.bilibilias.download.DownloadDir.NAME)
                 }, goToUser, onToLogin, onRetry = { viewModel.retryParse() })
             }
 

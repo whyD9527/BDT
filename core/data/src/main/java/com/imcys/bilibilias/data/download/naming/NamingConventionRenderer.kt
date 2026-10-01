@@ -87,7 +87,7 @@ object NamingConventionRenderer {
                 if (!known.contains(part.text)) {
                     // 模板里的未知成分（例如 `{unknown}`）：原样留着（老行为）
                     builder.append(part.text)
-                    trimmableTail = trailingUnderscoreCount(part.text)
+                    trimmableTail = trailingSeparatorCount(part.text)
                     lastTokenWasEmptyValue = false
                     return@forEach
                 }
@@ -111,15 +111,24 @@ object NamingConventionRenderer {
                 // 模板字面段：只塌它自己内部的下划线（老行为）
                 var literal = part.text.replace(runsOfSeparators, "_")
                 if (lastTokenWasEmptyValue) {
-                    // 上一个占位符取值为空：它留下的那个分隔下划线就是本段开头那一个。
-                    // ⚠️ 只吃掉**一个**（而不是把整段的开头下划线都吃掉）：
+                    // 上一个占位符取值为空：它留下的那个分隔符就是本段开头那一个。
+                    // ⚠️ 只吃掉**一个**（而不是把整段的开头分隔符都吃掉）：
                     // `{title}_{p_title}_{cid}` 里 p_title 为空时，第二个 `_` 是给 cid 的分隔符，
                     // 必须留着 —— 老实现的 `Regex("_+$")` 也只在"后面没东西了"时才删。
-                    literal = literal.removePrefix("_")
+                    //
+                    // ⚠️ 2026-10-01：`/` 也要一起处理。番剧的推荐模板是
+                    // `{season_title}/{episode_number}_{episode_title}`，而 season_title 经常为空；
+                    // 只吃 `_` 的话会渲染出 **以 `/` 开头**的名字（`/第1话_某话.mp4`）——
+                    // 交付时虽然会被拆目录+过滤空段兜住，但别的调用方（字幕/弹幕名）没这层兜底。
+                    literal = if (literal.startsWith("_") || literal.startsWith("/")) {
+                        literal.substring(1)
+                    } else {
+                        literal
+                    }
                     lastTokenWasEmptyValue = false
                 }
                 builder.append(literal)
-                trimmableTail = trailingUnderscoreCount(literal)
+                trimmableTail = trailingSeparatorCount(literal)
             }
         }
 
@@ -134,9 +143,9 @@ object NamingConventionRenderer {
         return FileNameLengthRules.truncateToUtf8Bytes(filePath)
     }
 
-    /** 这段文本末尾有几个下划线（只有"模板字面段"产出的下划线才允许被收掉） */
-    private fun trailingUnderscoreCount(text: String): Int =
-        text.length - text.trimEnd('_').length
+    /** 这段文本末尾有几个分隔符（`_` 或 `/`；只有"模板字面段"产出的才允许被收掉） */
+    private fun trailingSeparatorCount(text: String): Int =
+        text.length - text.trimEnd('_', '/').length
 
     /**
      * 去掉"上一个占位符取值为空"留下的尾部独立下划线。

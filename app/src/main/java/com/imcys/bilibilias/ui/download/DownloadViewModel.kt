@@ -138,7 +138,7 @@ class DownloadViewModel(
 
     companion object {
         /** 下载目录（与交付时用的 MediaStore RELATIVE_PATH 一致） */
-        private const val DOWNLOAD_RELATIVE_PATH = "Download/BiliDownloader"
+        private val DOWNLOAD_RELATIVE_PATH = com.imcys.bilibilias.download.DownloadDir.RELATIVE_PATH
     }
 
     // region 排序
