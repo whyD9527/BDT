@@ -234,10 +234,26 @@ class FileOutputManager(
     ): String? {
         val resolver = context.contentResolver
 
-        // ⚠️ 顺序是这个函数的关键：**先把新文件完整写出来，才允许动旧文件**。
-        // 原先一进来就把同名旧文件删掉，再去 insert/copy —— 中途任何一步失败
-        // （空间不足、MediaStore 拒绝、读写出错）都会让用户**原有的那个文件没了、新的也没有**。
-        // 现在先用一个临时名字建行、写完，成功之后才删旧文件并改名。
+        // ⚠️ 顺序（**2026-10-01 真机复现后第三次改写，这次是"挪开-写入-删除"三段式**）：
+        //
+        // 之前试过、并且被真机打回来的两种顺序：
+        //  A. 先删旧文件再写新的 → 中途失败会让用户原有文件没了、新的也没有；
+        //  B. 先写新文件再删旧的 → 这台 ROM 上 MediaStore 会把新文件改名成 `xxx (1)/(2).mp4`
+        //     （因为正式名被旧文件占着），而"删旧文件"两条路都不生效，副本越攒越多；
+        //     更糟的是**回读到/`_data` 报的名字与磁盘真实名字不一致**，
+        //     一旦用它当 keepName 去目录直删，就会把刚交付的成品删掉（真机复现过）。
+        //
+        // 现在：**交付前把同名旧文件整行挪到一边（改成一个带时间戳的临时名，可回滚）**，
+        // 于是：
+        //  · 正式名在写入前就是空闲的 → 不会再有 `(N)` 后缀、也不会撞名；
+        //  · 旧文件此时并没有被删除 → 写入失败就把名字改回去，用户的东西原样还在；
+        //  · 我们自己的新文件在"挪开"这一步**还不存在** → 物理上不可能误删自己。
+        val targetDir = File(
+            Environment.getExternalStoragePublicDirectory(Environment.DIRECTORY_DOWNLOADS),
+            relativePath,
+        )
+        val asides = moveAsideSameContentFiles(resolver, fileName, targetDir)
+
         val stagingName = DownloadRecordReuseRules.stagingFileName(fileName)
         val uri = resolver.insert(
             MediaStore.Downloads.EXTERNAL_CONTENT_URI,
@@ -246,7 +262,10 @@ class FileOutputManager(
                 put(MediaStore.Downloads.MIME_TYPE, mimeType)
                 put(MediaStore.Downloads.RELATIVE_PATH, relativePath)
             }
-        ) ?: return null
+        ) ?: run {
+            restoreAsideFiles(resolver, asides)
+            return null
+        }
 
         try {
             resolver.openOutputStream(uri)?.use { outputStream ->
@@ -255,9 +274,10 @@ class FileOutputManager(
                 }
             } ?: error("openOutputStream 返回 null")
         } catch (e: Exception) {
-            // 新文件没写成：把这一行删掉，**旧文件原样保留**（这正是这次修复的意义）
+            // 新文件没写成：把这一行删掉，并**把挪开的旧文件改回原名**（用户的东西不能丢）
             runCatching { resolver.delete(uri, null, null) }
-            Log.e(TAG, "写入下载目录失败，已回滚（旧文件未动）: $fileName", e)
+            restoreAsideFiles(resolver, asides)
+            Log.e(TAG, "写入下载目录失败，已回滚（旧文件已改回原名）: $fileName", e)
             return null
         }
 
@@ -304,16 +324,9 @@ class FileOutputManager(
             renameStaging(resolver, uri, fileName, storedDisplayName(resolver, uri) ?: stagingName)
         }
 
-        // ③ 没有媒体库行的**孤儿文件**（历史版本只删了行、文件留在盘上）：
-        //    按行查不到、app 直删又 EACCES，只能先让媒体库重新收录、再删那一行。
-        //    ⚠️ 必须先能确定"本次成品在磁盘上的路径"，否则宁可不清（绝不误删自己的成品）。
-        val ownDataPath = storedDataPath(resolver, uri)
-        ownDir?.let { dir -> deleteOrphanSameContentFiles(fileName, dir, ownDataPath) }
-
-        // ④ 孤儿清掉之后再试一次改名（这次同名冲突应该真的没了）
-        if (!FinalNameVerifyRules.displayNameMatches(fileName, storedDisplayName(resolver, uri))) {
-            renameStaging(resolver, uri, fileName, storedDisplayName(resolver, uri) ?: stagingName)
-        }
+        // ③ 新文件已经就位、名字也改好了 → 现在才**真正删掉**那些挪开的旧文件
+        //    （删行 = MediaProvider 连带删文件；此时我们自己的文件已经是正式名，不会被波及）
+        deleteAsideFiles(resolver, asides)
 
         if (!verifyFinalName(resolver, uri, stagingName, fileName)) {
             // 重试一轮：再删一次同名行 + 再清一次孤儿 + 再改一次名
@@ -325,7 +338,6 @@ class FileOutputManager(
                 targetDir = ownDir,
                 excludeId = ownRowId,
             )
-            ownDir?.let { dir -> deleteOrphanSameContentFiles(fileName, dir, storedDataPath(resolver, uri)) }
             renameStaging(resolver, uri, fileName, storedDisplayName(resolver, uri) ?: stagingName)
         }
 
@@ -484,72 +496,114 @@ class FileOutputManager(
             ?.use { c -> if (c.moveToFirst()) c.getString(0) else null }
     }.getOrNull()?.let { File(it).parentFile }
 
-    /** 读回某个 MediaStore 行当前指向的磁盘路径（用于把"自己"从删除目标里排除） */
-    private fun storedDataPath(
+    /** 「挪到一边」的旧文件：记住它的行 uri 与原名，供成功后删除 / 失败后回滚 */
+    private data class AsideFile(
+        val rowUri: android.net.Uri,
+        val originalName: String,
+    )
+
+    /**
+     * 交付**之前**把目录里与 [fileName] 同内容的旧文件整行挪到一边。
+     *
+     * ## 为什么是"挪开"而不是"删掉"（2026-10-01 真机复现后第三次改写）
+     * 这台 ROM 的 MediaStore 实测行为：
+     *  · 往 `Download/` 里 `insert` 一个**已存在**的名字，会被自动改成 `xxx (1).mp4`、`(2)`…；
+     *  · 事后再 `update(DISPLAY_NAME)` 想改回正式名，也是继续往 `(N)` 上加；
+     *  · `_data` / 回读出来的名字与实际磁盘名**可能不一致**（真机上出现过 `_data` 指向
+     *    另一个文件、`DISPLAY_NAME` 回读为 null）。
+     * 于是"先写新的、再删旧的"必然留下 `(N)` 副本；"先删旧的、再写新的"又会在写入失败时
+     * 把用户原有文件弄丢。所以走中间路线：**先把旧行改成一个带时间戳的临时名**
+     * （MediaStore 改名是生效的，磁盘上那个文件跟着改名），正式名就空出来了：
+     *  · 写入前正式名空闲 → 新文件不会再拿到 `(N)`；
+     *  · 旧文件只是改名、没有删除 → 写入失败可以 [restoreAsideFiles] 改回来；
+     *  · 这一步发生在"我们自己的新文件还不存在"时 → **物理上不可能误删自己的成品**。
+     *
+     * ⚠️ 孤儿文件（磁盘有、媒体库没行）同样适用：先 [scanFileBlocking] 让媒体库收录拿到 uri
+     * （已收录的会返回原来那一行），再改名。
+     */
+    private fun moveAsideSameContentFiles(
+        resolver: android.content.ContentResolver,
+        fileName: String,
+        dir: File,
+    ): List<AsideFile> {
+        val victims = runCatching {
+            dir.listFiles()?.filter { f ->
+                f.isFile && FinalNameVerifyRules.isSameContentName(f.name, fileName)
+            }
+        }.getOrNull().orEmpty()
+        if (victims.isEmpty()) return emptyList()
+
+        val result = mutableListOf<AsideFile>()
+        val stamp = System.currentTimeMillis()
+        victims.forEach { victim ->
+            val uri = scanFileBlocking(victim) ?: return@forEach
+            val dataPath = contentDataPath(resolver, uri)
+            if (dataPath != null && dataPath != victim.absolutePath) {
+                // 扫描回来的行指向别的文件：绝不动它（宁可留着副本，也不删错东西）
+                Log.w(TAG, "扫描回来的行不是目标文件，跳过挪开: ${victim.name} → $dataPath")
+                return@forEach
+            }
+            val asideName = "$fileName.old-$stamp"
+            val rows = runCatching {
+                resolver.update(
+                    uri,
+                    ContentValues().apply { put(MediaStore.Downloads.DISPLAY_NAME, asideName) },
+                    null,
+                    null,
+                )
+            }.getOrDefault(0)
+            if (rows > 0) {
+                result += AsideFile(uri, victim.name)
+            } else {
+                Log.w(TAG, "挪开同名旧文件失败（改名 0 行），保持原样: ${victim.name}")
+            }
+        }
+        Log.d(TAG, "交付前挪开同名旧文件: $fileName 目标=${victims.size} 成功=${result.size}")
+        return result
+    }
+
+    /** 交付成功后：删掉那些挪开的旧文件（删行 = MediaProvider 连带删文件） */
+    private fun deleteAsideFiles(
+        resolver: android.content.ContentResolver,
+        asides: List<AsideFile>,
+    ) {
+        if (asides.isEmpty()) return
+        var deleted = 0
+        asides.forEach { aside ->
+            runCatching { resolver.delete(aside.rowUri, null, null) }
+                .onSuccess { deleted += it }
+        }
+        Log.d(TAG, "交付成功，清理挪开的旧文件: 目标=${asides.size} 实际删除=$deleted")
+    }
+
+    /** 交付失败时：把挪开的旧文件改回原名（用户原有的东西必须原样还在） */
+    private fun restoreAsideFiles(
+        resolver: android.content.ContentResolver,
+        asides: List<AsideFile>,
+    ) {
+        if (asides.isEmpty()) return
+        var restored = 0
+        asides.forEach { aside ->
+            runCatching {
+                resolver.update(
+                    aside.rowUri,
+                    ContentValues().apply { put(MediaStore.Downloads.DISPLAY_NAME, aside.originalName) },
+                    null,
+                    null,
+                )
+            }.onSuccess { restored += it }
+        }
+        Log.w(TAG, "已把挪开的旧文件改回原名: 目标=${asides.size} 成功=$restored")
+    }
+
+    /** 某个 MediaStore 行当前指向的磁盘路径 */
+    private fun contentDataPath(
         resolver: android.content.ContentResolver,
         uri: android.net.Uri,
     ): String? = runCatching {
         resolver.query(uri, arrayOf(MediaStore.Downloads.DATA), null, null, null)
             ?.use { c -> if (c.moveToFirst()) c.getString(0) else null }
     }.getOrNull()
-
-    /**
-     * 清理**没有媒体库行**的同名残留文件（孤儿文件）。
-     *
-     * ## 为什么需要（2026-10-01 真机复现）
-     * 历史版本"删行成功、删文件失败"会留下这种状态：磁盘上还躺着 `xxx.mp4`（72MB），
-     * 而媒体库里**没有它的行** —— 于是：
-     *  · 按行删（[deleteSameContentRows]）查不到它，删不掉；
-     *  · app 直删又必然 EACCES（文件属主是 MediaProvider）。
-     * 结果就是每次重下都被它挤成 `xxx (1).mp4`、`(2)`…，副本越攒越多。
-     * 唯一的出路是**先让媒体库重新收录这个文件（拿到 uri），再删那一行** ——
-     * 删行时 MediaProvider 会把这个文件一起删掉。
-     *
-     * ⚠️ 安全边界（优先级：绝不误删本次成品 > 清理干净）：
-     * 1. [ownFilePath] 为 null 时**直接放弃清理**（连自己是谁都不知道，就不许动任何文件）；
-     * 2. 只处理"同内容名字"（正式名 / `xxx (N).ext`）且**不是**本次自己的文件、不是暂存名；
-     * 3. 扫描回来的行必须**确实指向那个孤儿文件**（比对 `_data`），否则跳过 ——
-     *    防止把别的行（比如本次自己的行）删掉。
-     */
-    private fun deleteOrphanSameContentFiles(
-        fileName: String,
-        dir: File,
-        ownFilePath: String?,
-    ): Int {
-        if (ownFilePath == null) {
-            Log.w(TAG, "拿不到本次成品在磁盘上的路径，跳过孤儿文件清理（宁可留着也不误删）")
-            return 0
-        }
-        val ownFile = File(ownFilePath)
-        val targets = dir.listFiles()?.filter { f ->
-            f.isFile &&
-                FinalNameVerifyRules.isSameContentName(f.name, fileName) &&
-                f.absolutePath != ownFile.absolutePath &&
-                f.name != "$fileName.part"
-        } ?: return 0
-        var deleted = 0
-        targets.forEach { orphan ->
-            val uri = scanFileBlocking(orphan) ?: return@forEach
-            val scannedPath = runCatching {
-                context.contentResolver.query(
-                    uri,
-                    arrayOf(MediaStore.Downloads.DATA),
-                    null,
-                    null,
-                    null,
-                )?.use { c -> if (c.moveToFirst()) c.getString(0) else null }
-            }.getOrNull()
-            if (scannedPath != orphan.absolutePath) {
-                Log.w(TAG, "扫描回来的行不是目标孤儿文件，跳过: ${orphan.name} → $scannedPath")
-                return@forEach
-            }
-            val rows = runCatching { context.contentResolver.delete(uri, null, null) }
-                .getOrDefault(0)
-            if (rows > 0) deleted++
-        }
-        Log.d(TAG, "清理无行残留文件: $fileName 目标=${targets.size} 实际删除=$deleted")
-        return deleted
-    }
 
     /** 让媒体库收录一个文件并等它返回 uri（媒体扫描是异步的，最多等 3 秒） */
     private fun scanFileBlocking(file: File): android.net.Uri? {
