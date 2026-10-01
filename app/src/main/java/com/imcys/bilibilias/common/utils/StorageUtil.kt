@@ -1,5 +1,6 @@
 package com.imcys.bilibilias.common.utils
 
+import com.imcys.bilibilias.download.DownloadDir
 import android.app.usage.StorageStatsManager
 import android.content.Context
 import android.os.Build
