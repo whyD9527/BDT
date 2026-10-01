@@ -10,6 +10,9 @@ import com.imcys.bilibilias.data.repository.DownloadTaskRepository
 import com.imcys.bilibilias.database.entity.download.DownloadSegment
 import com.imcys.bilibilias.database.entity.download.DownloadState
 import com.imcys.bilibilias.datastore.AppSettings
+import android.net.Uri
+import java.io.FileNotFoundException
+import com.imcys.bilibilias.data.download.record.DownloadRecordDisplayRules
 import com.imcys.bilibilias.data.download.output.DuplicateDownloadRules
 import com.imcys.bilibilias.download.FileOutputManager
 import com.imcys.bilibilias.download.NewDownloadManager
@@ -170,6 +173,44 @@ class DownloadViewModel(
 
     fun cancelDownloadTask(segmentId: Long) {
         viewModelScope.launch { downloadManager.cancelTask(segmentId) }
+    }
+    // endregion
+
+    // region 文件已丢失探测
+    /**
+     * 记录里有媒体路径、但**文件已经不在了**的那些 segmentId（用于列表上标「文件已丢失」）。
+     *
+     * ⚠️ 判据只有一条：打开文件抛 `FileNotFoundException`。
+     * 权限不足（SecurityException）、URI 形式不支持等**一律当作"还在"** ——
+     * 宁可多显示一条"看起来正常"的记录，也不能把好记录误标成丢失、更不能据此自动删记录。
+     */
+    private val _missingFileIds = MutableStateFlow<Set<Long>>(emptySet())
+    val missingFileIds = _missingFileIds.asStateFlow()
+
+    /** 刷新"文件已丢失"清单（进列表时调用；条数很少，直接每条探一次） */
+    fun refreshMissingFiles(segments: List<DownloadSegment>) {
+        val targets = segments.filter { DownloadRecordDisplayRules.hasMediaFile(it.savePath) }
+        viewModelScope.launch {
+            val missing = withContext(Dispatchers.IO) {
+                targets.filterNot { mediaFileExists(it.savePath) }.map { it.segmentId }.toSet()
+            }
+            _missingFileIds.value = missing
+        }
+    }
+
+    private fun mediaFileExists(savePath: String): Boolean = try {
+        val uri = if (savePath.startsWith("content://")) {
+            Uri.parse(savePath)
+        } else {
+            File(savePath).toUri()
+        }
+        contentResolver.openFileDescriptor(uri, "r")?.use { true } ?: false
+    } catch (e: FileNotFoundException) {
+        // 行/文件确实不在了
+        false
+    } catch (e: Exception) {
+        // 权限、不支持的形式……一律按"还在"处理，避免误报
+        true
     }
     // endregion
 

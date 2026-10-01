@@ -240,6 +240,8 @@ fun DownloadTaskCard(
 fun DownloadFinishTaskCard(
     modifier: Modifier = Modifier,
     downloadSegment: DownloadSegment,
+    /** 记录里写了媒体路径、但文件已经不在（探测结果，见 DownloadViewModel.refreshMissingFiles） */
+    fileMissing: Boolean = false,
     downloadFinishEditState: Boolean,
     selectDeleteList: SnapshotStateList<DownloadSegment>,
     onSelect: () -> Unit = {},
@@ -308,6 +310,7 @@ fun DownloadFinishTaskCard(
                         qualityTitle = downloadSegment.qualityDescription,
                         extension = downloadSegment.mediaContainer.extension,
                         savePath = downloadSegment.savePath,
+                        fileMissing = fileMissing,
                     ).forEach { tag ->
                         Surface(
                             shape = RoundedCornerShape(percent = 50),

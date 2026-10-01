@@ -136,6 +136,12 @@ fun DownloadScreen(route: DownloadRoute, onToBack: () -> Unit) {
         selectDeleteList.clear()
     }
 
+    // 「文件已丢失」清单：列表变化时探一次（文件被外部删掉后，记录还在，但要让用户看得见）
+    val missingFileIds by vm.missingFileIds.collectAsState()
+    LaunchedEffect(completedSegments) {
+        vm.refreshMissingFiles(completedSegments)
+    }
+
     // 重复下载文件（同一部视频多份）：进页面扫一次，清理后 VM 里会自己刷新
     val duplicateGroups by vm.duplicateGroups.collectAsState()
     LaunchedEffect(Unit) {
@@ -270,15 +276,25 @@ fun DownloadScreen(route: DownloadRoute, onToBack: () -> Unit) {
                                     ) {
                                         if (downloadFinishEditState) {
                                             toggleSelection(selectDeleteList, segment)
-                                        } else if (DownloadRecordDisplayRules.hasMediaFile(segment.savePath)) {
+                                        } else if (
+                                            DownloadRecordDisplayRules.hasMediaFile(segment.savePath) &&
+                                            segment.segmentId !in missingFileIds
+                                        ) {
                                             vm.requestOpenFile(segment)
                                         } else {
                                             // 没有媒体文件（只勾了封面/弹幕/字幕）：打开必然失败。
                                             // 别再报"文件不存在，可能已被删除" —— 那会让人以为文件丢了。
-                                            sendToastEventOnBlocking("这条记录只有附加内容（弹幕/封面/字幕），没有可打开的文件")
+                                            // 分情况说实话：纯附加内容 / 文件被外部删掉 / 其它打不开原因
+                                            sendToastEventOnBlocking(
+                                                DownloadRecordDisplayRules.unopenableMessage(
+                                                    savePath = segment.savePath,
+                                                    fileMissing = segment.segmentId in missingFileIds,
+                                                ),
+                                            )
                                         }
                                     },
                                 downloadSegment = segment,
+                                fileMissing = segment.segmentId in missingFileIds,
                                 downloadFinishEditState = downloadFinishEditState,
                                 selectDeleteList = selectDeleteList,
                                 onDeleteTaskAndFile = { vm.deleteDownloadSegment(segment) },
