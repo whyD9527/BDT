@@ -80,4 +80,35 @@ object DownloadRecordReuseRules {
      */
     fun relativePathCandidates(relativePath: String): List<String> =
         listOf(relativePath, relativePath.trimEnd('/') + "/").distinct()
+
+    /**
+     * 把 MediaStore 的 `RELATIVE_PATH` 归一成**相对公共下载目录根**的路径段。
+     *
+     * ## 为什么单独抽成一条规则（2026-10-01 真机复现）
+     * 这个"`Download/` 前缀"的坑咬了两次：
+     *  · 命名规则 / legacy 分支拿到的相对路径是 **`BiliDownloader`**（不含前缀）；
+     *  · 而 `moveToDownloadMediaStore` 拿到的是 **`Download/BiliDownloader`**（含前缀）。
+     * 于是"用相对路径拼磁盘目录"时，前者和 Downloads 根拼一次就对，后者会拼成
+     * `.../Download/Download/BiliDownloader` —— 目录不存在 → `listFiles()` 为 null →
+     * 清理/挪开旧文件整步**静默 no-op**（真机上表现为"日志里一条都没有"）。
+     *
+     * 归一化结果：
+     * ```
+     * "Download/BiliDownloader"  → "BiliDownloader"
+     * "Download/BiliDownloader/" → "BiliDownloader"
+     * "download/BiliDownloader"  → "BiliDownloader"   （大小写不敏感）
+     * "BiliDownloader"           → "BiliDownloader"
+     * "Download"                 → ""                 （就在下载根目录下）
+     * ```
+     */
+    fun downloadDirRelativePath(relativePath: String): String {
+        val trimmed = relativePath.trim('/')
+        if (trimmed.isEmpty()) return ""
+        val first = trimmed.substringBefore('/')
+        if (!first.equals(DOWNLOADS_DIR_NAME, ignoreCase = true)) return trimmed
+        return trimmed.substringAfter('/', "").trim('/')
+    }
+
+    /** 公共下载目录的名字（与 `Environment.DIRECTORY_DOWNLOADS` 一致；core:data 不依赖 android.*） */
+    const val DOWNLOADS_DIR_NAME: String = "Download"
 }

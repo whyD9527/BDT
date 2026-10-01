@@ -248,10 +248,12 @@ class FileOutputManager(
         //  · 正式名在写入前就是空闲的 → 不会再有 `(N)` 后缀、也不会撞名；
         //  · 旧文件此时并没有被删除 → 写入失败就把名字改回去，用户的东西原样还在；
         //  · 我们自己的新文件在"挪开"这一步**还不存在** → 物理上不可能误删自己。
-        val targetDir = File(
-            Environment.getExternalStoragePublicDirectory(Environment.DIRECTORY_DOWNLOADS),
-            relativePath,
-        )
+        // ⚠️ 目录要按 RELATIVE_PATH 的写法算（2026-10-01 真机复现）：
+        // 这里的 `relativePath` 是 **"Download/BiliDownloader"**（MediaStore 的相对路径，
+        // 自带 `Download/` 前缀），若再拼一次 Downloads 根目录就会变成
+        // `.../Download/Download/BiliDownloader` —— 目录不存在 → `listFiles()` 为 null →
+        // "挪开旧文件"整步**静默 no-op**（真机日志里连一条都没有，又踩了一次"静默失效"）。
+        val targetDir = resolveDownloadDir(relativePath)
         val asides = moveAsideSameContentFiles(resolver, fileName, targetDir)
 
         val stagingName = DownloadRecordReuseRules.stagingFileName(fileName)
@@ -531,7 +533,14 @@ class FileOutputManager(
                 f.isFile && FinalNameVerifyRules.isSameContentName(f.name, fileName)
             }
         }.getOrNull().orEmpty()
-        if (victims.isEmpty()) return emptyList()
+        if (victims.isEmpty()) {
+            // ⚠️ 空也要打日志：这一步"静默不生效"正是 2026-10-01 那次真机复现的形态
+            Log.d(
+                TAG,
+                "交付前挪开同名旧文件: $fileName 目标=0（目录=${dir.absolutePath} 存在=${dir.exists()}）",
+            )
+            return emptyList()
+        }
 
         val result = mutableListOf<AsideFile>()
         val stamp = System.currentTimeMillis()
@@ -594,6 +603,19 @@ class FileOutputManager(
             }.onSuccess { restored += it }
         }
         Log.w(TAG, "已把挪开的旧文件改回原名: 目标=${asides.size} 成功=$restored")
+    }
+
+    /**
+     * 把 MediaStore 的 `RELATIVE_PATH`（如 `Download/BiliDownloader`）解析成磁盘目录。
+     *
+     * ⚠️ 这里必须**去掉开头的 `Download/`**：公共下载目录本身就是 Downloads 根，
+     * 再拼一次会得到 `Download/Download/...`（2026-10-01 真机复现：这直接让"挪开旧文件"
+     * 变成静默 no-op）。两种写法都容错（有的调用方传的是不含前缀的相对路径）。
+     */
+    private fun resolveDownloadDir(relativePath: String): File {
+        val root = Environment.getExternalStoragePublicDirectory(Environment.DIRECTORY_DOWNLOADS)
+        val cleaned = DownloadRecordReuseRules.downloadDirRelativePath(relativePath)
+        return if (cleaned.isBlank()) root else File(root, cleaned)
     }
 
     /** 某个 MediaStore 行当前指向的磁盘路径 */

@@ -78,4 +78,31 @@ class DownloadRecordReuseRulesTest {
         assertFalse("不能出现双斜杠", already.any { it.endsWith("//") })
         assertTrue(already.contains("Download/BiliDownloader/"))
     }
+
+    // ------------------------------------ RELATIVE_PATH 归一化（2026-10-01 真机复现）
+
+    @Test
+    fun `RELATIVE_PATH 的 Download 前缀只能有一个`() {
+        // 真机踩的坑：拿 "Download/BiliDownloader" 去拼 Downloads 根目录 →
+        // `.../Download/Download/BiliDownloader` → 目录不存在 → 清理旧文件静默 no-op
+        assertEquals("BiliDownloader", DownloadRecordReuseRules.downloadDirRelativePath("Download/BiliDownloader"))
+        assertEquals("BiliDownloader", DownloadRecordReuseRules.downloadDirRelativePath("Download/BiliDownloader/"))
+        assertEquals("BiliDownloader/合集", DownloadRecordReuseRules.downloadDirRelativePath("Download/BiliDownloader/合集/"))
+        // 不含前缀的写法（命名规则 / legacy 分支给的就是这种）必须原样保留
+        assertEquals("BiliDownloader", DownloadRecordReuseRules.downloadDirRelativePath("BiliDownloader"))
+        assertEquals("BiliDownloader/合集", DownloadRecordReuseRules.downloadDirRelativePath("BiliDownloader/合集"))
+        // 大小写不敏感
+        assertEquals("BiliDownloader", DownloadRecordReuseRules.downloadDirRelativePath("download/BiliDownloader"))
+        // 就在下载根目录下
+        assertEquals("", DownloadRecordReuseRules.downloadDirRelativePath("Download"))
+        assertEquals("", DownloadRecordReuseRules.downloadDirRelativePath("Download/"))
+        assertEquals("", DownloadRecordReuseRules.downloadDirRelativePath(""))
+    }
+
+    @Test
+    fun `名字里带 Download 子串的目录不会被误剪`() {
+        // "Downloaded" 不是 "Download"，不能被当成前缀剪掉
+        assertEquals("Downloaded", DownloadRecordReuseRules.downloadDirRelativePath("Downloaded"))
+        assertEquals("下载/Download 备份", DownloadRecordReuseRules.downloadDirRelativePath("下载/Download 备份"))
+    }
 }
