@@ -57,7 +57,7 @@ fun ComplaintScreen(
 
             ComplaintOptionCard(
                 title = "方案一：禁止缓存",
-                description = "不能让其他用户在哔哩下载器内缓存该视频。\n限制：只能是自己的视频。",
+                description = "不能让其他用户在BDT内缓存该视频。\n限制：只能是自己的视频。",
                 buttonText = "查看详情",
                 onClick = { }
             )
@@ -73,7 +73,7 @@ fun ComplaintScreen(
 
             ComplaintOptionCard(
                 title = "方案三：紧急下架与全网追回",
-                description = "立即停止哔哩下载器的一切活动，有必要时向所有用户发送追回邮件，要求42小时内删除缓存的视频和副本。\n限制：只能主体且需要可以代表主体的必要资料，哔哩下载器所有渠道下架（Github和APP官网），APP所有版本阻止用户继续使用，并发布公告表明问题。",
+                description = "立即停止BDT的一切活动，有必要时向所有用户发送追回邮件，要求42小时内删除缓存的视频和副本。\n限制：只能主体且需要可以代表主体的必要资料，BDT所有渠道下架（Github和APP官网），APP所有版本阻止用户继续使用，并发布公告表明问题。",
                 buttonText = "查看详情",
                 onClick = {  }
             )

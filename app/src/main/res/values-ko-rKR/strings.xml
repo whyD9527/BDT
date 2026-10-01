@@ -23,8 +23,8 @@
     <string name="login_benefits"><![CDATA[·더 고화질, 고비트레이트 영상 지원\n·애니메이션 캐시 지원\n·프리미엄 회원 혜택 사용 지원\n·로밍 서비스 이용]]></string>
     <string name="login_agreement_prefix">로그인은 다음에 동의함을 의미합니다:</string>
     <string name="login_bilibili_agreement">·Bilibili 계정 및 커뮤니티 관련 약관</string>
-    <string name="login_privacy_agreement">·《哔哩下载器 개인정보 약관》</string>
-    <string name="login_disclaimer">·哔哩下载器는 사용으로 인한 모든 결과에 대해 책임지지 않습니다</string>
+    <string name="login_privacy_agreement">·《BDT 개인정보 약관》</string>
+    <string name="login_disclaimer">·BDT는 사용으로 인한 모든 결과에 대해 책임지지 않습니다</string>
     <string name="login_special_notice">특별 안내:\n본 프로그램은 Bilibili의 공식 승인을 받지 않았으며, 사용으로 인한 모든 결과에 대해 Bilibili는 책임지지 않습니다.</string>
     <string name="login_scan_qrcode">Bilibili QR코드 로그인</string>
     <string name="login_web">웹</string>
@@ -70,9 +70,9 @@
     <string name="instructions_title">이용 안내</string>
     <string name="instructions_not_bilibili">현재 사용하는 소프트웨어는 Bilibili가 아니며, 보조용 서드파티 도구로 Bilibili와는 아무 관련이 없습니다.</string>
     <string name="instructions_no_authorization">이 소프트웨어는 Bilibili의 허가를 받지 않았으며, Bilibili는 이에 대한 어떤 책임도 지지 않습니다.</string>
-    <string name="instructions_purpose">哔哩下载器는 Bilibili(비리비리) 영상 캐시용 서드파티 도구로, 오프라인 재생 또는 원본 영상 클립이 필요한 크리에이터를 위한 도구입니다.</string>
-    <string name="instructions_no_redistribution">哔哩下载器로 저장된 모든 콘텐츠는 재배포할 수 없으며, 자신의 디바이스 내에서만 재생하거나 편집 영상 제작에 사용할 수 있습니다(저자 허가 없이 직접 재업로드 불가).</string>
-    <string name="instructions_self_responsibility">규정을 위반하거나 불법 용도로 사용할 경우 모든 결과에 대해 본인이 책임져야 하며, 哔哩下载器는 서비스 이용 중지를 할 수도 있습니다.</string>
+    <string name="instructions_purpose">BDT는 Bilibili(비리비리) 영상 캐시용 서드파티 도구로, 오프라인 재생 또는 원본 영상 클립이 필요한 크리에이터를 위한 도구입니다.</string>
+    <string name="instructions_no_redistribution">BDT로 저장된 모든 콘텐츠는 재배포할 수 없으며, 자신의 디바이스 내에서만 재생하거나 편집 영상 제작에 사용할 수 있습니다(저자 허가 없이 직접 재업로드 불가).</string>
+    <string name="instructions_self_responsibility">규정을 위반하거나 불법 용도로 사용할 경우 모든 결과에 대해 본인이 책임져야 하며, BDT는 서비스 이용 중지를 할 수도 있습니다.</string>
     <string name="instructions_go_to_bilibili">아니요, 저는 Bilibili를 찾고 있습니다</string>
     <string name="instructions_i_agree">알고 동의합니다</string>
 
@@ -82,7 +82,7 @@
 
     <!-- Privacy policy refuse dialog strings -->
     <string name="privacy_refuse_content"><![CDATA[
-설령 哔哩下载器의 개인정보 처리방침에 동의하지 않으셔도, 이 앱은 Bilibili(비리비리) 영상 캐싱 서드파티 도구입니다. 계속 사용하실 경우 Bilibili 플랫폼의 관련 정책을 준수하셔야 합니다.
+설령 BDT의 개인정보 처리방침에 동의하지 않으셔도, 이 앱은 Bilibili(비리비리) 영상 캐싱 서드파티 도구입니다. 계속 사용하실 경우 Bilibili 플랫폼의 관련 정책을 준수하셔야 합니다.
 이 앱을 사용하는 동안 Bilibili를 간접적으로 이용하게 되며, 계정 로그인과 동영상 콘텐츠 접근이 반드시 필요합니다. 이를 피하려면 앱을 삭제해야 합니다.
 단, 이 경우 앱에서는 어떤 개인정보도 수집하지 않으니 안심하고 사용하셔도 됩니다.<br>
 자세한 정책은 다음에서 확인할 수 있습니다:
@@ -214,7 +214,7 @@
     <string name="user_freeze_all_confirm_message">이 기능은 업로더용입니다. 동결 후 다른 사용자는 본인이 업로드한 영상을 캐싱할 수 없습니다. 동결하시겠습니까?</string>
     <string name="user_freezing_progress">동결 중입니다. 잠시만 기다려주세요...</string>
     <string name="user_input_bv_prompt">동결할 동영상의 BV 번호를 입력하세요. 동결 후에는 다른 사용자가 영상을 캐싱할 수 없습니다:</string>
-    <string name="user_freeze_notice">참고: 哔哩下载器의 동결 기능은 哔哩下载器에서만 적용됩니다. 타사의 캐시 도구는 제한할 수 없습니다.</string>
+    <string name="user_freeze_notice">참고: BDT의 동결 기능은 BDT에서만 적용됩니다. 타사의 캐시 도구는 제한할 수 없습니다.</string>
     <string name="user_uploaded_videos">업로드 영상</string>
     <string name="user_likes">좋아요</string>
     <string name="user_recent">최근</string>

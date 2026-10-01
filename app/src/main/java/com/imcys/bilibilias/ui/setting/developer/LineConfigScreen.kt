@@ -140,7 +140,7 @@ fun LineConfigContent(modifier: Modifier) {
                 modifier =  Modifier.animateItem(),
                 text =
                 """
-                    这些加速由B站支持的CDN提供，全程不经过哔哩下载器服务器代理。
+                    这些加速由B站支持的CDN提供，全程不经过BDT服务器代理。
                 """.trimIndent()
             )
         }

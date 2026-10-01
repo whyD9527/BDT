@@ -23,8 +23,8 @@
     <string name="login_benefits"><![CDATA[·より高い画質・高ビットレートの動画対応\n·アニメのキャッシュ対応\n·プレミアム会員特典の使用\n·ローミングサービスの利用]]></string>
     <string name="login_agreement_prefix">ログインは以下への同意を意味します：</string>
     <string name="login_bilibili_agreement">·ビリビリアカウントとコミュニティに関する規約</string>
-    <string name="login_privacy_agreement">·《哔哩下载器プライバシーポリシー》</string>
-    <string name="login_disclaimer">·使用による一切の結果について哔哩下载器は責任を負いません</string>
+    <string name="login_privacy_agreement">·《BDTプライバシーポリシー》</string>
+    <string name="login_disclaimer">·使用による一切の結果についてBDTは責任を負いません</string>
     <string name="login_special_notice">特記：\n本ソフトウェアはビリビリの認可を受けていません。本ソフトウェアの使用によるあらゆる結果についてビリビリは一切責任を負いません。</string>
     <string name="login_scan_qrcode">ビリビリ QRコードログイン</string>
     <string name="login_web">ウェブ</string>
@@ -70,9 +70,9 @@
     <string name="instructions_title">ご利用案内</string>
     <string name="instructions_not_bilibili">ご利用中のソフトウェアはビリビリ/bilibiliではなく、その補助を目的とした第三者ツールであり、ビリビリとは一切関係ありません。</string>
     <string name="instructions_no_authorization">このソフトウェアはビリビリの許可を受けておらず、ビリビリはその使用に起因するいかなる結果にも一切責任を負いません。</string>
-    <string name="instructions_purpose">哔哩下载器は第三者によるBilibili動画キャッシュツールであり、オフライン再生や動画切り抜きなどを必要とするクリエイター向けです。</string>
-    <string name="instructions_no_redistribution">哔哩下载器でキャッシュしたコンテンツの再配布は禁止されています。自身の端末での再生または切り抜き動画の制作に限ります（著作者の許可なく転載不可）。</string>
-    <string name="instructions_self_responsibility">規約違反や不正利用の場合、すべての責任はご自身で負担するものとし、哔哩下载器はご利用を禁止する場合があります。</string>
+    <string name="instructions_purpose">BDTは第三者によるBilibili動画キャッシュツールであり、オフライン再生や動画切り抜きなどを必要とするクリエイター向けです。</string>
+    <string name="instructions_no_redistribution">BDTでキャッシュしたコンテンツの再配布は禁止されています。自身の端末での再生または切り抜き動画の制作に限ります（著作者の許可なく転載不可）。</string>
+    <string name="instructions_self_responsibility">規約違反や不正利用の場合、すべての責任はご自身で負担するものとし、BDTはご利用を禁止する場合があります。</string>
     <string name="instructions_go_to_bilibili">いいえ、ビリビリを探しています</string>
     <string name="instructions_i_agree">理解し同意します</string>
 
@@ -81,7 +81,7 @@
     <string name="account_all_invalid">すべてのアカウントが無効です。再度ログインしてください。</string>
 
     <!-- Privacy policy refuse dialog strings -->
-    <string name="privacy_refuse_content">哔哩下载器のプライバシーポリシーに拒否された場合でも、このアプリは第三者によるBilibili動画キャッシュツールです。このソフトを使い続ける場合、ビリビリの関連ポリシーを遵守する必要があります。\nAPPの利用中は間接的にビリビリを利用することになり、アカウントログインや動画取得が避けられません。これが嫌な場合はアンインストールしてください。\nなお、ご利用時に個人情報は収集されませんので、ご安心ください。&lt;br&gt;\n詳細な規約は：\n&lt;a href="https://www.bilibili.com/blackboard/topic/activity-cn8bxPLzz.html"&gt;ビリビリ規約一覧&lt;/a&gt;をご確認ください。</string>
+    <string name="privacy_refuse_content">BDTのプライバシーポリシーに拒否された場合でも、このアプリは第三者によるBilibili動画キャッシュツールです。このソフトを使い続ける場合、ビリビリの関連ポリシーを遵守する必要があります。\nAPPの利用中は間接的にビリビリを利用することになり、アカウントログインや動画取得が避けられません。これが嫌な場合はアンインストールしてください。\nなお、ご利用時に個人情報は収集されませんので、ご安心ください。&lt;br&gt;\n詳細な規約は：\n&lt;a href="https://www.bilibili.com/blackboard/topic/activity-cn8bxPLzz.html"&gt;ビリビリ規約一覧&lt;/a&gt;をご確認ください。</string>
 
     <!-- Donate related strings -->
     <string name="donate_recommend">オススメ</string>
@@ -208,7 +208,7 @@
     <string name="user_freeze_all_confirm_message">これはUP主向け機能です。凍結すると他ユーザーはあなたの動画をキャッシュできません。本当に凍結しますか？</string>
     <string name="user_freezing_progress">凍結中です。しばらくお待ちください...</string>
     <string name="user_input_bv_prompt">凍結したい動画のBV番号を入力してください。凍結後、他のユーザーはキャッシュできません：</string>
-    <string name="user_freeze_notice">注意：哔哩下载器の凍結機能は哔哩下载器内に限定され、他のツールは制限されません。</string>
+    <string name="user_freeze_notice">注意：BDTの凍結機能はBDT内に限定され、他のツールは制限されません。</string>
     <string name="user_uploaded_videos">投稿動画</string>
     <string name="user_likes">いいね</string>
     <string name="user_recent">最近</string>

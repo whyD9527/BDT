@@ -23,8 +23,8 @@
     <string name="login_benefits"><![CDATA[·دعم فيديوهات بجودة أعلى ومعدل نقل أعلى\n·دعم تخزين الرسوم المتحركة\n·استخدام مزايا العضوية المميزة\n·استخدام خدمة التجوال]]></string>
     <string name="login_agreement_prefix">تسجيل الدخول يعني موافقتك على:</string>
     <string name="login_bilibili_agreement">·اتفاقيات حساب ومجتمع Bilibili</string>
-    <string name="login_privacy_agreement">·《اتفاقية الخصوصية 哔哩下载器》</string>
-    <string name="login_disclaimer">·哔哩下载器 غير مسؤول عن أي نتائج ناتجة عن الاستخدام</string>
+    <string name="login_privacy_agreement">·《اتفاقية الخصوصية BDT》</string>
+    <string name="login_disclaimer">·BDT غير مسؤول عن أي نتائج ناتجة عن الاستخدام</string>
     <string name="login_special_notice">تنبيه خاص:\nهذا البرنامج غير مصرح به من قبل Bilibili. Bilibili غير مسؤول عن أي نتائج يسببها استخدام البرنامج.</string>
     <string name="login_scan_qrcode">تسجيل الدخول برمز QR لـ Bilibili</string>
     <string name="login_web">الويب</string>
@@ -70,8 +70,8 @@
     <string name="instructions_title">إشعار استخدام</string>
     <string name="instructions_not_bilibili">البرنامج المستخدم ليس Bilibili وإنما أداة طرف ثالث للمساعدة، ولا يتبع Bilibili بأي شكل.</string>
     <string name="instructions_no_authorization">هذا البرنامج غير مصرح به من قبل Bilibili ولن تكون Bilibili مسؤولة عن أي نتائج ناتجة عن الاستخدام.</string>
-    <string name="instructions_purpose">哔哩下载器 أداة خارجية لحفظ فيديوهات Bilibili، تهدف لمساعدة من يحتاج لتشغيل الفيديوهات دون اتصال أو إنشاء مقاطع تحريرية.</string>
-    <string name="instructions_no_redistribution">لا يجوز إعادة توزيع أي محتوى تم حفظه عبر 哔哩下载器. يُسمح فقط بالتشغيل على جهازك أو لتحرير فيديوهات (ممنوع النقل المباشر دون إذن المؤلف).</string>
+    <string name="instructions_purpose">BDT أداة خارجية لحفظ فيديوهات Bilibili، تهدف لمساعدة من يحتاج لتشغيل الفيديوهات دون اتصال أو إنشاء مقاطع تحريرية.</string>
+    <string name="instructions_no_redistribution">لا يجوز إعادة توزيع أي محتوى تم حفظه عبر BDT. يُسمح فقط بالتشغيل على جهازك أو لتحرير فيديوهات (ممنوع النقل المباشر دون إذن المؤلف).</string>
     <string name="instructions_self_responsibility">إذا خالفت الشروط أو استخدمت التطبيق لأغراض غير مشروعة، ستتحمل جميع النتائج، وقد يتم حظرك من الاستخدام.</string>
     <string name="instructions_go_to_bilibili">لا، أبحث عن Bilibili</string>
     <string name="instructions_i_agree">فهمت وأوافق</string>
@@ -82,7 +82,7 @@
 
     <!-- Privacy policy refuse dialog strings -->
     <string name="privacy_refuse_content"><![CDATA[
-على الرغم من أنك رفضت سياسة الخصوصية الخاصة بـ哔哩下载器، إلا أن هذا التطبيق هو أداة خارجية لحفظ فيديوهات Bilibili. طالما استمررت في استخدام التطبيق، يجب عليك الالتزام بسياسات منصة Bilibili.
+على الرغم من أنك رفضت سياسة الخصوصية الخاصة بـBDT، إلا أن هذا التطبيق هو أداة خارجية لحفظ فيديوهات Bilibili. طالما استمررت في استخدام التطبيق، يجب عليك الالتزام بسياسات منصة Bilibili.
 ذلك لأنك أثناء استخدام التطبيق ما زلت فعليًا تستخدم Bilibili بطريقة غير مباشرة، وقد تحتاج لتسجيل الدخول والوصول إلى محتوى الفيديو، وهو أمر لا يمكن تجنبه إلا بحذف التطبيق.
 ولكن، في هذا الوقت لن يجمع التطبيق أي بيانات خصوصية منك. لا تقلق أثناء الاستخدام.<br>
 اطلع على الاتفاقيات الكاملة هنا:
@@ -214,7 +214,7 @@
     <string name="user_freeze_all_confirm_message">هذه الخاصية لأصحاب القنوات فقط. بعد التجميد، لن يستطيع الآخرون حفظ فيديوهاتك عبر التطبيق. هل أنت متأكد؟</string>
     <string name="user_freezing_progress">جارٍ التجميد، يرجى الانتظار...</string>
     <string name="user_input_bv_prompt">أدخل رقم BV للفيديو المراد تجميده. بعد التجميد، لن يستطيع الآخرون حفظ الفيديو الخاص بك:</string>
-    <string name="user_freeze_notice">ملاحظة: ميزة التجميد تعمل فقط على 哔哩下载器 ولا تمنع أدوات طرف ثالث من الحفظ.</string>
+    <string name="user_freeze_notice">ملاحظة: ميزة التجميد تعمل فقط على BDT ولا تمنع أدوات طرف ثالث من الحفظ.</string>
     <string name="user_uploaded_videos">الفيديوهات المنشورة</string>
     <string name="user_likes">إعجابات</string>
     <string name="user_recent">الأحدث</string>

@@ -1,10 +1,14 @@
 <div align="center">
 
-# 哔哩下载器
+<img src="docs/images/icon.png" width="132" alt="BDT 图标" />
+
+# BDT
 
 **便捷的 B 站视频与番剧缓存工具**
 
 [![Build APK (Alpha)](https://github.com/whyD9527/BDT/actions/workflows/build-apk-alpha.yml/badge.svg)](https://github.com/whyD9527/BDT/actions/workflows/build-apk-alpha.yml)
+[![Latest release](https://img.shields.io/github/v/release/whyD9527/BDT?label=release)](../../releases)
+[![License](https://img.shields.io/badge/license-Apache--2.0-blue)](LICENSE)
 
 基于 [BILIBILIAS](https://github.com/1250422131/bilibilias) 源码的二次开发构建
 
@@ -55,6 +59,60 @@ BILIBILIAS 开源社区多年积累的成果**。本仓库只是在他们的工�
 ## 三、本构建做了什么
 
 在保留原项目全部功能的前提下，做了以下修改：
+
+### 3.3.0：改名 BDT · 下载交付链路重写 · 重复文件清理
+
+**改名**：应用显示名与全部界面文案由「哔哩下载器」改为 **BDT**（12 个语言资源 + 6 处代码文案，
+共 99 处）。包名与签名保持不变，**可直接覆盖安装、登录状态与设置都不丢**。
+
+> 下载目录仍沿用 `Download/BiliDownloader` —— 这是为了让**你已经下好的文件继续被找到**
+> （记录里存的是完整路径）。要不要连目录一起改成 `Download/BDT`，可以单独再说一声。
+
+**下载交付链路重写（这一版最核心的修复）**
+
+以前"重新下载同一集"会不断在下载目录里攒出 `xxx (1).mp4`、`xxx (2).mp4` 整集大小的副本，
+严重时**刚下好的文件会被删掉、界面却报失败**。根因是真机（小米 / Android 16）上 MediaStore 的四个怪癖：
+
+| 现象 | 实测 |
+|---|---|
+| 写入撞名 | 自动改名为 `xxx (1).mp4`，不报错 |
+| 事后改名 | 继续往 `(N)` 上加；`_data` 与回读名还可能和磁盘对不上 |
+| 删除/改名/读属性 | app 对"媒体库拥有的文件"既 `stat` 不了也删不动（EACCES）；`File.listFiles()` 甚至可能返回 null |
+| 日志 | MIUI 会过滤 app 自己的 logcat，同一段代码有时一条日志都没有 |
+
+现在的做法（**"挪开 → 写入 → 删除"三段式**）：
+
+1. **交付前**先把同名旧文件挪到一边（有「所有文件访问」就直接改名；没有就让媒体库改行名）——
+   此刻新文件还没写，**物理上不可能误删自己**；
+2. 写入新文件：正式名此刻是空闲的，**不会再被改成 `(N)`**；
+3. 成功就删掉挪开的那份；**失败就把旧文件改回原名**，用户原有的东西一个不少；
+4. 目录枚举一律**问 MediaStore**（`RELATIVE_PATH` 前缀 → `_data` 前缀），并支持
+   `scanFile` 单名探测/扫目录兜底 —— 不再依赖 `listFiles()`。
+
+**新增：重复下载文件检查/清理**
+
+- 下载管理页常驻入口：发现"同一部视频多份副本"时列出来，**默认保留正式名那份**，由你勾选删除；
+- 清理"不是本 App 拥有"的副本（上一版安装留下的、别的 App 写进来的）时，会走
+  **系统确认框**（Android 11+ 的规矩），而不是静默失败；
+- 可选「所有文件访问」权限：给了之后交付阶段可以直接改名/删除，这台机器上的 `(N)` 问题彻底消失。
+
+**新增：诊断轨迹文件**
+
+交付与清理的每一步都会写进 `Android/data/com.whyd9527.bilibilias/files/logs/download-trace.log`
+（超过 256KB 轮转）。起因就是上面那条"MIUI 过滤日志"——**没有它，这类"删除没生效"的问题只能靠猜**。
+
+**其它一大批修复（42 条高中低危，逐条带证据）**
+
+取消不再被记成失败、Cookie 不再外发到非 B 站主机、封面下标算错导致合并必失败、
+命名规则吃掉标题下划线、抽帧 OOM 与无上限、列表 key 重复会崩、隐私门槛统一、
+DataStore 损坏兜底、合并进度单位、多语言小数点、首页板块补齐落盘……
+清单与证据见 [`docs/bug-report-v324.md`](docs/bug-report-v324.md) 与
+[`docs/项目交接文档.md`](docs/项目交接文档.md) 第十四节。
+
+**数据库**
+
+- `download_task(platform_id, type)` 加**唯一索引**（版本 4 → 5），迁移时**先去重再建索引**，
+  避免老库升级即失败。
 
 ### 3.2.4：文件命名与附加内容的两批修复
 
@@ -222,7 +280,7 @@ BILIBILIAS 开源社区多年积累的成果**。本仓库只是在他们的工�
 
 ```bash
 git clone https://github.com/whyD9527/BDT.git
-cd bilibilias
+cd BDT
 ./gradlew :app:assembleAlphaRelease
 ```
 

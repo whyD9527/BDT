@@ -22,8 +22,8 @@
     <string name="login_benefits"><![CDATA[· زیادہ اعلیٰ معیار اور زیادہ بٹ ریٹ ویڈیوز کی حمایت\n· ڈرامہ (Bangumi) کیشنگ کی سہولت\n· پریمیم ممبر فوائد سے استفادہ\n· رومنگ سروس سے لطف اندوزی]]></string>
     <string name="login_agreement_prefix">لاگ ان کرتے ہوئے آپ ان سے متفق ہیں:</string>
     <string name="login_bilibili_agreement">· بیلیبیلی اکاؤنٹ اور کمیونٹی سے متعلق معاہدے</string>
-    <string name="login_privacy_agreement">· 哔哩下载器 کی رازداری پالیسی</string>
-    <string name="login_disclaimer">· استعمال سے پیدا ہونے والے کسی بھی نتائج کی ذمہ داری 哔哩下载器 پر نہیں ہوگی</string>
+    <string name="login_privacy_agreement">· BDT کی رازداری پالیسی</string>
+    <string name="login_disclaimer">· استعمال سے پیدا ہونے والے کسی بھی نتائج کی ذمہ داری BDT پر نہیں ہوگی</string>
     <string name="login_special_notice">خصوصی اطلاع:\nیہ پروگرام بیلیبیلی سے منظور شدہ نہیں، اس کے استعمال سے نتیجہ خیز کسی بھی مسئلہ کی ذمہ داری بیلیبیلی کی نہیں ہوگی</string>
     <string name="login_scan_qrcode">بیلیبیلی QR کوڈ سکین لاگ ان</string>
     <string name="login_web">ویب</string>
@@ -68,9 +68,9 @@
     <string name="instructions_title">استعمال کی ہدایت</string>
     <string name="instructions_not_bilibili">آپ جو سافٹ ویئر استعمال کر رہے ہیں وہ بیلیبیلی (bilibili) نہیں بلکہ ایک تھرڈ پارٹی ٹول ہے، اس کا بیلیبیلی سے کوئی تعلق نہیں۔</string>
     <string name="instructions_no_authorization">اس سافٹ ویئر کو بیلیبیلی کی منظوری حاصل نہیں ہے، اس کے استعمال سے ہونے والے نتیجہ کی ذمہ داری بیلیبیلی پر نہیں۔</string>
-    <string name="instructions_purpose">哔哩下载器 ایک تھرڈ پارٹی بیلیبیلی ویڈیو کیشنگ ٹول ہے جو ان میڈیا تخلیق کاروں کی مدد کے لیے ہے جو آفلائن پلے یا اصل ویڈیو ایڈیٹنگ کرنا چاہتے ہیں۔</string>
-    <string name="instructions_no_redistribution">哔哩下载器 میں کی گئی کوئی بھی کیشنگ صرف آپ کی اپنی ڈیوائس پر پلے یا کلپنگ کے لیے ہو سکتی ہے، بغیر اجازت دوبارہ اپ لوڈ کی اجازت نہیں۔</string>
-    <string name="instructions_self_responsibility">اگر آپ نے قوانین کی خلاف ورزی کی یا غیر قانونی مقاصد کے لیے استعمال کیا تو سب ذمہ داری آپ کی ہو گی۔ 哔哩下载器 آپ کو سروس سے روک بھی سکتا ہے۔</string>
+    <string name="instructions_purpose">BDT ایک تھرڈ پارٹی بیلیبیلی ویڈیو کیشنگ ٹول ہے جو ان میڈیا تخلیق کاروں کی مدد کے لیے ہے جو آفلائن پلے یا اصل ویڈیو ایڈیٹنگ کرنا چاہتے ہیں۔</string>
+    <string name="instructions_no_redistribution">BDT میں کی گئی کوئی بھی کیشنگ صرف آپ کی اپنی ڈیوائس پر پلے یا کلپنگ کے لیے ہو سکتی ہے، بغیر اجازت دوبارہ اپ لوڈ کی اجازت نہیں۔</string>
+    <string name="instructions_self_responsibility">اگر آپ نے قوانین کی خلاف ورزی کی یا غیر قانونی مقاصد کے لیے استعمال کیا تو سب ذمہ داری آپ کی ہو گی۔ BDT آپ کو سروس سے روک بھی سکتا ہے۔</string>
     <string name="instructions_go_to_bilibili">نہیں، میں بیلیبیلی تلاش کر رہا ہوں</string>
     <string name="instructions_i_agree">میں جانتا ہوں اور متفق ہوں</string>
 
@@ -79,7 +79,7 @@
     <string name="account_all_invalid">تمام اکاؤنٹس غیر فعال ہوگئے، براہ کرم دوبارہ لاگ ان کریں۔</string>
 
     <!-- Privacy policy refuse dialog strings -->
-    <string name="privacy_refuse_content">اگرچہ آپ نے 哔哩下载器 کی رازداری پالیسی قبول نہیں کی، یہ ایپ ایک تھرڈ پارٹی بیلیبیلی ویڈیو کیشنگ ٹول ہے۔ جب تک آپ اس ایپ کو استعمال کرتے ہیں آپ کو بیلیبیلی کے اصول اپنانا ہوں گے۔\nکیونکہ ایپ کے استعمال کے دوران آپ بالواسطہ طور پر بھی بیلیبیلی استعمال کر رہے ہیں اور شاید آپ کو اکاؤنٹ لاگ ان اور ویڈیو مواد کی ضرورت ہو گی۔ اس سے بچنے کے لیے ایپ کو ان انسٹال کریں۔\nتاہم اس وقت یہ ایپ آپ کا کوئی ذاتی ڈیٹا جمع نہیں کرے گی اور آپ آسانی سے استعمال کر سکتے ہیں۔&lt;br&gt;\nتفصیل کے لیے لنک دیکھیں:\n&lt;a href="https://www.bilibili.com/blackboard/topic/activity-cn8bxPLzz.html"&gt;بیلیبیلی پالیسی کلیکشن&lt;/a&gt;۔</string>
+    <string name="privacy_refuse_content">اگرچہ آپ نے BDT کی رازداری پالیسی قبول نہیں کی، یہ ایپ ایک تھرڈ پارٹی بیلیبیلی ویڈیو کیشنگ ٹول ہے۔ جب تک آپ اس ایپ کو استعمال کرتے ہیں آپ کو بیلیبیلی کے اصول اپنانا ہوں گے۔\nکیونکہ ایپ کے استعمال کے دوران آپ بالواسطہ طور پر بھی بیلیبیلی استعمال کر رہے ہیں اور شاید آپ کو اکاؤنٹ لاگ ان اور ویڈیو مواد کی ضرورت ہو گی۔ اس سے بچنے کے لیے ایپ کو ان انسٹال کریں۔\nتاہم اس وقت یہ ایپ آپ کا کوئی ذاتی ڈیٹا جمع نہیں کرے گی اور آپ آسانی سے استعمال کر سکتے ہیں۔&lt;br&gt;\nتفصیل کے لیے لنک دیکھیں:\n&lt;a href="https://www.bilibili.com/blackboard/topic/activity-cn8bxPLzz.html"&gt;بیلیبیلی پالیسی کلیکشن&lt;/a&gt;۔</string>
 
     <!-- Donate related strings -->
     <string name="donate_recommend">سفارش</string>
@@ -207,7 +207,7 @@
     <string name="user_freeze_all_confirm_message">یہ فیچر صرف اپلوڈر کے لیے ہے، فریز کرنے کے بعد دوسرے صارفین آپ کی ویڈیوز کیش نہیں کر سکیں گے، کیا آپ فریز کرنا چاہتے ہیں؟</string>
     <string name="user_freezing_progress">فریز کیا جا رہا ہے، براہ کرم انتظار کریں...</string>
     <string name="user_input_bv_prompt">جس ویڈیو کو فریز کرنا ہو اس کا BV نمبر درج کریں، فریز کرنے کے بعد کوئی اسے کیش نہیں کر سکے گا:</string>
-    <string name="user_freeze_notice">نوٹ: 哔哩下载器 کی طرف سے فراہم کردہ فریز صرف 哔哩下载器 پر اثرانداز ہوتا ہے، دوسرے تھرڈ پارٹی ٹول پر نہیں۔</string>
+    <string name="user_freeze_notice">نوٹ: BDT کی طرف سے فراہم کردہ فریز صرف BDT پر اثرانداز ہوتا ہے، دوسرے تھرڈ پارٹی ٹول پر نہیں۔</string>
     <string name="user_uploaded_videos">اپلوڈ شدہ ویڈیوز</string>
     <string name="user_likes">پسندیدہ</string>
     <string name="user_recent">حالیہ</string>

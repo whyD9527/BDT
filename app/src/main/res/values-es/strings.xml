@@ -23,8 +23,8 @@
     <string name="login_benefits"><![CDATA[·Soportar vídeos con mayor calidad y tasa de bits\n·Soportar caché de anime\n·Soportar privilegios de gran miembro\n·Soportar servicio de roaming]]></string>
     <string name="login_agreement_prefix">Iniciar sesión significa que aceptas:</string>
     <string name="login_bilibili_agreement">·Acuerdo de cuenta y comunidad de BiliBili</string>
-    <string name="login_privacy_agreement">·《Política de Privacidad de 哔哩下载器》</string>
-    <string name="login_disclaimer">·哔哩下载器 no se responsabiliza de las consecuencias del uso</string>
+    <string name="login_privacy_agreement">·《Política de Privacidad de BDT》</string>
+    <string name="login_disclaimer">·BDT no se responsabiliza de las consecuencias del uso</string>
     <string name="login_special_notice">Especial:\nEste programa no está autorizado por BiliBili. BiliBili no se responsabiliza por las consecuencias del uso de este software.</string>
     <string name="login_scan_qrcode">Escanear código QR de BiliBili</string>
     <string name="login_web">Web</string>
@@ -70,9 +70,9 @@
     <string name="instructions_title">Aviso de uso</string>
     <string name="instructions_not_bilibili">El software que está usando no es BiliBili, sino una herramienta de terceros que no tiene ninguna relación con BiliBili.</string>
     <string name="instructions_no_authorization">Este software no tiene la autorización de BiliBili, que no se hace responsable de las consecuencias de su uso.</string>
-    <string name="instructions_purpose">哔哩下载器 es una herramienta de caché de vídeo de BiliBili de terceros, diseñada para ayudar a los creadores de contenidos que necesitan reproducir offline o editar vídeos originales.</string>
-    <string name="instructions_no_redistribution">El contenido almacenado en 哔哩下载器 no debe redistribuirse. Sólo se permite la reproducción o edición en su propio dispositivo (no se puede re-subir sin permiso del autor).</string>
-    <string name="instructions_self_responsibility">Si viola las reglas o hace un uso indebido, asumirá todas las consecuencias y 哔哩下载器 podría prohibirle seguir usando el software.</string>
+    <string name="instructions_purpose">BDT es una herramienta de caché de vídeo de BiliBili de terceros, diseñada para ayudar a los creadores de contenidos que necesitan reproducir offline o editar vídeos originales.</string>
+    <string name="instructions_no_redistribution">El contenido almacenado en BDT no debe redistribuirse. Sólo se permite la reproducción o edición en su propio dispositivo (no se puede re-subir sin permiso del autor).</string>
+    <string name="instructions_self_responsibility">Si viola las reglas o hace un uso indebido, asumirá todas las consecuencias y BDT podría prohibirle seguir usando el software.</string>
     <string name="instructions_go_to_bilibili">No, busco BiliBili</string>
     <string name="instructions_i_agree">Lo sé y acepto</string>
 
@@ -81,7 +81,7 @@
     <string name="account_all_invalid">Todas las cuentas han caducado, inicie sesión de nuevo.</string>
 
     <!-- Privacy policy refuse dialog strings -->
-    <string name="privacy_refuse_content">Aunque haya rechazado la política de privacidad de 哔哩下载器, esta aplicación es una herramienta de caché de vídeo de BiliBili de terceros. Si continúa usando el software, aún debe cumplir con las políticas de BiliBili.\nEsto se debe a que, durante el uso de esta aplicación, está usando indirectamente BiliBili, y es posible que deba iniciar sesión con su cuenta de BiliBili y obtener contenido de vídeo, algo inevitable salvo que desinstale la app.\nSin embargo, el software no recopilará sus datos personales, puede usarlo con seguridad.&lt;br&gt;\nPara detalles consulte:\n&lt;a href="https://www.bilibili.com/blackboard/topic/activity-cn8bxPLzz.html"&gt;Resumen de acuerdos de BiliBili&lt;/a&gt;.</string>
+    <string name="privacy_refuse_content">Aunque haya rechazado la política de privacidad de BDT, esta aplicación es una herramienta de caché de vídeo de BiliBili de terceros. Si continúa usando el software, aún debe cumplir con las políticas de BiliBili.\nEsto se debe a que, durante el uso de esta aplicación, está usando indirectamente BiliBili, y es posible que deba iniciar sesión con su cuenta de BiliBili y obtener contenido de vídeo, algo inevitable salvo que desinstale la app.\nSin embargo, el software no recopilará sus datos personales, puede usarlo con seguridad.&lt;br&gt;\nPara detalles consulte:\n&lt;a href="https://www.bilibili.com/blackboard/topic/activity-cn8bxPLzz.html"&gt;Resumen de acuerdos de BiliBili&lt;/a&gt;.</string>
 
     <!-- Donate related strings -->
     <string name="donate_recommend">Recomendar</string>
@@ -208,7 +208,7 @@
     <string name="user_freeze_all_confirm_message">Función solo para creadores. Si congela todos los vídeos, otros usuarios no podrán guardar sus vídeos, ¿continuar?</string>
     <string name="user_freezing_progress">Congelando, por favor espere...</string>
     <string name="user_input_bv_prompt">Ingrese el número BV del vídeo a congelar. Después de eso, otros usuarios no podrán guardar su vídeo:</string>
-    <string name="user_freeze_notice">Nota: el bloqueo de 哔哩下载器 solo restringe el almacenamiento aquí, otros softwares de terceros pueden ignorarlo.</string>
+    <string name="user_freeze_notice">Nota: el bloqueo de BDT solo restringe el almacenamiento aquí, otros softwares de terceros pueden ignorarlo.</string>
     <string name="user_uploaded_videos">Vídeos subidos</string>
     <string name="user_likes">Me gusta</string>
     <string name="user_recent">Reciente</string>

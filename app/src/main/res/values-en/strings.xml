@@ -23,8 +23,8 @@
     <string name="login_benefits"><![CDATA[·Support higher quality and bitrate videos\n·Support anime caching\n·Support big member privileges\n·Support roaming services]]></string>
     <string name="login_agreement_prefix">Logging in means that you agree to:</string>
     <string name="login_bilibili_agreement">·Bilibili Account and Community Agreements</string>
-    <string name="login_privacy_agreement">·《哔哩下载器 Privacy Agreement》</string>
-    <string name="login_disclaimer">·哔哩下载器 is not responsible for any results caused by usage</string>
+    <string name="login_privacy_agreement">·《BDT Privacy Agreement》</string>
+    <string name="login_disclaimer">·BDT is not responsible for any results caused by usage</string>
     <string name="login_special_notice">Special Note:\nThis app is not authorized by Bilibili. Bilibili is not responsible for any consequences resulting from the use of this software</string>
     <string name="login_scan_qrcode">Bilibili QR Code Login</string>
     <string name="login_web">Web</string>
@@ -70,9 +70,9 @@
     <string name="instructions_title">Usage Notice</string>
     <string name="instructions_not_bilibili">The software you are using is not Bilibili, but a third-party tool that assists it and has no relation to Bilibili.</string>
     <string name="instructions_no_authorization">This software is not authorized by Bilibili, and Bilibili bears no responsibility for any consequences of its use.</string>
-    <string name="instructions_purpose">哔哩下载器 is a third-party Bilibili video caching tool designed to help content creators who need to play offline or clip original videos.</string>
-    <string name="instructions_no_redistribution">Any content cached by 哔哩下载器 must not be redistributed, and can only be played or used for making videos on your own device (do not re-upload without the author’s permission).</string>
-    <string name="instructions_self_responsibility">If you violate the rules or use illegally, you will bear all consequences yourself, and 哔哩下载器 may ban your usage.</string>
+    <string name="instructions_purpose">BDT is a third-party Bilibili video caching tool designed to help content creators who need to play offline or clip original videos.</string>
+    <string name="instructions_no_redistribution">Any content cached by BDT must not be redistributed, and can only be played or used for making videos on your own device (do not re-upload without the author’s permission).</string>
+    <string name="instructions_self_responsibility">If you violate the rules or use illegally, you will bear all consequences yourself, and BDT may ban your usage.</string>
     <string name="instructions_go_to_bilibili">No, I am looking for Bilibili</string>
     <string name="instructions_i_agree">I know and agree</string>
 
@@ -82,7 +82,7 @@
 
     <!-- Privacy policy refuse dialog strings -->
     <string name="privacy_refuse_content">
-        Although you have refused the privacy policy of 哔哩下载器, this app is a third-party video caching tool for Bilibili. As long as you continue to use this app, you are still required to comply with the relevant policies of the Bilibili platform.&#10;
+        Although you have refused the privacy policy of BDT, this app is a third-party video caching tool for Bilibili. As long as you continue to use this app, you are still required to comply with the relevant policies of the Bilibili platform.&#10;
         This is because while using this app, you are still indirectly using Bilibili, and you may still need to log in to your Bilibili account and access video content—this is unavoidable unless you uninstall the app.&#10;
         However, at this point, the app will not collect any of your personal private data, so you can use it with confidence.&#10;
         For specific agreements, please refer to:&#10;
@@ -213,7 +213,7 @@
     <string name="user_freeze_all_confirm_message">This is a feature for UP owners. After freezing, other users will not be able to cache all your uploaded videos. Are you sure?</string>
     <string name="user_freezing_progress">Freezing in progress, please wait...</string>
     <string name="user_input_bv_prompt">Please enter the BV number of the video you want to freeze. After freezing, other users will not be able to cache your video:</string>
-    <string name="user_freeze_notice">Note: The freeze function provided by 哔哩下载器 can only restrict other users from caching in 哔哩下载器 and cannot restrict other third-party caching tools.</string>
+    <string name="user_freeze_notice">Note: The freeze function provided by BDT can only restrict other users from caching in BDT and cannot restrict other third-party caching tools.</string>
     <string name="user_uploaded_videos">Uploaded Videos</string>
     <string name="user_likes">Likes</string>
     <string name="user_recent">Recent</string>

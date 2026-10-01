@@ -362,7 +362,7 @@ fun SettingScreen(
 //                BaseSettingsItem(
 //                    painter = rememberVectorPainter(Icons.Outlined.MoodBad),
 //                    text = "投诉",
-//                    descriptionText = "向哔哩下载器投诉违规行为",
+//                    descriptionText = "向BDT投诉违规行为",
 //                    onClick = onToComplaint
 //                )
 //            }

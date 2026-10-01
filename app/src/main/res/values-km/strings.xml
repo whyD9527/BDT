@@ -23,8 +23,8 @@
     <string name="login_benefits"><![CDATA[·គាំទ្រវីដេអូដែលមានគុណភាពខ្ពស់ និងអត្រាបញ្ជូនខ្ពស់\n·គាំទ្ររឿងកុនសំរាប់ផ្ទុក\n·ប្រើប្រាស់សិទ្ធិសមាជិកពិសេស\n·ប្រើសេវាកម្ម Roaming]]></string>
     <string name="login_agreement_prefix">ការចូលមានន័យថាអ្នកយល់ព្រម៖</string>
     <string name="login_bilibili_agreement">·កិច្ចព្រមព្រៀងគណនី និងសហគមន៍ Bilibili</string>
-    <string name="login_privacy_agreement">·《កិច្ចព្រមព្រៀងភាពឯកជន 哔哩下载器》</string>
-    <string name="login_disclaimer">·哔哩下载器 មិនទទួលខុសត្រូវចំពោះលទ្ធផលណាមួយនៃប្រើប្រាស់ឡើយ</string>
+    <string name="login_privacy_agreement">·《កិច្ចព្រមព្រៀងភាពឯកជន BDT》</string>
+    <string name="login_disclaimer">·BDT មិនទទួលខុសត្រូវចំពោះលទ្ធផលណាមួយនៃប្រើប្រាស់ឡើយ</string>
     <string name="login_special_notice">ចំណាំ៖\nកម្មវិធីនេះមិនត្រូវបានអនុញ្ញាតដោយ Bilibili ទេ។ Bilibili មិនទទួលខុសត្រូវចំពោះលទ្ធផលក្នុងការប្រើប្រាស់កម្មវិធីនេះឡើយ។</string>
     <string name="login_scan_qrcode">ចូលដោយស្កេន QR របស់ Bilibili</string>
     <string name="login_web">វេបសាយ</string>
@@ -70,9 +70,9 @@
     <string name="instructions_title">សេចក្តីណែនាំប្រើប្រាស់</string>
     <string name="instructions_not_bilibili">កម្មវិធីដែលអ្នកប្រើ មិនមែន Bilibili ឬ bilibili ប៉ុន្តែនៅជាឧបករណ៍ជំនួយរបស់ភាគីទីបី មិនទាក់ទងអ្វីឡើយជាមួយ Bilibili។</string>
     <string name="instructions_no_authorization">កម្មវិធីនេះមិនទទួលបានការអនុញ្ញាតពី Bilibili ទេ។ Bilibili មិនទទួលខុសត្រូវចំពោះលទ្ធផលណាមួយនៃការប្រើប្រាស់។</string>
-    <string name="instructions_purpose">哔哩下载器 ជាឧបករណ៍កភ្ជាប់វីដេអូ Bilibili របស់ភាគីទីបី ល្អសម្រាប់អ្នកបង្កើតមាតិកាដែលត្រូវការបាញ់វិដេអូក្រៅបណ្ដាញ ឬកាត់ដកវីដេអូដើម។</string>
-    <string name="instructions_no_redistribution">មាតិកាទាំងអស់ដែលបានផ្ទុកតាមរយៈ 哔哩下载器 មិនអាចចែកចាយម្តងទៀតបានទេ ទុកធ្វើការលេងតែមាននៅលើឧបករណ៍ឬកាត់វីដេអូ (បើគ្មានការអនុញ្ញាតពីអ្នកនិពន្ធ។)</string>
-    <string name="instructions_self_responsibility">បើអ្នកលើកលែងប្រើតាមច្បាប់ ឬប្រើមិនត្រឹមត្រូវ អ្នកនឹងត្រូវទទួលខុសត្រូវផ្ទាល់ពីលទ្ធផល ហើយ 哔哩下载器 ប្រហែលជាមានពេលផ្អាកឬបញ្ឈប់អ្នកប្រើ។</string>
+    <string name="instructions_purpose">BDT ជាឧបករណ៍កភ្ជាប់វីដេអូ Bilibili របស់ភាគីទីបី ល្អសម្រាប់អ្នកបង្កើតមាតិកាដែលត្រូវការបាញ់វិដេអូក្រៅបណ្ដាញ ឬកាត់ដកវីដេអូដើម។</string>
+    <string name="instructions_no_redistribution">មាតិកាទាំងអស់ដែលបានផ្ទុកតាមរយៈ BDT មិនអាចចែកចាយម្តងទៀតបានទេ ទុកធ្វើការលេងតែមាននៅលើឧបករណ៍ឬកាត់វីដេអូ (បើគ្មានការអនុញ្ញាតពីអ្នកនិពន្ធ។)</string>
+    <string name="instructions_self_responsibility">បើអ្នកលើកលែងប្រើតាមច្បាប់ ឬប្រើមិនត្រឹមត្រូវ អ្នកនឹងត្រូវទទួលខុសត្រូវផ្ទាល់ពីលទ្ធផល ហើយ BDT ប្រហែលជាមានពេលផ្អាកឬបញ្ឈប់អ្នកប្រើ។</string>
     <string name="instructions_go_to_bilibili">ទេ ខ្ញុំកំពុងស្វែងរក Bilibili</string>
     <string name="instructions_i_agree">ខ្ញុំយល់ដឹងនិងយល់ព្រម</string>
 
@@ -82,7 +82,7 @@
 
     <!-- Privacy policy refuse dialog strings -->
     <string name="privacy_refuse_content"><![CDATA[
-ទោះបីអ្នកបានបដិសេធគោលនយោបាយភាពឯកជនរបស់​ 哔哩下载器 ក៏ដោយ App នេះគឺជាកម្មវិធីផ្ទុកវីដេអូ Bilibili របស់ភាគីទីបី។ នៅពេលដែលអ្នកនៅតែប្រើកម្មវិធីនេះ អ្នកត្រូវតែទទួលខុសត្រូវនិងគោរពគោលការណ៍នៃវេទិកា Bilibili។
+ទោះបីអ្នកបានបដិសេធគោលនយោបាយភាពឯកជនរបស់​ BDT ក៏ដោយ App នេះគឺជាកម្មវិធីផ្ទុកវីដេអូ Bilibili របស់ភាគីទីបី។ នៅពេលដែលអ្នកនៅតែប្រើកម្មវិធីនេះ អ្នកត្រូវតែទទួលខុសត្រូវនិងគោរពគោលការណ៍នៃវេទិកា Bilibili។
 ពេលអ្នកប្រើកម្មវិធីនេះ អ្នកនៅតែប្រើដោយផ្ទាល់ Bilibili ដូចដែលអ្នកត្រូវចូលគណនី និងទាញយកមាតិកាវីដេអូ ដែលថាមិនអាចជៀសវាងពីលើកលែងលុបកម្មវិធី។
 ទន្ទឹមនឹងនេះ កម្មវិធីមិនប្រមូលពត៌មានឯកជនផ្ទាល់ខ្លួនរបស់អ្នកឡើយ។ អ្នកអាចប្រើដោយមានទំនុកចិត្ត។<br>
 សូមអានកិច្ចព្រមព្រៀង នៅ៖
@@ -214,7 +214,7 @@
     <string name="user_freeze_all_confirm_message">មុខងារនេះសម្រាប់ម្ចាស់គណនី បោះពុម្ពក្រោយអ្នកដទៃមិនអាចផ្ទុកវីដេអូរបស់អ្នក តើចង់បោះពុម្ពឬ?</string>
     <string name="user_freezing_progress">កំពុងបោះពុម្ព សូមរង់ចាំ...</string>
     <string name="user_input_bv_prompt">សូមបញ្ចូលលេខ BV វីដេអូនាំបោះពុម្ព បោះពុម្ពរួចអ្នកដទៃមិនអាចផ្ទុកវីដេអូរបស់អ្នក៖</string>
-    <string name="user_freeze_notice">សម្គាល់៖ មុខងារបោះពុម្ពលើសេវា 哔哩下载器 ប៉ុណ្ណោះ សេវាភាគីទីបីអាចមិនត្រូវបានទប់ស្កាត់។</string>
+    <string name="user_freeze_notice">សម្គាល់៖ មុខងារបោះពុម្ពលើសេវា BDT ប៉ុណ្ណោះ សេវាភាគីទីបីអាចមិនត្រូវបានទប់ស្កាត់។</string>
     <string name="user_uploaded_videos">វីដេអូនាំបញ្ចូល</string>
     <string name="user_likes">ចូលចិត្ត</string>
     <string name="user_recent">ថ្មីៗ</string>
