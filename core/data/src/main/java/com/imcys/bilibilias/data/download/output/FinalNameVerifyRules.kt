@@ -67,6 +67,20 @@ object FinalNameVerifyRules {
         return pattern.matchEntire(name)?.groupValues?.getOrNull(1)?.toIntOrNull()
     }
 
+    /**
+     * 从**名字本身**剥掉结尾的 ` (N)`：`爱 (2).mp4` → (`爱.mp4`, 2)；不是这个形状则 null。
+     *
+     * 与 [duplicateCopyIndex] 的区别：那个需要**已知基名**（用于"这个名字是不是某个期望名的副本"），
+     * 这个只需要名字自己（用于"把目录里的名字按族分组"）。两者用途不同，不要混用 ——
+     * 2026-10-01 我就把前者当后者用，4 条单测直接红。
+     */
+    fun stripDuplicateSuffix(name: String): Pair<String, Int>? {
+        val (stem, ext) = splitName(name)
+        val match = Regex(" \\((\\d+)\\)$").find(stem) ?: return null
+        val index = match.groupValues[1].toIntOrNull() ?: return null
+        return stem.substring(0, match.range.first) + ext to index
+    }
+
     /** 把 `xxx.mp4` 拆成 (`xxx`, `.mp4`)；没有扩展名时 ext 为空串 */
     fun splitName(name: String): Pair<String, String> {
         val dot = name.lastIndexOf('.')

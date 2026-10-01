@@ -37,23 +37,12 @@ object DuplicateDownloadRules {
      * 名字的"族标识"：去掉结尾的 ` (N)` 后剩下的部分。
      * `爱 (2).mp4` → `爱.mp4`；`爱.mp4` → `爱.mp4`；`带 (括号) 的标题.mp4` → 原样（括号里不是纯数字）。
      */
-    fun familyKey(name: String): String {
-        val dot = name.lastIndexOf('.')
-        val stem = if (dot > 0) name.substring(0, dot) else name
-        val ext = if (dot > 0) name.substring(dot) else ""
-        return FinalNameVerifyRules.duplicateCopyIndex(name, stem, ext)?.let { index ->
-            // 去掉 " (index)" 得到原始 stem
-            stem.substring(0, stem.length - " ($index)".length) + ext
-        } ?: name
-    }
+    fun familyKey(name: String): String =
+        FinalNameVerifyRules.stripDuplicateSuffix(name)?.first ?: name
 
     /** 名字里的副本序号（`爱 (2).mp4` → 2）；不是副本名则 null */
-    fun copyIndex(name: String): Int? {
-        val dot = name.lastIndexOf('.')
-        val stem = if (dot > 0) name.substring(0, dot) else name
-        val ext = if (dot > 0) name.substring(dot) else ""
-        return FinalNameVerifyRules.duplicateCopyIndex(name, stem, ext)
-    }
+    fun copyIndex(name: String): Int? =
+        FinalNameVerifyRules.stripDuplicateSuffix(name)?.second
 
     /**
      * 把一组文件名分成重复组。**只有 ≥2 个成员的族才算重复**，其余忽略。
