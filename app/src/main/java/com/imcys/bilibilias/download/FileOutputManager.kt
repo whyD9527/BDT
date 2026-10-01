@@ -280,11 +280,15 @@ class FileOutputManager(
         // 本次成品在磁盘上的名字。**回读不到时按"改名已生效"处理**（即把正式名排除掉）：
         // 那最多退化成"旧同名文件没删掉"这种无害 no-op（与旧代码同等），
         // 总比反过来把刚写好的成品删掉强。
-        val ownName = storedDisplayName(resolver, uri) ?: fileName
         val ownDir = directoryOf(uri)
 
-        // ① MediaStore 行删除（**这条才是真能生效的那条**：文件属主是 MediaProvider，
-        //    app 直删必然 EACCES，见 deleteSameContentRows 的注释）。排除本次自己的行。
+        // ⚠️⚠️ 2026-10-01 真机复现的教训：**MediaStore 这条路上一律不要做"目录枚举直删"**。
+        // 原因：`ownName`（keepName）来自媒体库回读，而改名失败时它还是 `xxx.mp4.part`，
+        // 与磁盘上的真实名字对不上；一旦那个文件恰好是 app 自己刚写出来、**属主是 app** 的
+        // （新版这次就是），`File.delete()` 会真的成功 —— 于是**刚交付的成品被自己删掉**，
+        // 磁盘上只剩那份老的孤儿文件。旧版之所以"看起来无害"，只是因为它删不动
+        // MediaProvider 拥有的文件（EACCES）而已，纯属侥幸。
+        // 结论：删除只走"按行删"（按 _ID 排除自己，MediaProvider 负责删对文件）。
         deleteSameContentRows(
             resolver = resolver,
             fileName = fileName,
@@ -293,19 +297,26 @@ class FileOutputManager(
             excludeId = ownRowId,
         )
 
-        // ② 目录枚举直删作为兜底（Android 9 及以前、或授予了存储权限的机型上有效；
-        //    新机型上 app 无权限直删 MediaProvider 的文件，这里会是 0 —— 无害）
-        ownDir?.let { dir -> deleteSiblingCopies(fileName, dir, keepName = ownName) }
-
-        // ③ 冲突清掉之后**再改一次名**：MediaStore 之前因为同名冲突把新文件叫成了 `xxx (2).mp4`，
-        //    现在旧行/旧文件已经没了，这次改名就能落到实处（真机实测 `resolver.update(DISPLAY_NAME)`
+        // ② 冲突清掉之后**再改一次名**：MediaStore 之前因为同名冲突把新文件叫成了 `xxx (2).mp4`，
+        //    现在旧行没了，这次改名就能落到实处（真机实测 `resolver.update(DISPLAY_NAME)`
         //    是生效的 —— 它先给出了 (1)、(2)，说明"改不动"的唯一原因就是冲突）。
         if (!FinalNameVerifyRules.displayNameMatches(fileName, storedDisplayName(resolver, uri))) {
             renameStaging(resolver, uri, fileName, storedDisplayName(resolver, uri) ?: stagingName)
         }
 
+        // ③ 没有媒体库行的**孤儿文件**（历史版本只删了行、文件留在盘上）：
+        //    按行查不到、app 直删又 EACCES，只能先让媒体库重新收录、再删那一行。
+        //    ⚠️ 必须先能确定"本次成品在磁盘上的路径"，否则宁可不清（绝不误删自己的成品）。
+        val ownDataPath = storedDataPath(resolver, uri)
+        ownDir?.let { dir -> deleteOrphanSameContentFiles(fileName, dir, ownDataPath) }
+
+        // ④ 孤儿清掉之后再试一次改名（这次同名冲突应该真的没了）
+        if (!FinalNameVerifyRules.displayNameMatches(fileName, storedDisplayName(resolver, uri))) {
+            renameStaging(resolver, uri, fileName, storedDisplayName(resolver, uri) ?: stagingName)
+        }
+
         if (!verifyFinalName(resolver, uri, stagingName, fileName)) {
-            // 重试一轮：再删一次 + 再改一次名
+            // 重试一轮：再删一次同名行 + 再清一次孤儿 + 再改一次名
             Log.w(TAG, "第一次交付后名字不符，重试删除同名旧记录: 期望=$fileName")
             deleteSameContentRows(
                 resolver = resolver,
@@ -314,7 +325,7 @@ class FileOutputManager(
                 targetDir = ownDir,
                 excludeId = ownRowId,
             )
-            ownDir?.let { dir -> deleteSiblingCopies(fileName, dir, keepName = ownName) }
+            ownDir?.let { dir -> deleteOrphanSameContentFiles(fileName, dir, storedDataPath(resolver, uri)) }
             renameStaging(resolver, uri, fileName, storedDisplayName(resolver, uri) ?: stagingName)
         }
 
@@ -427,19 +438,23 @@ class FileOutputManager(
         FinalNameVerifyRules.Verdict.OK
 
     /**
-     * 按**目录枚举**删掉与 [fileName] 指向同一份内容的旧文件。
+     * ⚠️ **已停用**（2026-10-01 真机复现后从 MediaStore 交付路径摘除）：
+     * 它在"改名失败、行里的名字还是 `.part`"时会把 [keepName] 认成正式名，
+     * 而磁盘上真正的成品此刻可能叫别的名字 —— 一旦那个文件恰好属主是 app（新版就会这样），
+     * `File.delete()` 会成功，**刚交付的成品被自己删掉**。真机日志：
+     * `按目录删除同名旧文件: … 删除=1 个` 紧接着 `交付名不是期望值（MISSING）：回读=null`。
+     * 现在删除只走"按 MediaStore 行删"（[deleteSameContentRows]，按 `_ID` 排除自己）。
+     * 代码保留是为了 Android 9 及以前 / 已授予全盘权限的机型将来还可能用到，
+     * 但**不要再从 MediaStore 路径调它**。
      *
-     * 为什么不再走 MediaStore 的"按名字删"：2026-09-15 真机取证显示，
-     * 那条路在这台设备上**命中=0**（`删除同名旧文件: … 命中=0 实际删除=0`），
-     * 于是旧文件永远留着、新文件被 MediaStore 自动改名成 `xxx (1).mp3` / `(2)` / `(3)` —— 越攒越多。
-     * 而文件本来就在我们能直接枚举的目录里，所以**直接用 File 删**，
-     * 删完再用 `MediaScannerConnection` 让媒体库跟上（不让磁盘与媒体库分叉）。
+     * 按**目录枚举**删掉与 [fileName] 指向同一份内容的旧文件。
      *
      * 返回真正删掉的个数。
      *
      * @param keepName 本次**刚交付**的那一份的名字，必须排除 —— 否则会把刚写好的成品删掉
      *   （2026-09-15 复审：新版先改名再删，磁盘上的正式名就是本次的成品）。
      */
+    @Suppress("unused")
     private fun deleteSiblingCopies(expectedName: String, dir: File, keepName: String?): Int {
         val names = dir.listFiles()?.map { it.name } ?: return 0
         val targets = FinalNameVerifyRules.siblingCopies(expectedName, names, keepName = keepName)
@@ -468,6 +483,91 @@ class FileOutputManager(
             .query(uri, arrayOf(MediaStore.Downloads.DATA), null, null, null)
             ?.use { c -> if (c.moveToFirst()) c.getString(0) else null }
     }.getOrNull()?.let { File(it).parentFile }
+
+    /** 读回某个 MediaStore 行当前指向的磁盘路径（用于把"自己"从删除目标里排除） */
+    private fun storedDataPath(
+        resolver: android.content.ContentResolver,
+        uri: android.net.Uri,
+    ): String? = runCatching {
+        resolver.query(uri, arrayOf(MediaStore.Downloads.DATA), null, null, null)
+            ?.use { c -> if (c.moveToFirst()) c.getString(0) else null }
+    }.getOrNull()
+
+    /**
+     * 清理**没有媒体库行**的同名残留文件（孤儿文件）。
+     *
+     * ## 为什么需要（2026-10-01 真机复现）
+     * 历史版本"删行成功、删文件失败"会留下这种状态：磁盘上还躺着 `xxx.mp4`（72MB），
+     * 而媒体库里**没有它的行** —— 于是：
+     *  · 按行删（[deleteSameContentRows]）查不到它，删不掉；
+     *  · app 直删又必然 EACCES（文件属主是 MediaProvider）。
+     * 结果就是每次重下都被它挤成 `xxx (1).mp4`、`(2)`…，副本越攒越多。
+     * 唯一的出路是**先让媒体库重新收录这个文件（拿到 uri），再删那一行** ——
+     * 删行时 MediaProvider 会把这个文件一起删掉。
+     *
+     * ⚠️ 安全边界（优先级：绝不误删本次成品 > 清理干净）：
+     * 1. [ownFilePath] 为 null 时**直接放弃清理**（连自己是谁都不知道，就不许动任何文件）；
+     * 2. 只处理"同内容名字"（正式名 / `xxx (N).ext`）且**不是**本次自己的文件、不是暂存名；
+     * 3. 扫描回来的行必须**确实指向那个孤儿文件**（比对 `_data`），否则跳过 ——
+     *    防止把别的行（比如本次自己的行）删掉。
+     */
+    private fun deleteOrphanSameContentFiles(
+        fileName: String,
+        dir: File,
+        ownFilePath: String?,
+    ): Int {
+        if (ownFilePath == null) {
+            Log.w(TAG, "拿不到本次成品在磁盘上的路径，跳过孤儿文件清理（宁可留着也不误删）")
+            return 0
+        }
+        val ownFile = File(ownFilePath)
+        val targets = dir.listFiles()?.filter { f ->
+            f.isFile &&
+                FinalNameVerifyRules.isSameContentName(f.name, fileName) &&
+                f.absolutePath != ownFile.absolutePath &&
+                f.name != "$fileName.part"
+        } ?: return 0
+        var deleted = 0
+        targets.forEach { orphan ->
+            val uri = scanFileBlocking(orphan) ?: return@forEach
+            val scannedPath = runCatching {
+                context.contentResolver.query(
+                    uri,
+                    arrayOf(MediaStore.Downloads.DATA),
+                    null,
+                    null,
+                    null,
+                )?.use { c -> if (c.moveToFirst()) c.getString(0) else null }
+            }.getOrNull()
+            if (scannedPath != orphan.absolutePath) {
+                Log.w(TAG, "扫描回来的行不是目标孤儿文件，跳过: ${orphan.name} → $scannedPath")
+                return@forEach
+            }
+            val rows = runCatching { context.contentResolver.delete(uri, null, null) }
+                .getOrDefault(0)
+            if (rows > 0) deleted++
+        }
+        Log.d(TAG, "清理无行残留文件: $fileName 目标=${targets.size} 实际删除=$deleted")
+        return deleted
+    }
+
+    /** 让媒体库收录一个文件并等它返回 uri（媒体扫描是异步的，最多等 3 秒） */
+    private fun scanFileBlocking(file: File): android.net.Uri? {
+        val latch = java.util.concurrent.CountDownLatch(1)
+        var scanned: android.net.Uri? = null
+        runCatching {
+            android.media.MediaScannerConnection.scanFile(
+                context,
+                arrayOf(file.absolutePath),
+                null,
+            ) { _, uri ->
+                scanned = uri
+                latch.countDown()
+            }
+        }
+        latch.await(3, java.util.concurrent.TimeUnit.SECONDS)
+        return scanned
+    }
 
     /** 读回某个 MediaStore 行当前的 DISPLAY_NAME（仅用于观测/兜底日志） */
     private fun storedDisplayName(
