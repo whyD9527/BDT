@@ -23,4 +23,6 @@ dependencies {
     // Android 单测里的 org.json 是 stub（调用即 "not mocked"），
     // 而 NamingConventionConverter 的往返测试需要真的 JSONObject
     testImplementation(libs.json)
+    // 迁移 SQL 的回归测试要真的跑一遍 SQLite（JVM 版）
+    testImplementation(libs.sqlite.jdbc)
 }
