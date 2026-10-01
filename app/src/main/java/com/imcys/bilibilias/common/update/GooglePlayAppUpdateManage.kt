@@ -112,13 +112,12 @@ class GooglePlayAppUpdateManage(
     private suspend fun checkUpdateAvailability(updateType: Int): Boolean {
         val appUpdateInfoTask = appUpdateManager.appUpdateInfo
         return suspendCancellableCoroutine { cont ->
-            appUpdateInfoTask.addOnSuccessListener { appUpdateInfo ->
-
-                apply {
+            appUpdateInfoTask
+                .addOnSuccessListener { appUpdateInfo ->
                     val versionCode = appUpdateInfo.availableVersionCode()
                     if (lastSkipUpdateVersionCode == versionCode) {
-                        cont.resumeWith(Result.success(false))
-                        return@apply
+                        if (cont.isActive) cont.resumeWith(Result.success(false))
+                        return@addOnSuccessListener
                     }
 
                     if (appUpdateInfo.updateAvailability() == UpdateAvailability.UPDATE_AVAILABLE
@@ -130,12 +129,13 @@ class GooglePlayAppUpdateManage(
                         if (cont.isActive) cont.resumeWith(Result.success(false))
                     }
                 }
-                // 同上：没有这个回调就会永久挂住更新检查
+                // ⚠️ 失败回调要挂在**任务**上（addOnSuccessListener 返回 Task，可以继续链式调用）：
+                // 原来完全没有失败回调，Play Core 任务失败时 suspendCancellableCoroutine
+                // **永不恢复** → 更新检查静默挂死。
                 .addOnFailureListener { e ->
                     Log.w(TAG, "检查更新失败，按无更新处理", e)
                     if (cont.isActive) cont.resumeWith(Result.success(false))
                 }
-            }
         }
     }
 
