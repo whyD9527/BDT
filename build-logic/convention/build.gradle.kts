@@ -49,11 +49,5 @@ gradlePlugin {
             version = "unspecified"
         }
 
-        register("ffmpegVerification"){
-            id = libs.plugins.bilibilias.android.ffmpegVerification.get().pluginId
-            implementationClass = "FFmpegVerificationConventionPlugin"
-            version = "unspecified"
-        }
-
     }
 }

@@ -42,7 +42,6 @@ window = "1.5.1"
 adaptive = "1.2.0"
 adaptiveNavigation3 = "1.3.0-alpha06"
 documentfile = "1.1.0"
-ffmpegCommand = "1.3.6-beta"
 ffmpegKitX6kb = "6.1.1"
 
 
@@ -70,7 +69,6 @@ android-desugarJdkLibs = { group = "com.android.tools", name = "desugar_jdk_libs
 androidx-room-ktx = { group = "androidx.room", name = "room-ktx", version.ref = "room" }
 androidx-room-compiler = { group = "androidx.room", name = "room-compiler", version.ref = "room" }
 androidx-room-runtime = { group = "androidx.room", name = "room-runtime", version.ref = "room" }
-ffmpeg-command = { module = "com.github.AnJoiner.FFmpegCommand:ffmpeg", version.ref = "ffmpegCommand" }
 ffmpeg-kit-x6kb = { module = "com.moizhassan.ffmpeg:ffmpeg-kit-16kb", version.ref = "ffmpegKitX6kb" }
 koin-bom = { group = "io.insert-koin", name = "koin-bom", version.ref = "koinBom" }
 koin-android = { module = "io.insert-koin:koin-android" }
@@ -148,7 +146,6 @@ kotlin-parcelize = {id = "kotlin-parcelize"}
 bilibilias-android-library = { id = "bilibilias.android.library" }
 bilibilias-android-application = { id = "bilibilias.android.application" }
 bilibilias-android-koin = { id = "bilibilias.android.koin" }
-bilibilias-android-ffmpegVerification = { id = "bilibilias.android.ffmpegVerification" }
 
 [bundles]
 compose = [

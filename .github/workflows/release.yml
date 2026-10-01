@@ -1,0 +1,126 @@
+name: Release APK
+
+# 打 tag 就自动出正式版并建 Release，人工只剩"打 tag"这一步：
+#
+#     git tag v3.3.1 && git push origin v3.3.1
+#
+# 之后 CI 会：跑单测 → 打 alphaRelease（固定签名）→ **校验 versionName 与 tag 一致**
+# → 建 Release 并把 4 个 APK 全部挂上去。
+#
+# 为什么要有这个 workflow（2026-10-01 的教训）：以前发版是纯手工——改版本号、推、等 CI、
+# **把 139MB 的 artifact 下下来**、手工建 Release、再逐个上传 4 个 APK。那台机器上这条下载链路
+# 反复中途断流（zip 只下到 49MB/146MB、单个 APK 连续 6 次失败），发一次版要折腾很久；
+# 而且"手工上传"本身就存在**混用不同 run 产物**的风险。放到 CI 里一次解决。
+on:
+  push:
+    tags:
+      - 'v*'
+  workflow_dispatch:
+
+# 建 Release + 上传资产需要写权限
+permissions:
+  contents: write
+
+concurrency:
+  group: ${{ github.workflow }}-${{ github.ref }}
+  cancel-in-progress: false
+
+jobs:
+  release:
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+
+      - name: Set up JDK 21
+        uses: actions/setup-java@v4
+        with:
+          distribution: zulu
+          java-version: '21'
+
+      - name: Setup Gradle
+        uses: gradle/actions/setup-gradle@v4
+
+      - name: Grant execute permission for gradlew
+        run: chmod +x ./gradlew
+
+      # 固定签名（与 Build APK 里那套完全相同，Secrets 名称一致）
+      - name: Check signing secret
+        id: signcheck
+        run: |
+          if [ -n "${{ secrets.ALPHA_KEYSTORE_BASE64 }}" ]; then
+            echo "has_keystore=true" >> "$GITHUB_OUTPUT"
+            echo "已检测到签名密钥，将使用固定签名。"
+          else
+            echo "has_keystore=false" >> "$GITHUB_OUTPUT"
+            echo "::error::未配置签名密钥，正式版必须用固定签名（否则用户无法覆盖升级）"
+            exit 1
+          fi
+
+      - name: Decode signing keystore
+        run: printf '%s' "${{ secrets.ALPHA_KEYSTORE_BASE64 }}" | base64 -d > "$RUNNER_TEMP/mxjs-debug.jks"
+
+      - name: Export signing secrets
+        run: |
+          echo "ALPHA_KEYSTORE_PASSWORD=${{ secrets.ALPHA_KEYSTORE_PASSWORD }}" >> "$GITHUB_ENV"
+          echo "ALPHA_KEY_ALIAS=${{ secrets.ALPHA_KEY_ALIAS }}" >> "$GITHUB_ENV"
+          echo "ALPHA_KEY_PASSWORD=${{ secrets.ALPHA_KEY_PASSWORD }}" >> "$GITHUB_ENV"
+
+      # 期望值：72:2D:A0:56:6C:73:E7:08:F4:88:BC:95:6C:75:AA:91:CD:64:18:56:17:7A:4B:66:A6:87:CE:71:E3:03:CF:06
+      - name: Print signing certificate fingerprint
+        env:
+          KS_PASS: ${{ secrets.ALPHA_KEYSTORE_PASSWORD }}
+          KEY_ALIAS: ${{ secrets.ALPHA_KEY_ALIAS }}
+        run: |
+          keytool -list -v -keystore "$RUNNER_TEMP/mxjs-debug.jks" \
+            -storepass "$KS_PASS" -alias "$KEY_ALIAS" 2>/dev/null \
+            | grep -E "SHA1:|SHA256:" \
+            || echo "::warning::读取签名证书失败，请核对 ALPHA_KEYSTORE_PASSWORD 与 ALPHA_KEY_ALIAS"
+
+      # 正式版不允许测试失败
+      - name: Run unit tests
+        run: ./gradlew testDebugUnitTest --stacktrace
+
+      - name: Assemble alphaRelease
+        run: ./gradlew :app:assembleAlphaRelease --stacktrace
+
+      # ⚠️ 这一步是防"tag 与代码里的版本号对不上"：Release 页面显示的版本号必须和
+      # APK 里的一致，否则用户会以为下载错了版本（也会让"哪些人升过级"无法判断）。
+      - name: Verify version matches tag
+        run: |
+          VERSION_NAME=$(grep -E 'versionName = "' app/build.gradle.kts | head -1 | sed -E 's/.*"([^"]+)".*/\1/')
+          TAG="${GITHUB_REF_NAME#v}"
+          echo "app versionName = $VERSION_NAME    tag = $GITHUB_REF_NAME"
+          if [ "$VERSION_NAME" != "$TAG" ]; then
+            echo "::error::versionName($VERSION_NAME) 与 tag($TAG) 不一致：先改 app/build.gradle.kts 里的 versionCode/versionName 再打 tag"
+            exit 1
+          fi
+
+      - name: List APKs
+        run: ls -lh app/build/outputs/apk/alpha/release/*.apk
+
+      # 建 Release + 挂 4 个 APK（全部来自**同一次构建**，不会混用不同 run 的产物）。
+      # 用 runner 自带的 gh CLI，不引第三方 action。
+      - name: Create release and upload APKs
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: |
+          # 手动触发（workflow_dispatch）时 GITHUB_REF_NAME 是分支名，不能拿去建 Release ——
+          # 那种情况只用来验证「签名 + 构建」这一步，发布仍然只允许由 tag 触发。
+          if [ "${GITHUB_REF_TYPE}" != "tag" ]; then
+            echo "::notice::当前不是 tag 触发（${GITHUB_REF_TYPE}=${GITHUB_REF_NAME}），跳过建 Release；构建/签名已验证。"
+            exit 0
+          fi
+          if gh release view "$GITHUB_REF_NAME" >/dev/null 2>&1; then
+            echo "Release 已存在，补传/覆盖资产"
+            gh release upload "$GITHUB_REF_NAME" app/build/outputs/apk/alpha/release/*.apk --clobber
+          else
+            gh release create "$GITHUB_REF_NAME" \
+              --title "$GITHUB_REF_NAME" \
+              --generate-notes \
+              app/build/outputs/apk/alpha/release/*.apk
+          fi
+          echo "Release: ${{ github.server_url }}/${{ github.repository }}/releases/tag/$GITHUB_REF_NAME"
