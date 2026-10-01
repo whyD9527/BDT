@@ -51,9 +51,9 @@ class DuplicateDownloadRulesTest {
                 listOf("爱 (前篇).mp4", "爱 (后篇).mp4"),
             ).isEmpty(),
         )
-        // 但真实的 `(1)` 仍要认
+        // 但真实的 `(1)` 仍要认：同族里保留序号最小的 (1)，可删 (2)
         assertEquals(
-            listOf("爱 (1).mp4", "爱 (2).mp4"),
+            listOf("爱 (2).mp4"),
             DuplicateDownloadRules.groupDuplicates(listOf("爱 (1).mp4", "爱 (2).mp4"))
                 .single().removableNames,
         )
