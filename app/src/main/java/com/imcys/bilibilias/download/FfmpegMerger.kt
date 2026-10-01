@@ -171,10 +171,10 @@ class FfmpegMerger(
                     Log.d("FFmpeg", "${log}")
                 },
                 { statistics ->
-                    if (statistics.time > 0 && duration > 0) {
+                    if (statistics.time > 0 && durationMs > 0) {
                         val now = System.currentTimeMillis()
                         if (now - lastProgressEmit > 100) {
-                            val progress = (statistics.time.toFloat() / duration.toFloat()).coerceIn(0f, 1f)
+                            val progress = (statistics.time.toFloat() / durationMs.toFloat()).coerceIn(0f, 1f)
                             onProgress(progress)
                             lastProgressEmit = now
                         }
