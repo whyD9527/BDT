@@ -255,7 +255,9 @@ class FileOutputManager(
         // `.../Download/Download/BiliDownloader` —— 目录不存在 → `listFiles()` 为 null →
         // "挪开旧文件"整步**静默 no-op**（真机日志里连一条都没有，又踩了一次"静默失效"）。
         val targetDir = resolveDownloadDir(relativePath)
-        val asides = moveAsideSameContentFiles(resolver, fileName, targetDir)
+        // 目录里的名字用 MediaStore 枚举（app 自己列目录会被 scoped storage 拒掉）
+        val dirNames = queryDownloadDirNames(relativePath)
+        val asides = moveAsideSameContentFiles(resolver, fileName, targetDir, dirNames)
 
         val stagingName = DownloadRecordReuseRules.stagingFileName(fileName)
         val uri = resolver.insert(
@@ -536,22 +538,21 @@ class FileOutputManager(
         resolver: android.content.ContentResolver,
         fileName: String,
         dir: File,
+        dirNames: List<String>,
     ): List<AsideFile> {
         // ⚠️ **只看名字，绝不 stat**（2026-10-01 真机复现）：
         // scoped storage 下 app 对 MediaProvider 拥有的文件 `stat()` 会被拒 ——
         // `File.isFile` 返回 false（而**目录列表本身是可用的**，所以 `verify()` 能看到名字）。
         // 上一版就是因为在过滤条件里加了 `f.isFile`，把所有目标都滤掉了：
         // 真机日志 `目标=0（目录=…/Download/BiliDownloader 存在=true）`，而目录里明明躺着 3 份同名文件。
-        val names: List<String>? = runCatching { dir.listFiles()?.map { it.name } }.getOrNull()
-        val matched = names?.filter { FinalNameVerifyRules.isSameContentName(it, fileName) }.orEmpty()
-        // 列表拿不到时至少试一下正式名（scanFile 会问 MediaProvider，不依赖 app 的 stat 权限）
-        val victims = matched.ifEmpty { if (names == null) listOf(fileName) else emptyList() }
+        val matched = dirNames.filter { FinalNameVerifyRules.isSameContentName(it, fileName) }
+        // 枚举拿不到时至少试一下正式名：scanFile 走 MediaProvider，不依赖 app 的列目录/stat 权限
+        val victims = matched.ifEmpty { if (dirNames.isEmpty()) listOf(fileName) else emptyList() }
         if (victims.isEmpty()) {
             // ⚠️ 空也要打日志：这一步"静默不生效"正是 2026-10-01 那次真机复现的形态
             Log.d(
                 TAG,
-                "交付前挪开同名旧文件: $fileName 列表=${names?.size ?: -1} 目标=0" +
-                    "（目录=${dir.absolutePath} 存在=${dir.exists()}）",
+                "交付前挪开同名旧文件: $fileName 枚举=${dirNames.size} 目标=0（目录=${dir.absolutePath}）",
             )
             return emptyList()
         }
@@ -601,7 +602,7 @@ class FileOutputManager(
         }
         Log.d(
             TAG,
-            "交付前挪开同名旧文件: $fileName 列表=${names?.size ?: -1} 目标=${victims.size} " +
+            "交付前挪开同名旧文件: $fileName 枚举=${dirNames.size} 目标=${victims.size} " +
                 "成功=${result.size} 目录=${dir.absolutePath}",
         )
         return result
@@ -671,6 +672,53 @@ class FileOutputManager(
         return if (cleaned.isBlank()) root else File(root, cleaned)
     }
 
+    /**
+     * 用 **MediaStore** 枚举某个下载目录下的文件名。
+     *
+     * ⚠️⚠️ **绝不能用 `File(dir).listFiles()`**（2026-10-01 真机复现）：
+     * 这台 ROM 上 app 对 `Download/BiliDownloader` 的**目录列举被 scoped storage 拒掉**，
+     * `listFiles()` 返回 null —— 于是"重复文件检测"和"交付前挪开旧文件"**一起变成静默 no-op**
+     * （真机表现：明明有两份同名文件，下载管理页却连"发现重复文件"的卡片都不出现）。
+     * 而 MediaStore 本来就是这些文件的主人，问它最靠谱：先按 `RELATIVE_PATH` 前缀查，
+     * 拿不到再退回 `_data` 前缀；两个都拿不到才认输并打日志（不再伪装成"没有重复"）。
+     */
+    private fun queryDownloadDirNames(relativePath: String): List<String> {
+        val rel = relativePath.trim('/')
+        val fromRelative = queryDownloadNames(
+            selection = "${MediaStore.Files.FileColumns.RELATIVE_PATH} LIKE ?",
+            args = arrayOf("$rel/%"),
+        )
+        if (fromRelative.isNotEmpty()) {
+            Log.d(TAG, "枚举下载目录: $rel 命中=${fromRelative.size}（按 RELATIVE_PATH）")
+            return fromRelative
+        }
+        val fromData = queryDownloadNames(
+            selection = "${MediaStore.Files.FileColumns.DATA} LIKE ?",
+            args = arrayOf("%/$rel/%"),
+        )
+        Log.d(TAG, "枚举下载目录: $rel rel命中=0 data命中=${fromData.size}")
+        return fromData
+    }
+
+    private fun queryDownloadNames(selection: String, args: Array<String>): List<String> {
+        val names = mutableListOf<String>()
+        runCatching {
+            context.contentResolver.query(
+                MediaStore.Files.getContentUri("external"),
+                arrayOf(MediaStore.Files.FileColumns.DISPLAY_NAME),
+                selection,
+                args,
+                null,
+            )?.use { cursor ->
+                val idx = cursor.getColumnIndexOrThrow(MediaStore.Files.FileColumns.DISPLAY_NAME)
+                while (cursor.moveToNext()) {
+                    cursor.getString(idx)?.takeIf { it.isNotBlank() }?.let { names += it }
+                }
+            }
+        }
+        return names
+    }
+
     /** 把某个显示名对应的媒体库行删掉（文件已经不在原路径时用它清残留行） */
     private fun deleteRowsByDisplayName(
         resolver: android.content.ContentResolver,
@@ -719,9 +767,8 @@ class FileOutputManager(
     fun findDuplicateGroups(
         relativePath: String,
     ): List<DuplicateDownloadRules.DuplicateGroup> {
-        val dir = resolveDownloadDir(relativePath)
-        val names = runCatching { dir.listFiles()?.map { it.name } }.getOrNull() ?: return emptyList()
-        return DuplicateDownloadRules.groupDuplicates(names)
+        // ⚠️ 这里原来是 File(dir).listFiles()，在这台 ROM 上恒为 null（见 queryDownloadDirNames）
+        return DuplicateDownloadRules.groupDuplicates(queryDownloadDirNames(relativePath))
     }
 
     /**
