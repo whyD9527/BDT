@@ -32,7 +32,8 @@ class Migration45SqlTest {
             st.execute("CREATE TABLE download_task (task_id INTEGER PRIMARY KEY AUTOINCREMENT, platform_id TEXT, type TEXT)")
             st.execute("CREATE TABLE download_task_node (node_id INTEGER PRIMARY KEY AUTOINCREMENT, task_id INTEGER)")
             st.execute("CREATE TABLE download_segment (segment_id INTEGER PRIMARY KEY AUTOINCREMENT, task_id INTEGER)")
-            st.execute("CREATE UNIQUE INDEX IF NOT EXISTS index_download_task_platform_id_type ON download_task(platform_id, type)")
+            // ⚠️ 故意**不建**唯一索引：这里模拟的是 v4 的库（那时还没有这个索引），
+            // 索引由迁移负责创建；否则"插两条重复任务"这一步会被索引当场拒掉，测不到迁移逻辑。
         }
     }
 
@@ -96,7 +97,6 @@ class Migration45SqlTest {
     @Test
     fun `空库上执行迁移不出错且会建好唯一索引`() {
         val c = connect()
-        c.createStatement().use { it.execute("DROP INDEX IF EXISTS index_download_task_platform_id_type") }
 
         migrate(c)
 
@@ -110,6 +110,8 @@ class Migration45SqlTest {
     fun `索引确实是唯一的（重复插入会被拒）`() {
         val c = connect()
         c.createStatement().use { it.execute("INSERT INTO download_task (platform_id, type) VALUES ('BV1', 'VIDEO')") }
+        // 索引来自迁移本身，先跑迁移再验唯一性
+        migrate(c)
         var rejected = false
         try {
             c.createStatement().use { it.execute("INSERT INTO download_task (platform_id, type) VALUES ('BV1', 'VIDEO')") }
