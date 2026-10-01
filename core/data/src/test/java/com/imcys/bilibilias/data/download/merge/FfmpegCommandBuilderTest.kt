@@ -265,6 +265,20 @@ class FfmpegCommandBuilderTest {
         assertTrue(args.contains("-q:a"))
     }
 
+    /**
+     * 取"封面那一处 `-map` 的值"。
+     *
+     * ⚠️ 不能用 `args.indexOf("/c.jpg") + 2` 去取：那是**输入**位置，它后面第一个 `-map`
+     * 是视频/音频映射（封面是最后一个输入，映射列表紧跟在输入列表之后），
+     * 我第一次就是这么写错的，CI 上两条新用例直接红。封面是**最后一处** `:v:0` 映射。
+     */
+    private fun coverMapValue(args: List<String>): String =
+        args.zipWithNext()
+            .filter { (flag, _) -> flag == "-map" }
+            .map { (_, value) -> value }
+            .filter { it.endsWith(":v:0") }
+            .last()
+
     @Test
     fun `仅音频 + M4A + 字幕 + 封面时封面下标不能多算没有被映射的字幕（H3 同处遗漏）`() {
         // 2026-09-15 复审：coverIdx 原来写死 `mediaInputs.size + subtitles.size`，
@@ -286,10 +300,7 @@ class FfmpegCommandBuilderTest {
         // 字幕没被映射（M4A 不支持），所以封面是第 2 个输入（下标 1），不是第 3 个
         assertFalse("M4A 容器不得映射字幕", args.any { it.endsWith(":s:0") })
         assertTrue("封面要作为输入加入", args.contains("/c.jpg"))
-
-        val coverInputAt = args.indexOf("/c.jpg")
-        assertEquals("-map", args[coverInputAt + 1])
-        assertEquals("封面必须映射到它真实的输入下标", "1:v:0", args[coverInputAt + 2])
+        assertEquals("封面必须映射到它真实的输入下标", "1:v:0", coverMapValue(args))
     }
 
     @Test
@@ -302,8 +313,6 @@ class FfmpegCommandBuilderTest {
             coverPath = "/c.jpg",
         )
         assertTrue("mp4 容器应映射字幕", args.any { it.endsWith(":s:0") })
-        val coverInputAt = args.indexOf("/c.jpg")
-        assertEquals("-map", args[coverInputAt + 1])
-        assertEquals("有字幕输入时可封面下标应为 2", "2:v:0", args[coverInputAt + 2])
+        assertEquals("有字幕输入时封面下标应为 2", "2:v:0", coverMapValue(args))
     }
 }
