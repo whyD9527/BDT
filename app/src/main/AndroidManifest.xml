@@ -14,6 +14,12 @@
     <uses-permission android:name="android.permission.FOREGROUND_SERVICE_DATA_SYNC" />
 
 
+        <!-- 「所有文件访问」：这台 ROM（Android 16）上 MediaStore 的改名会往 (N) 上加、
+         `_data` 还与实际文件名不一致，而 app 对 MediaProvider 拥有的文件无权直改 ——
+         授权后才能直接 delete()/renameTo()，做到"下载完成后只留一份、且是正式名"。
+         未授权时走 MediaStore + 手动清理兜底，不影响下载本身。 -->
+    <uses-permission android:name="android.permission.MANAGE_EXTERNAL_STORAGE" />
+
     <application
         android:name=".BILIBILIASApplication"
         android:allowBackup="false"

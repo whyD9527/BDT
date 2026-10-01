@@ -10,7 +10,12 @@ import com.imcys.bilibilias.data.repository.DownloadTaskRepository
 import com.imcys.bilibilias.database.entity.download.DownloadSegment
 import com.imcys.bilibilias.database.entity.download.DownloadState
 import com.imcys.bilibilias.datastore.AppSettings
+import com.imcys.bilibilias.data.download.output.DuplicateDownloadRules
+import com.imcys.bilibilias.download.FileOutputManager
 import com.imcys.bilibilias.download.NewDownloadManager
+import kotlinx.coroutines.flow.MutableStateFlow
+import kotlinx.coroutines.flow.asStateFlow
+import kotlinx.coroutines.withContext
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.flow.MutableSharedFlow
 import kotlinx.coroutines.flow.SharingStarted
@@ -25,8 +30,44 @@ class DownloadViewModel(
     private val downloadManager: NewDownloadManager,
     private val downloadTaskRepository: DownloadTaskRepository,
     private val contentResolver: ContentResolver,
-    private val appSettingsRepository: AppSettingsRepository
+    private val appSettingsRepository: AppSettingsRepository,
+    /** 交付/清理都走它；这里只用来做"重复下载文件"的扫描与用户确认后的删除 */
+    private val fileOutputManager: FileOutputManager,
 ) : ViewModel() {
+
+    /**
+     * 下载目录里"同一部视频有多份"的分组。
+     *
+     * ⚠️ 为什么要在界面上让用户确认，而不是自动删（2026-10-01 真机复现）：
+     * 这台 ROM 的 MediaStore 会把撞名的新文件改成 `xxx (1)/(2).mp4`，而 app 对这些
+     * MediaProvider 拥有的文件既删不动（EACCES）、事后按行删又常常命中 0 —— 自动判定
+     * "哪个是旧文件"被 ROM 的实现细节堵死了。于是退一步：**列出来让用户点一下**，
+     * 默认勾选"保留正式名、删掉副本"，比默默删错安全得多。
+     */
+    private val _duplicateGroups = MutableStateFlow<List<DuplicateDownloadRules.DuplicateGroup>>(emptyList())
+    val duplicateGroups = _duplicateGroups.asStateFlow()
+
+    /** 刷新重复文件分组（进入页面时 / 清理后调用） */
+    fun refreshDuplicateGroups() {
+        viewModelScope.launch {
+            val groups = withContext(Dispatchers.IO) {
+                fileOutputManager.findDuplicateGroups(DOWNLOAD_RELATIVE_PATH)
+            }
+            _duplicateGroups.value = groups
+        }
+    }
+
+    /** 用户确认后清理选中的重复文件；返回是否真的删掉了东西（用于提示文案） */
+    fun cleanDuplicateFiles(names: List<String>) {
+        if (names.isEmpty()) return
+        viewModelScope.launch {
+            val deleted = withContext(Dispatchers.IO) {
+                fileOutputManager.deleteFilesByName(DOWNLOAD_RELATIVE_PATH, names)
+            }
+            sendToast(if (deleted > 0) "已清理 $deleted 个重复文件" else "没有文件被删除（可能已被移动或没有权限）")
+            refreshDuplicateGroups()
+        }
+    }
 
     // region 事件流
     private val _uiEvent = MutableSharedFlow<DownloadUiEvent>()
@@ -67,6 +108,11 @@ class DownloadViewModel(
     )
 
     // endregion
+
+    companion object {
+        /** 下载目录（与交付时用的 MediaStore RELATIVE_PATH 一致） */
+        private const val DOWNLOAD_RELATIVE_PATH = "Download/BiliDownloader"
+    }
 
     // region 排序
     fun updateDownloadSortType(sortType: AppSettings.DownloadSortType) {

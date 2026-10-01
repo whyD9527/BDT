@@ -48,13 +48,29 @@ object FinalNameVerifyRules {
      * 结果多数字符串判不出来）—— 这类"纯字符串边界"逻辑正是该配单测的。
      */
     fun isDuplicateNameOf(name: String, expected: String): Boolean {
-        val dot = expected.lastIndexOf('.')
-        val stem = if (dot > 0) expected.substring(0, dot) else expected
-        val ext = if (dot > 0) expected.substring(dot) else ""
+        val (stem, ext) = splitName(expected)
+        return duplicateCopyIndex(name, stem, ext) != null
+    }
+
+    /**
+     * 从【名字】里取出副本序号：`爱 (2).mp4`（相对 `stem`=爱、`ext`=.mp4）→ `2`；
+     * 不是 `stem (N)ext` 这个形状则返回 null。
+     *
+     * 抽出来是给 [DuplicateDownloadRules] 复用的：它要按名字把"同一部视频的多份副本"
+     * 分到一组（`爱.mp4` / `爱 (1).mp4` / `爱 (2).mp4`），判据与这里完全一样，
+     * 两边各写一份正则迟早会走偏。
+     */
+    fun duplicateCopyIndex(name: String, stem: String, ext: String): Int? {
         val pattern = Regex(
             Regex.escape(stem) + " \\((\\d+)\\)" + Regex.escape(ext)
         )
-        return pattern.matches(name)
+        return pattern.matchEntire(name)?.groupValues?.getOrNull(1)?.toIntOrNull()
+    }
+
+    /** 把 `xxx.mp4` 拆成 (`xxx`, `.mp4`)；没有扩展名时 ext 为空串 */
+    fun splitName(name: String): Pair<String, String> {
+        val dot = name.lastIndexOf('.')
+        return if (dot > 0) name.substring(0, dot) to name.substring(dot) else name to ""
     }
 
     /**

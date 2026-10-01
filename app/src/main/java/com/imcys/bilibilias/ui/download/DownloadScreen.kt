@@ -15,6 +15,8 @@ import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.Spacer
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.width
+import androidx.compose.material3.Checkbox
+import com.imcys.bilibilias.data.download.output.DuplicateDownloadRules
 import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.items
 import androidx.compose.foundation.rememberScrollState
@@ -122,6 +124,13 @@ fun DownloadScreen(route: DownloadRoute, onToBack: () -> Unit) {
         selectDeleteList.clear()
     }
 
+    // 重复下载文件（同一部视频多份）：进页面扫一次，清理后 VM 里会自己刷新
+    val duplicateGroups by vm.duplicateGroups.collectAsState()
+    LaunchedEffect(Unit) {
+        vm.refreshDuplicateGroups()
+    }
+    var showDuplicateDialog by remember { mutableStateOf(false) }
+
     // 返回键处理
     BackHandler(enabled = true) {
         if (downloadFinishEditState) {
@@ -156,6 +165,18 @@ fun DownloadScreen(route: DownloadRoute, onToBack: () -> Unit) {
                 modifier = Modifier.padding(bottom = 10.dp, end = 10.dp, start = 10.dp),
                 verticalArrangement = Arrangement.spacedBy(11.dp)
             ) {
+                // ⚠️ 放在列表最前面：重复文件是"同一个视频多份 100MB 级副本"，
+                // 提示要显眼；点进去由用户确认删哪些（默认只勾副本、保留正式名）。
+                if (duplicateGroups.isNotEmpty()) {
+                    item(key = "duplicate_files_card") {
+                        DuplicateFilesCard(
+                            groupCount = duplicateGroups.size,
+                            removableCount = duplicateGroups.sumOf { it.removableNames.size },
+                            onClean = { showDuplicateDialog = true },
+                        )
+                    }
+                }
+
                 when (selectIndex) {
                     0 -> {
                         // key 用 **segmentId**（数据库主键，天然唯一），不用 platformId：
@@ -205,6 +226,18 @@ fun DownloadScreen(route: DownloadRoute, onToBack: () -> Unit) {
             }
         }
 
+        // 重复文件清理对话框
+        if (showDuplicateDialog) {
+            DuplicateFilesCleanupDialog(
+                groups = duplicateGroups,
+                onConfirm = { names ->
+                    vm.cleanDuplicateFiles(names)
+                    showDuplicateDialog = false
+                },
+                onDismiss = { showDuplicateDialog = false },
+            )
+        }
+
         // 删除确认对话框
         if (showDeleteDialog) {
             DeleteConfirmDialog(
@@ -217,6 +250,112 @@ fun DownloadScreen(route: DownloadRoute, onToBack: () -> Unit) {
             )
         }
     }
+}
+
+/**
+ * 「发现重复下载文件」提示卡。
+ *
+ * 2026-10-01 真机复现：这台 ROM 的 MediaStore 会把撞名的新文件改成 `xxx (1)/(2).mp4`，
+ * 而 app 对这些 MediaProvider 拥有的文件删不动、按行删又常命中 0 —— 自动删除不可靠，
+ * 于是改成"提示 + 用户确认"：默认保留正式名那份，只删副本。
+ */
+@Composable
+private fun DuplicateFilesCard(
+    groupCount: Int,
+    removableCount: Int,
+    onClean: () -> Unit,
+) {
+    Card(
+        modifier = Modifier.fillMaxWidth(),
+        colors = CardDefaults.cardColors(
+            containerColor = MaterialTheme.colorScheme.tertiaryContainer,
+        ),
+    ) {
+        Row(
+            modifier = Modifier
+                .fillMaxWidth()
+                .padding(horizontal = 16.dp, vertical = 12.dp),
+            verticalAlignment = Alignment.CenterVertically,
+        ) {
+            Column(Modifier.weight(1f)) {
+                Text(
+                    "发现 $groupCount 组重复下载文件",
+                    fontSize = 15.sp,
+                    fontWeight = FontWeight.Medium,
+                )
+                Text(
+                    "同一个视频存在多份副本，共可清理 $removableCount 个（只删副本，保留正式名那份）",
+                    fontSize = 12.sp,
+                    color = MaterialTheme.colorScheme.onSurfaceVariant,
+                )
+            }
+            TextButton(onClick = onClean) {
+                Text("去清理")
+            }
+        }
+    }
+}
+
+/**
+ * 重复文件清理对话框：列出每个"可删副本"（默认勾选），正式名那份只展示不可勾。
+ * 用户点"删除选中"才会真的删。
+ */
+@Composable
+private fun DuplicateFilesCleanupDialog(
+    groups: List<DuplicateDownloadRules.DuplicateGroup>,
+    onConfirm: (List<String>) -> Unit,
+    onDismiss: () -> Unit,
+) {
+    // 默认全选可删项（用户可逐个取消）
+    val selected = remember(groups) {
+        mutableStateListOf<String>().apply {
+            groups.forEach { addAll(it.removableNames) }
+        }
+    }
+
+    AlertDialog(
+        onDismissRequest = onDismiss,
+        title = { Text("清理重复下载文件") },
+        text = {
+            LazyColumn(verticalArrangement = Arrangement.spacedBy(6.dp)) {
+                groups.forEach { group ->
+                    item(key = "keep_${group.keepName}") {
+                        Text(
+                            "保留：${group.keepName}",
+                            fontSize = 13.sp,
+                            fontWeight = FontWeight.Medium,
+                        )
+                    }
+                    items(group.removableNames, key = { "rm_$it" }) { name ->
+                        Row(verticalAlignment = Alignment.CenterVertically) {
+                            Checkbox(
+                                checked = name in selected,
+                                onCheckedChange = { checked ->
+                                    if (checked) {
+                                        if (name !in selected) selected.add(name)
+                                    } else {
+                                        selected.remove(name)
+                                    }
+                                },
+                            )
+                            Text(name, fontSize = 13.sp)
+                        }
+                    }
+                }
+            }
+        },
+        confirmButton = {
+            TextButton(
+                onClick = { onConfirm(selected.toList()) },
+                enabled = selected.isNotEmpty(),
+            ) {
+                Text("删除选中 (${selected.size})")
+            }
+        },
+        dismissButton = {
+            TextButton(onClick = onDismiss) { Text("取消") }
+        },
+    )
 }
 
 // region 辅助函数

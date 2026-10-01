@@ -11,6 +11,7 @@ import android.provider.MediaStore
 import android.util.Log
 import androidx.core.net.toUri
 import com.imcys.bilibilias.data.download.record.DownloadRecordReuseRules
+import com.imcys.bilibilias.data.download.output.DuplicateDownloadRules
 import com.imcys.bilibilias.data.download.output.FinalNameVerifyRules
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.withContext
@@ -498,10 +499,18 @@ class FileOutputManager(
             ?.use { c -> if (c.moveToFirst()) c.getString(0) else null }
     }.getOrNull()?.let { File(it).parentFile }
 
-    /** 「挪到一边」的旧文件：记住它的行 uri 与原名，供成功后删除 / 失败后回滚 */
+    /**
+     * 「挪到一边」的旧文件：记住它的原名（回滚要用），以及"怎么删/怎么还原"。
+     *
+     * 两种模式：
+     *  · MediaStore 模式（默认）：[rowUri] 那一行被改了名，删行/改名都靠 MediaProvider；
+     *  · 直删模式（用户授了"所有文件访问"）：文件被 [File.renameTo] 挪成了 [asidePath]，
+     *    媒体库那几行只是被顺手删掉（文件已经不在原路径，删行不会碰磁盘）。
+     */
     private data class AsideFile(
-        val rowUri: android.net.Uri,
         val originalName: String,
+        val rowUri: android.net.Uri? = null,
+        val asidePath: String? = null,
     )
 
     /**
@@ -549,8 +558,25 @@ class FileOutputManager(
 
         val result = mutableListOf<AsideFile>()
         val stamp = System.currentTimeMillis()
+        val direct = hasAllFilesAccess()
         victims.forEach { victimName ->
             val victim = File(dir, victimName)
+            if (direct) {
+                // ⚠️ 有"所有文件访问"时直接改名（真机上这是唯一 100% 可靠的方式）：
+                // MediaStore 的 rename 会往 (N) 上加、`_data` 还可能对不上；
+                // 而这些文件属主是 MediaProvider，没有这个权限就删不动/改不动。
+                val aside = File(dir, "$victimName.old-$stamp")
+                if (runCatching { victim.renameTo(aside) }.getOrDefault(false)) {
+                    // 文件已经不在了，但媒体库那几行还在 —— 留着会让下次 insert 继续拿到 (N)，删掉它们
+                    deleteRowsByDisplayName(resolver, victimName)
+                    result += AsideFile(
+                        originalName = victimName,
+                        asidePath = aside.absolutePath,
+                    )
+                    return@forEach
+                }
+                Log.w(TAG, "直删模式下改名失败，退回 MediaStore 方式: $victimName")
+            }
             val uri = scanFileBlocking(victim) ?: return@forEach
             val dataPath = contentDataPath(resolver, uri)
             if (dataPath != null && dataPath != victim.absolutePath) {
@@ -568,7 +594,7 @@ class FileOutputManager(
                 )
             }.getOrDefault(0)
             if (rows > 0) {
-                result += AsideFile(uri, victimName)
+                result += AsideFile(originalName = victimName, rowUri = uri)
             } else {
                 Log.w(TAG, "挪开同名旧文件失败（改名 0 行），保持原样: $victimName")
             }
@@ -589,8 +615,14 @@ class FileOutputManager(
         if (asides.isEmpty()) return
         var deleted = 0
         asides.forEach { aside ->
-            runCatching { resolver.delete(aside.rowUri, null, null) }
-                .onSuccess { deleted += it }
+            val asidePath = aside.asidePath
+            if (asidePath != null) {
+                // 直删模式：直接删那个临时文件
+                if (runCatching { File(asidePath).delete() }.getOrDefault(false)) deleted++
+            } else {
+                val rowUri = aside.rowUri ?: return@forEach
+                runCatching { resolver.delete(rowUri, null, null) }.onSuccess { deleted += it }
+            }
         }
         Log.d(TAG, "交付成功，清理挪开的旧文件: 目标=${asides.size} 实际删除=$deleted")
     }
@@ -603,14 +635,24 @@ class FileOutputManager(
         if (asides.isEmpty()) return
         var restored = 0
         asides.forEach { aside ->
-            runCatching {
-                resolver.update(
-                    aside.rowUri,
-                    ContentValues().apply { put(MediaStore.Downloads.DISPLAY_NAME, aside.originalName) },
-                    null,
-                    null,
-                )
-            }.onSuccess { restored += it }
+            val asidePath = aside.asidePath
+            if (asidePath != null) {
+                val aside = File(asidePath)
+                val back = File(aside.parentFile, aside.originalName)
+                if (runCatching { aside.renameTo(back) }.getOrDefault(false)) restored++
+            } else {
+                val rowUri = aside.rowUri ?: return@forEach
+                runCatching {
+                    resolver.update(
+                        rowUri,
+                        ContentValues().apply {
+                            put(MediaStore.Downloads.DISPLAY_NAME, aside.originalName)
+                        },
+                        null,
+                        null,
+                    )
+                }.onSuccess { restored += it }
+            }
         }
         Log.w(TAG, "已把挪开的旧文件改回原名: 目标=${asides.size} 成功=$restored")
     }
@@ -626,6 +668,94 @@ class FileOutputManager(
         val root = Environment.getExternalStoragePublicDirectory(Environment.DIRECTORY_DOWNLOADS)
         val cleaned = DownloadRecordReuseRules.downloadDirRelativePath(relativePath)
         return if (cleaned.isBlank()) root else File(root, cleaned)
+    }
+
+    /** 把某个显示名对应的媒体库行删掉（文件已经不在原路径时用它清残留行） */
+    private fun deleteRowsByDisplayName(
+        resolver: android.content.ContentResolver,
+        displayName: String,
+    ) {
+        val ids = mutableListOf<Long>()
+        runCatching {
+            resolver.query(
+                MediaStore.Downloads.EXTERNAL_CONTENT_URI,
+                arrayOf(MediaStore.Downloads._ID),
+                "${MediaStore.Downloads.DISPLAY_NAME}=?",
+                arrayOf(displayName),
+                null,
+            )?.use { c ->
+                val idx = c.getColumnIndexOrThrow(MediaStore.Downloads._ID)
+                while (c.moveToNext()) ids += c.getLong(idx)
+            }
+        }
+        ids.forEach { id ->
+            runCatching {
+                resolver.delete(
+                    ContentUris.withAppendedId(MediaStore.Downloads.EXTERNAL_CONTENT_URI, id),
+                    null,
+                    null,
+                )
+            }
+        }
+    }
+
+    /**
+     * 是否拿到"所有文件访问"（MANAGE_EXTERNAL_STORAGE）。
+     *
+     * 有了它，交付与清理就能直接对文件 `delete()/renameTo()` —— 这台 ROM 上
+     * MediaStore 的改名会往 `(N)` 上加、`_data` 还会与实际名字不一致，
+     * 而 app 对这些 MediaProvider 拥有的文件本来是无权直改的。**用户可选授权**，
+     * 没授权就走 MediaStore 那条（可用但可能留下副本，由"重复文件清理"兜底）。
+     */
+    fun hasAllFilesAccess(): Boolean =
+        Build.VERSION.SDK_INT >= Build.VERSION_CODES.R &&
+            runCatching { Environment.isExternalStorageManager() }.getOrDefault(false)
+
+    /**
+     * 扫描下载目录里"同一部视频存在多份"的分组（只按名字判定，不做 stat ——
+     * scoped storage 下这些文件的属性是读不到的，见 moveAsideSameContentFiles 的注释）。
+     */
+    fun findDuplicateGroups(
+        relativePath: String,
+    ): List<DuplicateDownloadRules.DuplicateGroup> {
+        val dir = resolveDownloadDir(relativePath)
+        val names = runCatching { dir.listFiles()?.map { it.name } }.getOrNull() ?: return emptyList()
+        return DuplicateDownloadRules.groupDuplicates(names)
+    }
+
+    /**
+     * 按名字删除下载目录里的文件（用户确认后的"清理重复文件"动作）。
+     *
+     * 两种模式：有"所有文件访问"就直接 `delete()`；否则先 `scanFile` 让媒体库收录/定位这一行、
+     * 校验 `_data` 确实指向该文件、再删行（删行 = MediaProvider 连带删文件）。
+     *
+     * @return 实际删掉的个数（0 也要打日志 —— "删除静默失效"是这次踩过好几次的坑）
+     */
+    fun deleteFilesByName(relativePath: String, names: List<String>): Int {
+        if (names.isEmpty()) return 0
+        val dir = resolveDownloadDir(relativePath)
+        val resolver = context.contentResolver
+        val direct = hasAllFilesAccess()
+        var deleted = 0
+        names.forEach { name ->
+            val target = File(dir, name)
+            if (direct) {
+                if (runCatching { target.delete() }.getOrDefault(false)) deleted++
+                return@forEach
+            }
+            val uri = scanFileBlocking(target) ?: return@forEach
+            val dataPath = contentDataPath(resolver, uri)
+            if (dataPath != null && dataPath != target.absolutePath) {
+                Log.w(TAG, "扫描回来的行不是目标文件，跳过删除: $name → $dataPath")
+                return@forEach
+            }
+            runCatching { resolver.delete(uri, null, null) }.onSuccess { deleted += it }
+        }
+        Log.d(
+            TAG,
+            "清理重复文件: 目标=${names.size} 实际删除=$deleted 直删=$direct 目录=${dir.absolutePath}",
+        )
+        return deleted
     }
 
     /** 某个 MediaStore 行当前指向的磁盘路径 */

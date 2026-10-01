@@ -9,6 +9,15 @@ import android.provider.DocumentsContract
 import android.widget.Toast
 import androidx.activity.compose.rememberLauncherForActivityResult
 import androidx.activity.result.contract.ActivityResultContracts
+import android.os.Build
+import android.provider.Settings
+import androidx.compose.runtime.DisposableEffect
+import androidx.compose.runtime.mutableStateOf
+import androidx.compose.runtime.remember
+import androidx.compose.runtime.setValue
+import androidx.lifecycle.Lifecycle
+import androidx.lifecycle.LifecycleEventObserver
+import androidx.lifecycle.compose.LocalLifecycleOwner
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
@@ -84,6 +93,20 @@ fun StorageManagementContent(
     modifier: Modifier = Modifier,
     onToDownloadList: () -> Unit
 ) {
+    // 「所有文件访问」状态：进页面 + 从系统设置返回（ON_RESUME）都刷新一次
+    var hasAllFilesAccess by remember { mutableStateOf(false) }
+    val lifecycleOwner = LocalLifecycleOwner.current
+    DisposableEffect(lifecycleOwner) {
+        val observer = LifecycleEventObserver { _, event ->
+            if (event == Lifecycle.Event.ON_RESUME) {
+                hasAllFilesAccess = Build.VERSION.SDK_INT >= Build.VERSION_CODES.R &&
+                    runCatching { Environment.isExternalStorageManager() }.getOrDefault(false)
+            }
+        }
+        lifecycleOwner.lifecycle.addObserver(observer)
+        onDispose { lifecycleOwner.lifecycle.removeObserver(observer) }
+    }
+
     val context = LocalContext.current
     val vm = koinViewModel<StorageManagementViewModel>()
     val uiState by vm.uiState.collectAsState()
@@ -233,6 +256,43 @@ fun StorageManagementSuccessScreen(
             },
         )
 
+
+        // 「所有文件访问」：授权后交付阶段可以直接改名/删除，彻底绕开这台 ROM 上
+        // MediaStore 的 `(N)` 改名与 `_data` 不一致问题（2026-10-01 真机复现）。
+        StorageContent(
+            title = "所有文件访问",
+            dataNumStr = if (hasAllFilesAccess) "已授权" else "未授权",
+            description = "授权后下载完成可自动清理同名重复文件（未授权则由「下载管理 → 重复文件」手动清理）",
+            buttonText = "去设置",
+            buttonColor = MaterialTheme.colorScheme.primary,
+            onClick = {
+                if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.R) {
+                    val intent = if (Environment.isExternalStorageManager()) {
+                        // 已授权：打开系统的"所有文件访问"列表页，方便随时撤销
+                        Intent(Settings.ACTION_MANAGE_APP_ALL_FILES_ACCESS_PERMISSION).apply {
+                            data = Uri.fromParts("package", context.packageName, null)
+                            addFlags(Intent.FLAG_ACTIVITY_NEW_TASK)
+                        }
+                    } else {
+                        Intent(Settings.ACTION_MANAGE_APP_ALL_FILES_ACCESS_PERMISSION).apply {
+                            data = Uri.fromParts("package", context.packageName, null)
+                            addFlags(Intent.FLAG_ACTIVITY_NEW_TASK)
+                        }
+                    }
+                    runCatching { context.startActivity(intent) }.onFailure {
+                        // 个别 ROM 没有这个页面，退到总列表
+                        runCatching {
+                            context.startActivity(
+                                Intent(Settings.ACTION_MANAGE_ALL_FILES_ACCESS_PERMISSION)
+                                    .addFlags(Intent.FLAG_ACTIVITY_NEW_TASK)
+                            )
+                        }
+                    }
+                } else {
+                    sendToastEventOnBlocking("系统版本低于 Android 11，无需此授权")
+                }
+            },
+        )
 
         StorageContent(
             title = "临时文件",
