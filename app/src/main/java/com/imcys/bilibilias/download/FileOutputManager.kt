@@ -789,7 +789,19 @@ class FileOutputManager(
         relativePath: String,
     ): List<DuplicateDownloadRules.DuplicateGroup> {
         // ⚠️ 这里原来是 File(dir).listFiles()，在这台 ROM 上恒为 null（见 queryDownloadDirNames）
-        return DuplicateDownloadRules.groupDuplicates(queryDownloadDirNames(relativePath))
+        val dir = resolveDownloadDir(relativePath)
+        var names = queryDownloadDirNames(relativePath)
+        if (names.size <= 1) {
+            // 只看到 ≤1 条时**很可能是"目录里有文件还没被媒体库收录"**：
+            // 实测过——用文件管理器/其他 App 写进下载目录的副本，MediaStore 一开始根本没有它的行，
+            // 按行查自然查不到（真机表现：目录里两份、卡片却不出现）。
+            // 所以先让媒体库扫一遍这个目录，再查一次；扫不动就按现有结果返回（不影响正确性）。
+            trace("重复检查: $relativePath 首次只拿到 ${names.size} 条，触发目录扫描后重查")
+            scanFileBlocking(dir)
+            names = queryDownloadDirNames(relativePath)
+            trace("重复检查: $relativePath 扫描后拿到 ${names.size} 条")
+        }
+        return DuplicateDownloadRules.groupDuplicates(names)
     }
 
     /**
