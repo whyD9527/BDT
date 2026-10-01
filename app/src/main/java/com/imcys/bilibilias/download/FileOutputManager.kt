@@ -528,28 +528,34 @@ class FileOutputManager(
         fileName: String,
         dir: File,
     ): List<AsideFile> {
-        val victims = runCatching {
-            dir.listFiles()?.filter { f ->
-                f.isFile && FinalNameVerifyRules.isSameContentName(f.name, fileName)
-            }
-        }.getOrNull().orEmpty()
+        // ⚠️ **只看名字，绝不 stat**（2026-10-01 真机复现）：
+        // scoped storage 下 app 对 MediaProvider 拥有的文件 `stat()` 会被拒 ——
+        // `File.isFile` 返回 false（而**目录列表本身是可用的**，所以 `verify()` 能看到名字）。
+        // 上一版就是因为在过滤条件里加了 `f.isFile`，把所有目标都滤掉了：
+        // 真机日志 `目标=0（目录=…/Download/BiliDownloader 存在=true）`，而目录里明明躺着 3 份同名文件。
+        val names: List<String>? = runCatching { dir.listFiles()?.map { it.name } }.getOrNull()
+        val matched = names?.filter { FinalNameVerifyRules.isSameContentName(it, fileName) }.orEmpty()
+        // 列表拿不到时至少试一下正式名（scanFile 会问 MediaProvider，不依赖 app 的 stat 权限）
+        val victims = matched.ifEmpty { if (names == null) listOf(fileName) else emptyList() }
         if (victims.isEmpty()) {
             // ⚠️ 空也要打日志：这一步"静默不生效"正是 2026-10-01 那次真机复现的形态
             Log.d(
                 TAG,
-                "交付前挪开同名旧文件: $fileName 目标=0（目录=${dir.absolutePath} 存在=${dir.exists()}）",
+                "交付前挪开同名旧文件: $fileName 列表=${names?.size ?: -1} 目标=0" +
+                    "（目录=${dir.absolutePath} 存在=${dir.exists()}）",
             )
             return emptyList()
         }
 
         val result = mutableListOf<AsideFile>()
         val stamp = System.currentTimeMillis()
-        victims.forEach { victim ->
+        victims.forEach { victimName ->
+            val victim = File(dir, victimName)
             val uri = scanFileBlocking(victim) ?: return@forEach
             val dataPath = contentDataPath(resolver, uri)
             if (dataPath != null && dataPath != victim.absolutePath) {
                 // 扫描回来的行指向别的文件：绝不动它（宁可留着副本，也不删错东西）
-                Log.w(TAG, "扫描回来的行不是目标文件，跳过挪开: ${victim.name} → $dataPath")
+                Log.w(TAG, "扫描回来的行不是目标文件，跳过挪开: $victimName → $dataPath")
                 return@forEach
             }
             val asideName = "$fileName.old-$stamp"
@@ -562,12 +568,16 @@ class FileOutputManager(
                 )
             }.getOrDefault(0)
             if (rows > 0) {
-                result += AsideFile(uri, victim.name)
+                result += AsideFile(uri, victimName)
             } else {
-                Log.w(TAG, "挪开同名旧文件失败（改名 0 行），保持原样: ${victim.name}")
+                Log.w(TAG, "挪开同名旧文件失败（改名 0 行），保持原样: $victimName")
             }
         }
-        Log.d(TAG, "交付前挪开同名旧文件: $fileName 目标=${victims.size} 成功=${result.size}")
+        Log.d(
+            TAG,
+            "交付前挪开同名旧文件: $fileName 列表=${names?.size ?: -1} 目标=${victims.size} " +
+                "成功=${result.size} 目录=${dir.absolutePath}",
+        )
         return result
     }
 
