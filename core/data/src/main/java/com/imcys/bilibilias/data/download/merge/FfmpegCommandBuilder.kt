@@ -160,7 +160,12 @@ object FfmpegCommandBuilder {
                 add("-c:v")
                 add("copy")
             }
-            if (audioEnabled) {
+            // ⚠️ `audioEnabled || mapEmbeddedAudio`（2026-09-15 复审 A-L5）：durl/单文件资源
+            // 在 AUDIO_ONLY 之外也会走 `-map 0:a:0?` 把**内嵌音轨**带出来（见上面 mapEmbeddedAudio）。
+            // 原来只在 `audioEnabled` 时写 `-c:a copy`，于是"仅视频"这条路上的音轨会被容器默认编码器
+            // **重新编码**一遍（有损、且与"只改封装"的预期不符）。`?` 让映射可选，
+            // 源里没有音轨时加上 `-c:a copy` 也是安全的 no-op。
+            if (audioEnabled || mapEmbeddedAudio) {
                 add("-c:a")
                 add("copy")
             }

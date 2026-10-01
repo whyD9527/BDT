@@ -88,13 +88,17 @@ fun ASAsyncImage(
         Surface(
             shape = shape,
             color = MaterialTheme.colorScheme.primaryContainer,
+            // ⚠️ 同一个 `modifier` 不能再原样传给下面的 AsyncImage（2026-10-01 复审 L33）：
+            // 里面的 `padding`/`border`/`size` 会在 Surface 与图片上**各生效一次**
+            // （视觉上 padding 翻倍、边框叠两层、尺寸被约束两次），
+            // 调用方看到的效果与传进去的 modifier 对不上。这里只让外层生效。
             modifier = modifier.alpha(alpha)
         ) {
             AsyncImage(
                 model = model,
                 contentDescription = contentDescription,
                 imageLoader = SingletonImageLoader.get(LocalPlatformContext.current),
-                modifier = modifier,
+                modifier = Modifier.fillMaxSize(),
                 transform = transform,
                 onState = onState,
                 alignment = alignment,

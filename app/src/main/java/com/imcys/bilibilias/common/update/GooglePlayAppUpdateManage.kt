@@ -24,6 +24,10 @@ class GooglePlayAppUpdateManage(
     context: Context,
     private val appSettingsRepository: AppSettingsRepository
 ) : ASAppUpdateManage() {
+    private companion object {
+        const val TAG = "ASAppUpdate"
+    }
+
     private var appUpdateManager: AppUpdateManager = AppUpdateManagerFactory.create(context)
 
     private var lastAppUpdateType = AppUpdateType.FLEXIBLE
@@ -57,7 +61,16 @@ class GooglePlayAppUpdateManage(
             appUpdateManager
                 .appUpdateInfo
                 .addOnSuccessListener { appUpdateInfo ->
-                    cont.resumeWith(Result.success(appUpdateInfo.availableVersionCode()))
+                    if (cont.isActive) {
+                        cont.resumeWith(Result.success(appUpdateInfo.availableVersionCode()))
+                    }
+                }
+                // ⚠️ 必须有失败回调（2026-10-01 复审）：原来只挂 addOnSuccessListener，
+                // 而 Play Core 的任务在“没有 Play 服务 / 网络失败 / 被风控 / 任务被取消”时**只会回调失败** ——
+                // 于是 suspendCancellableCoroutine **永不恢复**，调用方（更新检查那条路）就静默挂死。
+                .addOnFailureListener { e ->
+                    Log.w(TAG, "获取可更新版本失败，按 0（无更新）处理", e)
+                    if (cont.isActive) cont.resumeWith(Result.success(0))
                 }
         }
     }
@@ -82,6 +95,7 @@ class GooglePlayAppUpdateManage(
                     AppUpdateOptions.newBuilder(lastAppUpdateType).build()
                 )
             }
+            .addOnFailureListener { e -> Log.w(TAG, "取取更新信息失败，无法启动更新流程", e) }
     }
 
 
@@ -111,10 +125,15 @@ class GooglePlayAppUpdateManage(
                         && appUpdateInfo.isUpdateTypeAllowed(updateType)
                     ) {
                         lastAppUpdateType = updateType
-                        cont.resumeWith(Result.success(true))
+                        if (cont.isActive) cont.resumeWith(Result.success(true))
                     } else {
-                        cont.resumeWith(Result.success(false))
+                        if (cont.isActive) cont.resumeWith(Result.success(false))
                     }
+                }
+                // 同上：没有这个回调就会永久挂住更新检查
+                .addOnFailureListener { e ->
+                    Log.w(TAG, "检查更新失败，按无更新处理", e)
+                    if (cont.isActive) cont.resumeWith(Result.success(false))
                 }
             }
         }

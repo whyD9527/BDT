@@ -26,7 +26,7 @@ object FFmpegExecutor {
     suspend fun <T> executeFFmpeg(block: () -> T): T {
         return suspendCancellableCoroutine {
             val task = wrapTask(it, block)
-            val taskNum = currentTasks.incrementAndGet()
+            currentTasks.incrementAndGet()
             executor.execute(task)
         }
     }
@@ -35,9 +35,18 @@ object FFmpegExecutor {
         return Runnable {
             try {
                 val result = block()
-                con.resumeWith(Result.success(result))
+                // ⚠️ 2026-10-01 复审（core:ffmpeg 模块，当前未进构建）：协程被取消之后
+                // **不能再 resume** —— 原来的 `con.resumeWith(...)` 无条件调用，
+                // 会把结果塞进一个已经取消的续体。任务本身仍会跑完（block 是同步的
+                // muxer/ffmpeg 调用，没法真正中断），所以这里只保证"不向已取消的协程交付结果"，
+                // 计数照旧在 finally 里减一次（不会重复减）。
+                if (con.isActive) {
+                    con.resumeWith(Result.success(result))
+                }
             } catch (e: Exception) {
-                con.resumeWith(Result.failure(e))
+                if (con.isActive) {
+                    con.resumeWith(Result.failure(e))
+                }
             } finally {
                 currentTasks.decrementAndGet()
             }

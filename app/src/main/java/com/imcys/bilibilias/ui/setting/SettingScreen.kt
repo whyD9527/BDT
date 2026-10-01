@@ -2,6 +2,9 @@ package com.imcys.bilibilias.ui.setting
 
 import android.Manifest.permission
 import android.content.Intent
+import android.provider.Settings
+import android.util.Log
+import android.widget.Toast
 import android.content.pm.PackageManager
 import android.os.Build
 import androidx.activity.compose.rememberLauncherForActivityResult
@@ -570,16 +573,37 @@ fun DownloadPostNotifications() {
         SwitchSettingsItem(
             imageVector = Icons.Outlined.Notifications,
             text = "前台通知",
-            description = "开启后可以使得在后台的下载任务不会被系统回收",
+            // ⚠️ 文案要说清"关不掉"这件事（2026-10-01 复审）：POST_NOTIFICATIONS 一旦授予，
+            // Android **不允许应用自己撤销**，只能由用户在系统设置里关掉；原来开关看起来能关，
+            // 点一下却什么都不发生（checked 直接来自权限状态），用户会以为开关坏了。
+            description = "开启后后台下载任务不会被系统回收；关闭需到系统设置里操作",
             checked = hasForegroundServicePermission,
-        ) {
-            haptics.switchHapticFeedback(it)
-            if (ContextCompat.checkSelfPermission(
+        ) { wanted ->
+            haptics.switchHapticFeedback(wanted)
+            if (wanted) {
+                if (ContextCompat.checkSelfPermission(
+                        context,
+                        permission.POST_NOTIFICATIONS
+                    ) != PackageManager.PERMISSION_GRANTED
+                ) {
+                    showRequestForegroundServiceTip = true
+                }
+            } else if (hasForegroundServicePermission) {
+                // 用户想关掉：把系统设置的通知页打开（这是唯一能真正关闭的地方）
+                Toast.makeText(
                     context,
-                    permission.POST_NOTIFICATIONS
-                ) != PackageManager.PERMISSION_GRANTED
-            ) {
-                showRequestForegroundServiceTip = true
+                    "通知权限只能在系统设置里关闭，已为你打开设置页",
+                    Toast.LENGTH_LONG,
+                ).show()
+                runCatching {
+                    context.startActivity(
+                        Intent(Settings.ACTION_APP_NOTIFICATION_SETTINGS)
+                            .putExtra(Settings.EXTRA_APP_PACKAGE, context.packageName)
+                            .addFlags(Intent.FLAG_ACTIVITY_NEW_TASK)
+                    )
+                }.onFailure { e ->
+                    Log.w("SettingScreen", "打开通知设置失败", e)
+                }
             }
         }
 

@@ -35,40 +35,55 @@ object MediaMergeManager {
         outputPath: String,
         listener: MediaMergeListener
     ) {
+        // ⚠️ 2026-10-01 复审（core:ffmpeg 模块，当前未进构建）三处修正：
+        // 1. **资源必须放进 finally**：原来只在"全部写完"那条路径上 release()，
+        //    中途任何一步抛异常（writeSampleData 失败、磁盘写满、muxer.stop 抛错）
+        //    都会漏掉 MediaMuxer + 两个 MediaExtractor 的 native 资源 —— 反复重试会把 fd 耗光；
+        // 2. **进度 100% 必须放在 muxer.stop() 之后**：原来先报 100% 再 stop，
+        //    stop 失败时用户已经看到"100% 完成"，而产物其实没收尾；
+        // 3. **失败要删掉半成品**：否则下次"已有文件"的判断会把截断文件当成完整成品。
+        var videoExtractor: MediaExtractor? = null
+        var audioExtractor: MediaExtractor? = null
+        var muxer: MediaMuxer? = null
+        var muxerStarted = false
         try {
-            val videoExtractor = MediaExtractor()
-            val audioExtractor = MediaExtractor()
-            videoExtractor.setDataSource(videoPath)
-            audioExtractor.setDataSource(audioPath)
+            val vEx = MediaExtractor()
+            val aEx = MediaExtractor()
+            val mx = MediaMuxer(outputPath, MediaMuxer.OutputFormat.MUXER_OUTPUT_MPEG_4)
+            videoExtractor = vEx
+            audioExtractor = aEx
+            muxer = mx
+            vEx.setDataSource(videoPath)
+            aEx.setDataSource(audioPath)
 
-            val muxer = MediaMuxer(outputPath, MediaMuxer.OutputFormat.MUXER_OUTPUT_MPEG_4)
             var videoTrackIndex = -1
             var audioTrackIndex = -1
 
             // 选取视频轨道
-            for (i in 0 until videoExtractor.trackCount) {
-                val format = videoExtractor.getTrackFormat(i)
+            for (i in 0 until vEx.trackCount) {
+                val format = vEx.getTrackFormat(i)
                 val mime = format.getString(MediaFormat.KEY_MIME)
                 if (mime != null && mime.startsWith("video/")) {
-                    videoExtractor.selectTrack(i)
-                    videoTrackIndex = muxer.addTrack(format)
+                    vEx.selectTrack(i)
+                    videoTrackIndex = mx.addTrack(format)
                     break
                 }
             }
             // 选取音频轨道
-            for (i in 0 until audioExtractor.trackCount) {
-                val format = audioExtractor.getTrackFormat(i)
+            for (i in 0 until aEx.trackCount) {
+                val format = aEx.getTrackFormat(i)
                 val mime = format.getString(MediaFormat.KEY_MIME)
                 if (mime != null && mime.startsWith("audio/")) {
-                    audioExtractor.selectTrack(i)
-                    audioTrackIndex = muxer.addTrack(format)
+                    aEx.selectTrack(i)
+                    audioTrackIndex = mx.addTrack(format)
                     break
                 }
             }
             if (videoTrackIndex == -1 || audioTrackIndex == -1) {
                 throw Exception("找不到音视频轨道")
             }
-            muxer.start()
+            mx.start()
+            muxerStarted = true
 
             val bufferSize = 1024 * 1024
             val buffer = ByteArray(bufferSize)
@@ -83,13 +98,13 @@ object MediaMergeManager {
                 return -1
             }
 
-            val videoTrackIdx = findTrackIndex(videoExtractor, "video/")
-            val audioTrackIdx = findTrackIndex(audioExtractor, "audio/")
+            val videoTrackIdx = findTrackIndex(vEx, "video/")
+            val audioTrackIdx = findTrackIndex(aEx, "audio/")
             val videoDuration =
-                if (videoTrackIdx != -1) videoExtractor.getTrackFormat(videoTrackIdx)
+                if (videoTrackIdx != -1) vEx.getTrackFormat(videoTrackIdx)
                     .getLong(MediaFormat.KEY_DURATION) else 0L
             val audioDuration =
-                if (audioTrackIdx != -1) audioExtractor.getTrackFormat(audioTrackIdx)
+                if (audioTrackIdx != -1) aEx.getTrackFormat(audioTrackIdx)
                     .getLong(MediaFormat.KEY_DURATION) else 0L
             val totalDuration = maxOf(videoDuration, audioDuration)
             var lastProgress = -1
@@ -97,23 +112,23 @@ object MediaMergeManager {
             var videoDone = false
             while (!videoDone) {
                 bufferInfo.offset = 0
-                bufferInfo.size = videoExtractor.readSampleData(java.nio.ByteBuffer.wrap(buffer), 0)
+                bufferInfo.size = vEx.readSampleData(java.nio.ByteBuffer.wrap(buffer), 0)
                 if (bufferInfo.size < 0) {
                     videoDone = true
                     bufferInfo.size = 0
                 } else {
-                    bufferInfo.presentationTimeUs = videoExtractor.sampleTime
+                    bufferInfo.presentationTimeUs = vEx.sampleTime
                     // 只保留关键帧标志
                     bufferInfo.flags =
-                        if ((videoExtractor.sampleFlags and android.media.MediaExtractor.SAMPLE_FLAG_SYNC) != 0) {
+                        if ((vEx.sampleFlags and android.media.MediaExtractor.SAMPLE_FLAG_SYNC) != 0) {
                             android.media.MediaCodec.BUFFER_FLAG_KEY_FRAME
                         } else 0
-                    muxer.writeSampleData(
+                    mx.writeSampleData(
                         videoTrackIndex,
                         java.nio.ByteBuffer.wrap(buffer, 0, bufferInfo.size),
                         bufferInfo
                     )
-                    videoExtractor.advance()
+                    vEx.advance()
                     // 进度回调
                     if (totalDuration > 0) {
                         val progress = (bufferInfo.presentationTimeUs * 100 / totalDuration).toInt()
@@ -129,19 +144,19 @@ object MediaMergeManager {
             var audioDone = false
             while (!audioDone) {
                 bufferInfo.offset = 0
-                bufferInfo.size = audioExtractor.readSampleData(java.nio.ByteBuffer.wrap(buffer), 0)
+                bufferInfo.size = aEx.readSampleData(java.nio.ByteBuffer.wrap(buffer), 0)
                 if (bufferInfo.size < 0) {
                     audioDone = true
                     bufferInfo.size = 0
                 } else {
-                    bufferInfo.presentationTimeUs = audioExtractor.sampleTime
+                    bufferInfo.presentationTimeUs = aEx.sampleTime
                     bufferInfo.flags = 0 // 音频一般不需要关键帧标志
-                    muxer.writeSampleData(
+                    mx.writeSampleData(
                         audioTrackIndex,
                         java.nio.ByteBuffer.wrap(buffer, 0, bufferInfo.size),
                         bufferInfo
                     )
-                    audioExtractor.advance()
+                    aEx.advance()
                     // 进度回调
                     if (totalDuration > 0) {
                         val progress = (bufferInfo.presentationTimeUs * 100 / totalDuration).toInt()
@@ -153,15 +168,22 @@ object MediaMergeManager {
                     }
                 }
             }
-            // 结束时100%
+            // 收尾：**先 stop 落盘成功，再报 100% / 完成**
+            mx.stop()
+            muxerStarted = false
             listener.onProgress(100)
-            muxer.stop()
-            muxer.release()
-            videoExtractor.release()
-            audioExtractor.release()
             listener.onComplete()
         } catch (e: Exception) {
+            // 半成品不能留（否则会被当成"下好了"的文件）
+            runCatching { File(outputPath).delete() }
             throw e
+        } finally {
+            if (muxerStarted) {
+                runCatching { muxer?.stop() }
+            }
+            runCatching { muxer?.release() }
+            runCatching { videoExtractor?.release() }
+            runCatching { audioExtractor?.release() }
         }
     }
 }

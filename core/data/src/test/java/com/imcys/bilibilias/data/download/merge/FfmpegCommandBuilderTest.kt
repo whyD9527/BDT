@@ -151,11 +151,18 @@ class FfmpegCommandBuilderTest {
 
     @Test
     fun `仅视频不主动重编码音频`() {
+        // ⚠️ 2026-09-15 复审 A-L5：原来这条断言写的是"不得出现 -c:a"，但 `-map 0:a:0?`
+        // 已经把单文件资源的内嵌音轨带出来了 —— 不写 `-c:a copy` 反而会让 ffmpeg 用容器
+        // 默认编码器**重新编码**音轨（有损）。现在断言成"必须是 copy"：
+        // 既守住"不重编码"的初衷，又把这个坑钉死。
         val args = build(
             subTasks = listOf(subTask("/v.mp4", DownloadSubTaskType.VIDEO)),
             downloadMode = DownloadMode.VIDEO_ONLY,
         )
-        assertFalse("VIDEO_ONLY 不该带 -c:a", args.contains("-c:a"))
+        assertTrue("单文件资源要带内嵌音轨映射", args.contains("0:a:0?"))
+        val codecAt = args.indexOf("-c:a")
+        assertTrue("VIDEO_ONLY 也要显式 copy 音轨", codecAt >= 0)
+        assertEquals("copy", args[codecAt + 1])
     }
 
     @Test

@@ -110,4 +110,39 @@ object FinalNameVerifyRules {
      */
     fun displayNameMatches(expectedName: String, storedName: String?): Boolean =
         storedName == expectedName
+
+    /**
+     * 这个名字（不管来自目录枚举还是 MediaStore 行）是不是与 [expectedName] **同一份内容**：
+     * 正式名本身，或者 MediaStore 自动加的 `xxx (1).mp3` 副本名。
+     *
+     * 供"按行删旧文件"用 —— 只删同名/副本名，别的文件一个都不许碰。
+     */
+    fun isSameContentName(name: String, expectedName: String): Boolean =
+        name == expectedName || isDuplicateNameOf(name, expectedName)
+
+    /**
+     * 生成 SQL `LIKE` 模式，用来一次查出 `xxx.mp3` 以及 `xxx (1).mp3`、`xxx (2).mp3`…
+     *
+     * ⚠️ 两个必须做对的地方（这是 2026-10-01 真机复现后的修法）：
+     * 1. **转义**：文件名里 `_` 极常见（`第1话_A_1080P.mp4`），而 `_` 在 SQL LIKE 里是
+     *    "任意一个字符"的通配符 —— 不转义会命中别人的文件；`%` 与转义符本身同理。
+     *    调用方的 selection 必须带 `ESCAPE '\'`。
+     * 2. 副本名的形状是 **`stem` + " (" + 数字 + ")" + 扩展名**，所以模式是
+     *    `stem` + `" (%)"` + `ext`（而不是 `expected + "(%)"`）。
+     *
+     * 纯函数，配了单测（`FinalNameVerifyRulesTest`），因为这正是"静默 no-op"的高发区：
+     * 模式写错时查询命中 0，删除看起来毫无异常。
+     */
+    fun duplicateNameLikePattern(expectedName: String): String {
+        val dot = expectedName.lastIndexOf('.')
+        val stem = if (dot > 0) expectedName.substring(0, dot) else expectedName
+        val ext = if (dot > 0) expectedName.substring(dot) else ""
+        return escapeLike(stem) + " (%)" + escapeLike(ext)
+    }
+
+    /** 转义 SQL `LIKE` 的通配符（配合 `ESCAPE '\'` 使用） */
+    private fun escapeLike(text: String): String =
+        text.replace("\\", "\\\\")
+            .replace("%", "\\%")
+            .replace("_", "\\_")
 }

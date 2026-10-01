@@ -149,4 +149,31 @@ class FinalNameVerifyRulesTest {
         assertFalse(FinalNameVerifyRules.displayNameMatches(name, null))
         assertFalse(FinalNameVerifyRules.displayNameMatches(name, "$name (1).mp3".let { "鸣潮 _ 先约电台EP (1).mp3" }))
     }
+
+    // ------------------------------------------------ 按 MediaStore 行删旧记录（2026-10-01 真机复现）
+
+    @Test
+    fun `同一份内容的判定只认正式名与数字副本名`() {
+        assertTrue(FinalNameVerifyRules.isSameContentName(name, name))
+        assertTrue(FinalNameVerifyRules.isSameContentName("鸣潮 _ 先约电台EP (1).mp3", name))
+        assertTrue(FinalNameVerifyRules.isSameContentName("鸣潮 _ 先约电台EP (12).mp3", name))
+        assertFalse("不是数字副本名", FinalNameVerifyRules.isSameContentName("鸣潮 _ 先约电台EP (x).mp3", name))
+        assertFalse("暂存名不是同一份内容", FinalNameVerifyRules.isSameContentName(staging, name))
+        assertFalse("别的文件", FinalNameVerifyRules.isSameContentName("别的视频.mp3", name))
+    }
+
+    @Test
+    fun `LIKE 模式要转义下划线与百分号并按 stem 拆副本后缀`() {
+        // `_` 在 SQL LIKE 里是"任意一个字符"：不转义就会命中"鸣潮X先约电台EP"这类别人的文件
+        assertEquals(
+            "鸣潮 \\_ 先约电台EP (%).mp3",
+            FinalNameVerifyRules.duplicateNameLikePattern("鸣潮 _ 先约电台EP.mp3"),
+        )
+        // `%` 自己也要转义
+        assertEquals("100\\% (%).mp4", FinalNameVerifyRules.duplicateNameLikePattern("100%.mp4"))
+        // 反斜杠本身要转义（否则会吃掉后面的转义符）
+        assertEquals("a\\\\b (%).ts", FinalNameVerifyRules.duplicateNameLikePattern("a\\b.ts"))
+        // 没有扩展名时也不崩，副本后缀照样拼在最后
+        assertEquals("无扩展名 (%)", FinalNameVerifyRules.duplicateNameLikePattern("无扩展名"))
+    }
 }

@@ -126,15 +126,21 @@ class FileOutputManager(
             val raw = context.contentResolver.openOutputStream(uri)
                 ?: throw Exception("OutputStream == null")
             val excludeId = runCatching { ContentUris.parseId(uri) }.getOrDefault(-1L)
+            // 目标目录：相对路径 = "Download/<fullRelative>"，直接算出来给"按行删同名旧记录"做校验
+            val targetDir = File(
+                Environment.getExternalStoragePublicDirectory(Environment.DIRECTORY_DOWNLOADS),
+                fullRelative,
+            )
             object : FilterOutputStream(raw) {
                 override fun close() {
                     super.close()
-                    // 新文件已经完整写出来，这时删同名旧文件才是安全的（排除自己这一行）
+                    // 新文件已经完整写出来，这时删同名旧记录才是安全的（排除自己这一行）
                     runCatching {
-                        deleteExistingSameName(
+                        deleteSameContentRows(
                             resolver = context.contentResolver,
                             fileName = actualFileName,
                             relativePath = "Download/$fullRelative",
+                            targetDir = targetDir,
                             excludeId = excludeId,
                         )
                     }
@@ -275,19 +281,41 @@ class FileOutputManager(
         // 那最多退化成"旧同名文件没删掉"这种无害 no-op（与旧代码同等），
         // 总比反过来把刚写好的成品删掉强。
         val ownName = storedDisplayName(resolver, uri) ?: fileName
+        val ownDir = directoryOf(uri)
 
-        // ① 先按**目录枚举**把同一份内容的旧文件删掉（真机上 MediaStore 那条"按名字查"命中=0，
-        //    只有这条路真的能删掉，详见 deleteSiblingCopies 的注释）；ownName 是本次的成品，排除
-        directoryOf(uri)?.let { dir -> deleteSiblingCopies(fileName, dir, keepName = ownName) }
+        // ① MediaStore 行删除（**这条才是真能生效的那条**：文件属主是 MediaProvider，
+        //    app 直删必然 EACCES，见 deleteSameContentRows 的注释）。排除本次自己的行。
+        deleteSameContentRows(
+            resolver = resolver,
+            fileName = fileName,
+            relativePath = relativePath,
+            targetDir = ownDir,
+            excludeId = ownRowId,
+        )
 
-        // ② MediaStore 那条也照旧走一遍（能命中就命中，命中不了也不影响 ①；排除本次自己的行）
-        deleteExistingSameName(resolver, fileName, relativePath, excludeId = ownRowId)
+        // ② 目录枚举直删作为兜底（Android 9 及以前、或授予了存储权限的机型上有效；
+        //    新机型上 app 无权限直删 MediaProvider 的文件，这里会是 0 —— 无害）
+        ownDir?.let { dir -> deleteSiblingCopies(fileName, dir, keepName = ownName) }
+
+        // ③ 冲突清掉之后**再改一次名**：MediaStore 之前因为同名冲突把新文件叫成了 `xxx (2).mp4`，
+        //    现在旧行/旧文件已经没了，这次改名就能落到实处（真机实测 `resolver.update(DISPLAY_NAME)`
+        //    是生效的 —— 它先给出了 (1)、(2)，说明"改不动"的唯一原因就是冲突）。
+        if (!FinalNameVerifyRules.displayNameMatches(fileName, storedDisplayName(resolver, uri))) {
+            renameStaging(resolver, uri, fileName, storedDisplayName(resolver, uri) ?: stagingName)
+        }
 
         if (!verifyFinalName(resolver, uri, stagingName, fileName)) {
-            // 重试一轮：目录枚举再删一次（新插入的那一行可能刚被 MediaStore 标了名）
-            Log.w(TAG, "第一次交付后名字不符，重试删除同名旧文件: 期望=$fileName")
-            directoryOf(uri)?.let { dir -> deleteSiblingCopies(fileName, dir, keepName = ownName) }
-            deleteExistingSameName(resolver, fileName, relativePath, excludeId = ownRowId)
+            // 重试一轮：再删一次 + 再改一次名
+            Log.w(TAG, "第一次交付后名字不符，重试删除同名旧记录: 期望=$fileName")
+            deleteSameContentRows(
+                resolver = resolver,
+                fileName = fileName,
+                relativePath = relativePath,
+                targetDir = ownDir,
+                excludeId = ownRowId,
+            )
+            ownDir?.let { dir -> deleteSiblingCopies(fileName, dir, keepName = ownName) }
+            renameStaging(resolver, uri, fileName, storedDisplayName(resolver, uri) ?: stagingName)
         }
 
         val verdict = finalNameVerdict(resolver, uri, fileName, stagingName)
@@ -451,55 +479,100 @@ class FileOutputManager(
     }.getOrNull()
 
     /**
-     * 删掉下载目录里与 [fileName] 同名的旧文件（调用前必须确认新文件已经写好）。
+     * 删掉**同一个目录下**与 [fileName] 同内容的旧记录（连带旧文件）。
      *
-     * @param excludeId 本次**刚插入的那一行**的 `_ID`。它的 DISPLAY_NAME 在改名之后
-     *   也叫 [fileName]，不排除就会被当成"同名旧文件"**连行带文件一起删掉**
-     *   （2026-09-15 复审）。传 -1 表示不排除。
+     * ## 为什么改成"按名字查 + Kotlin 侧校验目录"（2026-10-01 真机复现后重写）
+     * 之前是 `DISPLAY_NAME=? AND RELATIVE_PATH IN (?,?) AND _ID!=?` 的**等值**查询，真机上
+     * 重下同一集时它**命中=0**（旧文件不删 → MediaStore 只能把新文件改成 `xxx (2).mp4`，
+     * 一个视频攒成两份 72MB）。同时另一条"目录枚举直删"的路也失败了，根因这次查清了：
+     *
+     * ```
+     * ls -l → 属主 10271 = com.android.providers.media.module，而 app 的 appId=10851
+     * ```
+     * scoped storage 下 app 对 MediaProvider 拥有的文件 `File.delete()/renameTo()` 必然 EACCES，
+     * 所以**唯一的删除途径是删 MediaStore 行**（MediaProvider 会连带删文件）。
+     * 既然要删行，就必须把"查得到旧行"这件事做对，于是：
+     *
+     * 1. **去掉 RELATIVE_PATH 等值条件**（它在真机上匹配不到，正是"静默 no-op"的来源），
+     *    只按 `DISPLAY_NAME` 查（正式名 + 用转义过的 LIKE 查 `xxx (N).ext` 副本名）；
+     * 2. **目录一致性在 Kotlin 里校验**：拿行的 `_data` 父目录与目标目录比对（回退用
+     *    RELATIVE_PATH 的两种写法），**同名但不同目录的文件绝不删**；
+     * 3. 排除本次自己那一行（[excludeId]）。
+     *
+     * @return 实际删掉的行数（0 也要打日志 —— 这个数字是"删除有没有真的生效"的唯一证据）
      */
-    private fun deleteExistingSameName(
+    private fun deleteSameContentRows(
         resolver: android.content.ContentResolver,
         fileName: String,
         relativePath: String,
+        targetDir: File?,
         excludeId: Long,
-    ) {
-        // ⚠️ RELATIVE_PATH 要**两种写法都试**：调用方给的是 "Download/BiliDownloader"，
-        // 而 MediaStore 存的是带结尾斜杠的 "Download/BiliDownloader/" ——
-        // 只按一种等值查会永远匹配不到，这一步就等于没写（旧代码就是这样，
-        // 真机表现为重下时旧文件不删、新文件被自动改名成 "xxx (1).mp4"）。
-        val pathForms = DownloadRecordReuseRules.relativePathCandidates(relativePath)
+    ): Int {
+        val projection = arrayOf(
+            MediaStore.Downloads._ID,
+            MediaStore.Downloads.DISPLAY_NAME,
+            MediaStore.Downloads.RELATIVE_PATH,
+            MediaStore.Downloads.DATA,
+        )
+        // ⚠️ LIKE 必须带 ESCAPE：文件名里的 `_` 在 LIKE 里是通配符（见 duplicateNameLikePattern 注释）
         val selection =
-            "${MediaStore.Downloads.DISPLAY_NAME}=? AND " +
-                "${MediaStore.Downloads.RELATIVE_PATH} IN (?,?) AND " +
-                "${MediaStore.Downloads._ID} != ?"
-        resolver.query(
-            MediaStore.Downloads.EXTERNAL_CONTENT_URI,
-            arrayOf(MediaStore.Downloads._ID),
-            selection,
-            arrayOf(fileName, pathForms[0], pathForms[1], excludeId.toString()),
-            null,
-        )?.use { cursor ->
-            // 先把 id 全收出来再删：一边遍历游标一边删会让游标失效。
-            // **全部**删掉而不是只删第一条 —— 旧版本重复下载会插出多条同名记录，
-            // 只删一条会留下"同名但没记录"的残留文件。
-            val ids = mutableListOf<Long>()
-            while (cursor.moveToNext()) {
-                ids += cursor.getLong(cursor.getColumnIndexOrThrow(MediaStore.Downloads._ID))
+            "${MediaStore.Downloads.DISPLAY_NAME}=? OR " +
+                "${MediaStore.Downloads.DISPLAY_NAME} LIKE ? ESCAPE '\\'"
+        val args = arrayOf(fileName, FinalNameVerifyRules.duplicateNameLikePattern(fileName))
+        val pathForms = DownloadRecordReuseRules.relativePathCandidates(relativePath)
+
+        val ids = mutableListOf<Long>()
+        runCatching {
+            resolver.query(
+                MediaStore.Downloads.EXTERNAL_CONTENT_URI,
+                projection,
+                selection,
+                args,
+                null,
+            )?.use { cursor ->
+                val idIdx = cursor.getColumnIndexOrThrow(MediaStore.Downloads._ID)
+                val nameIdx = cursor.getColumnIndexOrThrow(MediaStore.Downloads.DISPLAY_NAME)
+                val relIdx = cursor.getColumnIndexOrThrow(MediaStore.Downloads.RELATIVE_PATH)
+                val dataIdx = cursor.getColumnIndexOrThrow(MediaStore.Downloads.DATA)
+                while (cursor.moveToNext()) {
+                    val id = cursor.getLong(idIdx)
+                    if (id == excludeId) continue
+                    val name = cursor.getString(nameIdx) ?: continue
+                    if (!FinalNameVerifyRules.isSameContentName(name, fileName)) continue
+                    // 目录校验：先看 _data 的父目录（最可靠），取不到再退回 RELATIVE_PATH
+                    val dataPath = cursor.getString(dataIdx)
+                    val relPath = cursor.getString(relIdx)
+                    val sameDir = when {
+                        dataPath != null && targetDir != null ->
+                            File(dataPath).parentFile?.absolutePath == targetDir.absolutePath
+
+                        relPath != null ->
+                            DownloadRecordReuseRules.relativePathCandidates(relPath)
+                                .any { it in pathForms }
+
+                        else -> false
+                    }
+                    if (!sameDir) continue
+                    ids += id
+                }
             }
-            var deleted = 0
-            ids.forEach { id ->
-                runCatching {
-                    resolver.delete(
-                        ContentUris.withAppendedId(MediaStore.Downloads.EXTERNAL_CONTENT_URI, id),
-                        null,
-                        null,
-                    )
-                }.onSuccess { deleted += it }
-            }
-            // ⚠️ 这条日志是必须的：删除**静默 no-op** 正是这次踩的坑
-            //（查询条件匹配不上时它什么都不删、也不报错，看起来毫无异常）。
-            Log.d(TAG, "删除同名旧文件: $fileName 命中=${ids.size} 实际删除=$deleted 路径=${pathForms.joinToString()}")
         }
+        var deleted = 0
+        ids.forEach { id ->
+            runCatching {
+                resolver.delete(
+                    ContentUris.withAppendedId(MediaStore.Downloads.EXTERNAL_CONTENT_URI, id),
+                    null,
+                    null,
+                )
+            }.onSuccess { deleted += it }
+        }
+        Log.d(
+            TAG,
+            "删除同名旧记录: $fileName 命中=${ids.size} 实际删除=$deleted " +
+                "路径=${pathForms.joinToString()} 目录=${targetDir?.absolutePath}",
+        )
+        return deleted
     }
 
     private fun moveToDownloadLegacy(

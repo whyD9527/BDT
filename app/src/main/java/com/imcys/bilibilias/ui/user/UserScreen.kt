@@ -187,7 +187,8 @@ private fun VideoCard(item: BILISpaceArchiveModel.Item?, onClick: () -> Unit = {
             shape = CardDefaults.shape
         ) {
             ASAsyncImage(
-                "${item?.pic?.toHttps()}@672w_378h_1c",
+                // 可空时给 null，别把字符串 "null@672w_..." 交给 Coil（2026-10-01 复审 L34）
+                item?.pic?.toHttps()?.let { "$it@672w_378h_1c" },
                 modifier = Modifier.fillMaxSize(),
                 contentDescription = "视频封面"
             )
@@ -212,7 +213,8 @@ private fun VideoCard(item: BILISpaceArchiveModel.Item?, onClick: () -> Unit = {
             )
             Row {
                 Text(
-                    "${NumberUtils.formatLargeNumber(item?.play)}次播放",
+                    // 数据没回来时不要显示 "null次播放"
+                    "${NumberUtils.formatLargeNumber(item?.play ?: 0)}次播放",
                     fontSize = 11.sp,
                     color = MaterialTheme.colorScheme.outline,
                     modifier = Modifier.shimmer(item == null),
@@ -425,7 +427,8 @@ fun PlatformList(biliUsersEntity: BILIUsersEntity?) {
                     )
                     Spacer(Modifier.weight(1f))
                     Text(
-                        "${biliUsersEntity?.name}",
+                        // ⚠️ 可空值直接插进字符串会显示字面量 "null"（2026-10-01 复审 L34）
+                        biliUsersEntity?.name.orEmpty(),
                         fontSize = 16.sp,
                         color = MaterialTheme.colorScheme.onSurface,
                         modifier = Modifier.animateContentSize()
@@ -437,7 +440,8 @@ fun PlatformList(biliUsersEntity: BILIUsersEntity?) {
                         shape = MaterialShapes.Circle.toShape(),
                     ) {
                         AsyncImage(
-                            "${biliUsersEntity?.face}",
+                            // 可空时传 null（而不是字符串 "null"）给 Coil，否则它会去请求一个不存在的地址
+                            biliUsersEntity?.face?.takeIf { it.isNotBlank() },
                             modifier = Modifier.size(24.dp),
                             contentDescription = "关联账户头像",
                         )
@@ -585,7 +589,8 @@ fun TopUserInfo(
                             ) {
                                 Text(
                                     modifier = Modifier.padding(vertical = 2.dp, horizontal = 8.dp),
-                                    text = "LV ${pageInfoState.data?.level}",
+                                    // 同理：等级还没加载出来时不要显示 "LV null"
+                                    text = "LV ${pageInfoState.data?.level ?: "--"}",
                                     fontSize = 14.sp,
                                     fontWeight = FontWeight.W400,
                                 )
