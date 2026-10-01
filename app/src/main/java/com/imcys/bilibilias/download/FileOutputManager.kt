@@ -637,9 +637,10 @@ class FileOutputManager(
         asides.forEach { aside ->
             val asidePath = aside.asidePath
             if (asidePath != null) {
-                val aside = File(asidePath)
-                val back = File(aside.parentFile, aside.originalName)
-                if (runCatching { aside.renameTo(back) }.getOrDefault(false)) restored++
+                // ⚠️ 别把局部变量也命名成 aside（会遮蔽外层参数，`aside.originalName` 直接编译不过）
+                val moved = File(asidePath)
+                val back = File(moved.parentFile, aside.originalName)
+                if (runCatching { moved.renameTo(back) }.getOrDefault(false)) restored++
             } else {
                 val rowUri = aside.rowUri ?: return@forEach
                 runCatching {

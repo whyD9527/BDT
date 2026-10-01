@@ -93,20 +93,6 @@ fun StorageManagementContent(
     modifier: Modifier = Modifier,
     onToDownloadList: () -> Unit
 ) {
-    // 「所有文件访问」状态：进页面 + 从系统设置返回（ON_RESUME）都刷新一次
-    var hasAllFilesAccess by remember { mutableStateOf(false) }
-    val lifecycleOwner = LocalLifecycleOwner.current
-    DisposableEffect(lifecycleOwner) {
-        val observer = LifecycleEventObserver { _, event ->
-            if (event == Lifecycle.Event.ON_RESUME) {
-                hasAllFilesAccess = Build.VERSION.SDK_INT >= Build.VERSION_CODES.R &&
-                    runCatching { Environment.isExternalStorageManager() }.getOrDefault(false)
-            }
-        }
-        lifecycleOwner.lifecycle.addObserver(observer)
-        onDispose { lifecycleOwner.lifecycle.removeObserver(observer) }
-    }
-
     val context = LocalContext.current
     val vm = koinViewModel<StorageManagementViewModel>()
     val uiState by vm.uiState.collectAsState()
@@ -154,6 +140,20 @@ fun StorageManagementSuccessScreen(
     onToDownloadList: () -> Unit,
     onSaveDownloadUri: (uri: Uri) -> Unit,
 ) {
+    // 「所有文件访问」状态：进页面 + 从系统设置返回（ON_RESUME）都刷新一次
+    var hasAllFilesAccess by remember { mutableStateOf(false) }
+    val lifecycleOwner = LocalLifecycleOwner.current
+    DisposableEffect(lifecycleOwner) {
+        val observer = LifecycleEventObserver { _, event ->
+            if (event == Lifecycle.Event.ON_RESUME) {
+                hasAllFilesAccess = Build.VERSION.SDK_INT >= Build.VERSION_CODES.R &&
+                    runCatching { Environment.isExternalStorageManager() }.getOrDefault(false)
+            }
+        }
+        lifecycleOwner.lifecycle.addObserver(observer)
+        onDispose { lifecycleOwner.lifecycle.removeObserver(observer) }
+    }
+
     val windowWidthSizeClass = rememberWidthSizeClass()
     val context = LocalContext.current
     val downloadLauncher =
@@ -267,17 +267,11 @@ fun StorageManagementSuccessScreen(
             buttonColor = MaterialTheme.colorScheme.primary,
             onClick = {
                 if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.R) {
-                    val intent = if (Environment.isExternalStorageManager()) {
-                        // 已授权：打开系统的"所有文件访问"列表页，方便随时撤销
-                        Intent(Settings.ACTION_MANAGE_APP_ALL_FILES_ACCESS_PERMISSION).apply {
-                            data = Uri.fromParts("package", context.packageName, null)
-                            addFlags(Intent.FLAG_ACTIVITY_NEW_TASK)
-                        }
-                    } else {
-                        Intent(Settings.ACTION_MANAGE_APP_ALL_FILES_ACCESS_PERMISSION).apply {
-                            data = Uri.fromParts("package", context.packageName, null)
-                            addFlags(Intent.FLAG_ACTIVITY_NEW_TASK)
-                        }
+                    // ⚠️ 必须用 setData(...)：`Intent.apply { data = ... }` 里的 `data`
+                    // 会被解析成外层那个 `data: StorageInfoData` 参数（编译报 'val' cannot be reassigned）
+                    val intent = Intent(Settings.ACTION_MANAGE_APP_ALL_FILES_ACCESS_PERMISSION).apply {
+                        setData(Uri.fromParts("package", context.packageName, null))
+                        addFlags(Intent.FLAG_ACTIVITY_NEW_TASK)
                     }
                     runCatching { context.startActivity(intent) }.onFailure {
                         // 个别 ROM 没有这个页面，退到总列表
