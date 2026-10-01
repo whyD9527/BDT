@@ -1,5 +1,11 @@
 package com.imcys.bilibilias.ui.download
 
+import android.Manifest
+import android.content.pm.PackageManager
+import android.os.Build
+import androidx.activity.compose.rememberLauncherForActivityResult
+import androidx.activity.result.contract.ActivityResultContracts
+import androidx.core.content.ContextCompat
 import android.content.Context
 import android.content.Intent
 import android.widget.Toast
@@ -135,6 +141,28 @@ fun DownloadScreen(route: DownloadRoute, onToBack: () -> Unit) {
     }
     var showDuplicateDialog by remember { mutableStateOf(false) }
 
+    // 「检查重复下载文件」需要 READ_MEDIA_VIDEO 才能看到**不是本 app 创建**的副本
+    //（MediaStore 默认只返回本 app 拥有的行；上一版安装留下的副本就属于这一类）。
+    var hasVideoPermission by remember {
+        mutableStateOf(
+            Build.VERSION.SDK_INT < Build.VERSION_CODES.TIRAMISU ||
+                ContextCompat.checkSelfPermission(
+                    context,
+                    Manifest.permission.READ_MEDIA_VIDEO,
+                ) == PackageManager.PERMISSION_GRANTED,
+        )
+    }
+    val videoPermissionLauncher = rememberLauncherForActivityResult(
+        ActivityResultContracts.RequestPermission(),
+    ) { granted ->
+        hasVideoPermission = granted
+        if (granted) {
+            vm.refreshDuplicateGroups()
+        } else {
+            sendToastEventOnBlocking("没有读取视频权限，只能发现本应用自己下载的副本")
+        }
+    }
+
     // 返回键处理
     BackHandler(enabled = true) {
         if (downloadFinishEditState) {
@@ -169,16 +197,24 @@ fun DownloadScreen(route: DownloadRoute, onToBack: () -> Unit) {
                 modifier = Modifier.padding(bottom = 10.dp, end = 10.dp, start = 10.dp),
                 verticalArrangement = Arrangement.spacedBy(11.dp)
             ) {
-                // ⚠️ 放在列表最前面：重复文件是"同一个视频多份 100MB 级副本"，
-                // 提示要显眼；点进去由用户确认删哪些（默认只勾副本、保留正式名）。
-                if (duplicateGroups.isNotEmpty()) {
-                    item(key = "duplicate_files_card") {
-                        DuplicateFilesCard(
-                            groupCount = duplicateGroups.size,
-                            removableCount = duplicateGroups.sumOf { it.removableNames.size },
-                            onClean = { showDuplicateDialog = true },
-                        )
-                    }
+                // ⚠️ 放在列表最前面：重复文件是"同一个视频多份 100MB 级副本"，提示要显眼；
+                // 没有重复时也保留一个"检查"入口 —— 否则用户永远不知道有这个功能，
+                // 而权限（READ_MEDIA_VIDEO）没给时检测本就看不到别人创建的副本。
+                item(key = "duplicate_files_card") {
+                    DuplicateFilesCard(
+                        groupCount = duplicateGroups.size,
+                        removableCount = duplicateGroups.sumOf { it.removableNames.size },
+                        hasVideoPermission = hasVideoPermission,
+                        onClean = { showDuplicateDialog = true },
+                        onCheck = {
+                            if (hasVideoPermission) {
+                                vm.refreshDuplicateGroups()
+                                sendToastEventOnBlocking("已重新检查下载目录")
+                            } else {
+                                videoPermissionLauncher.launch(Manifest.permission.READ_MEDIA_VIDEO)
+                            }
+                        },
+                    )
                 }
 
                 when (selectIndex) {
@@ -267,8 +303,28 @@ fun DownloadScreen(route: DownloadRoute, onToBack: () -> Unit) {
 private fun DuplicateFilesCard(
     groupCount: Int,
     removableCount: Int,
+    hasVideoPermission: Boolean,
     onClean: () -> Unit,
+    onCheck: () -> Unit,
 ) {
+    if (groupCount == 0) {
+        // 没有发现重复：给一个常驻入口（并说明为什么可能需要先授权）
+        Column(
+            modifier = Modifier
+                .fillMaxWidth()
+                .padding(horizontal = 4.dp, vertical = 2.dp),
+        ) {
+            TextButton(onClick = onCheck) {
+                Text(if (hasVideoPermission) "检查重复下载文件" else "授予视频权限并检查重复文件")
+            }
+            Text(
+                "同一部视频若有多份副本，会在这里列出来由你确认删除（只删副本、保留正式名那份）",
+                fontSize = 11.sp,
+                color = MaterialTheme.colorScheme.outline,
+            )
+        }
+        return
+    }
     Card(
         modifier = Modifier.fillMaxWidth(),
         colors = CardDefaults.cardColors(

@@ -5,6 +5,7 @@ import com.imcys.bilibilias.database.BILIBILIASDatabase
 import com.imcys.bilibilias.database.MIGRATION_1_2
 import com.imcys.bilibilias.database.MIGRATION_2_3
 import com.imcys.bilibilias.database.MIGRATION_3_4
+import com.imcys.bilibilias.database.MIGRATION_4_5
 import org.koin.android.ext.koin.androidContext
 import org.koin.dsl.module
 
@@ -14,7 +15,7 @@ val databaseModule = module {
             androidContext(),
             BILIBILIASDatabase::class.java,
             "bilibilias-database"
-        ).addMigrations(MIGRATION_1_2,MIGRATION_2_3,MIGRATION_3_4).build()
+        ).addMigrations(MIGRATION_1_2,MIGRATION_2_3,MIGRATION_3_4,MIGRATION_4_5).build()
     }
 
     factory {

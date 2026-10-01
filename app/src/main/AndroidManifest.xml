@@ -10,6 +10,9 @@
     <uses-permission android:name="android.permission.ACCESS_MEDIA_LOCATION"/>
 
     <uses-permission android:name="android.permission.READ_MEDIA_AUDIO" />
+    <!-- 「检查重复下载文件」要能看到**不是本 app 创建**的同名副本（例如上一版安装留下的、
+         或用户手动复制的）——没有这个权限时 MediaStore 只会返回本 app 自己拥有的行。 -->
+    <uses-permission android:name="android.permission.READ_MEDIA_VIDEO" />
     <uses-permission android:name="android.permission.FOREGROUND_SERVICE" />
     <uses-permission android:name="android.permission.FOREGROUND_SERVICE_DATA_SYNC" />
 

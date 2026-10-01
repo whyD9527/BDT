@@ -21,7 +21,15 @@ import java.util.Date
 /**
  * 下载任务（顶层）
  */
-@Entity(tableName = "download_task")
+@Entity(
+    tableName = "download_task",
+    // ⚠️ 2026-10-01：`getOrCreateTask` 的查重键就是 (platform_id, type)（先按 platform_id 查、
+    // 再 `takeIf { it.type == type }`），但**数据库层没有约束** —— 并发或异常路径下可能插出两条，
+    // 之后 `getTaskByPlatformId` 只取第一行，另一条就变成"幽灵任务"。
+    // 这里把代码假设的不变式落到库上；Room 生成的索引名必须是 index_download_task_platform_id_type，
+    // 迁移 SQL 里手写的名字要与它一致（否则升级后 Room 校验 schema 会失败）。
+    indices = [Index(value = ["platform_id", "type"], unique = true)]
+)
 @TypeConverters(
     DownloadPlatformConverter::class,
     DateConverter::class,

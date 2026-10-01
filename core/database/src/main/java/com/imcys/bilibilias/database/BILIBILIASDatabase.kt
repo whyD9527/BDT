@@ -21,7 +21,7 @@ import com.imcys.bilibilias.database.entity.download.DownloadTaskNode
         DownloadTaskNode::class,
         DownloadSegment::class,
     ],
-    version = 4,
+    version = 5,
     exportSchema = true,
 )
 internal abstract class BILIBILIASDatabase : RoomDatabase() {

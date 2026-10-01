@@ -24,6 +24,8 @@ import java.io.OutputStream
  * 文件输出管理器
  * 负责处理所有文件输出操作和MediaStore注册
  */
+private const val MAX_TRACE_BYTES = 256L * 1024
+
 class FileOutputManager(
     private val context: Application
 ) {
@@ -600,8 +602,7 @@ class FileOutputManager(
                 Log.w(TAG, "挪开同名旧文件失败（改名 0 行），保持原样: $victimName")
             }
         }
-        Log.d(
-            TAG,
+        trace(
             "交付前挪开同名旧文件: $fileName 枚举=${dirNames.size} 目标=${victims.size} " +
                 "成功=${result.size} 目录=${dir.absolutePath}",
         )
@@ -625,7 +626,7 @@ class FileOutputManager(
                 runCatching { resolver.delete(rowUri, null, null) }.onSuccess { deleted += it }
             }
         }
-        Log.d(TAG, "交付成功，清理挪开的旧文件: 目标=${asides.size} 实际删除=$deleted")
+        trace("交付成功，清理挪开的旧文件: 目标=${asides.size} 实际删除=$deleted")
     }
 
     /** 交付失败时：把挪开的旧文件改回原名（用户原有的东西必须原样还在） */
@@ -656,7 +657,7 @@ class FileOutputManager(
                 }.onSuccess { restored += it }
             }
         }
-        Log.w(TAG, "已把挪开的旧文件改回原名: 目标=${asides.size} 成功=$restored")
+        trace("已把挪开的旧文件改回原名: 目标=${asides.size} 成功=$restored")
     }
 
     /**
@@ -689,14 +690,14 @@ class FileOutputManager(
             args = arrayOf("$rel/%"),
         )
         if (fromRelative.isNotEmpty()) {
-            Log.d(TAG, "枚举下载目录: $rel 命中=${fromRelative.size}（按 RELATIVE_PATH）")
+            trace("枚举下载目录: $rel 命中=${fromRelative.size}（按 RELATIVE_PATH）")
             return fromRelative
         }
         val fromData = queryDownloadNames(
             selection = "${MediaStore.Files.FileColumns.DATA} LIKE ?",
             args = arrayOf("%/$rel/%"),
         )
-        Log.d(TAG, "枚举下载目录: $rel rel命中=0 data命中=${fromData.size}")
+        trace("枚举下载目录: $rel rel命中=0 data命中=${fromData.size}")
         return fromData
     }
 
@@ -717,6 +718,26 @@ class FileOutputManager(
             }
         }
         return names
+    }
+
+    /**
+     * 诊断轨迹：既打 logcat，**也落一份文件**。
+     *
+     * ⚠️ 为什么必须落文件（2026-10-01 真机教训）：这台 ROM（MIUI/Android 16）会**过滤掉
+     * app 自己的日志**——同一个进程、同一段代码，有时能看到 `ASFileOutput`，重装后就一条都没有；
+     * 于是"删除/挪开旧文件有没有真的生效"这类问题**完全没法取证**，只能靠猜和反复装包。
+     * 轨迹文件写在 `Android/data/<pkg>/files/logs/download-trace.log`，adb 侧可读、也不受过滤影响。
+     */
+    private fun trace(message: String) {
+        Log.d(TAG, message)
+        runCatching {
+            val dir = File(context.getExternalFilesDir(null), "logs").apply { mkdirs() }
+            val file = File(dir, "download-trace.log")
+            if (file.length() > MAX_TRACE_BYTES) file.delete()
+            val stamp = java.text.SimpleDateFormat("MM-dd HH:mm:ss", java.util.Locale.ROOT)
+                .format(java.util.Date())
+            file.appendText("$stamp $message\n")
+        }
     }
 
     /** 把某个显示名对应的媒体库行删掉（文件已经不在原路径时用它清残留行） */
@@ -799,10 +820,7 @@ class FileOutputManager(
             }
             runCatching { resolver.delete(uri, null, null) }.onSuccess { deleted += it }
         }
-        Log.d(
-            TAG,
-            "清理重复文件: 目标=${names.size} 实际删除=$deleted 直删=$direct 目录=${dir.absolutePath}",
-        )
+        trace("清理重复文件: 目标=${names.size} 实际删除=$deleted 直删=$direct 目录=${dir.absolutePath}")
         return deleted
     }
 
@@ -931,8 +949,7 @@ class FileOutputManager(
                 )
             }.onSuccess { deleted += it }
         }
-        Log.d(
-            TAG,
+        trace(
             "删除同名旧记录: $fileName 命中=${ids.size} 实际删除=$deleted " +
                 "路径=${pathForms.joinToString()} 目录=${targetDir?.absolutePath}",
         )
