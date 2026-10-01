@@ -329,7 +329,9 @@ fun BILIAISimultaneousInterpretation(
             items = language.items,
             title = { it.title },
             selected = { it == selectAudioLanguage },
-            key = { it.title },
+            // ⚠️ key 用 `lang`（音轨标识），不要用 `title`（显示名）（2026-09-15 复审 H11）：
+            // 显示名可能重名/为空，撞 key 会让 Compose 直接崩。
+            key = { it.lang },
             onClick = { onUpdateAudioLanguage(it) }
         )
     }

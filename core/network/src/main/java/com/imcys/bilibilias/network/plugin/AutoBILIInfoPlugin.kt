@@ -36,7 +36,7 @@ val AutoBILIInfoPlugin = createClientPlugin("AutoBILIInfoPlugin", ::AutoBILIInfo
         val url = request.url.toString()
         val host = request.url.host
 
-        // 1) 媒体 CDN：无条件补齐
+        // 1) 媒体 CDN：补齐（缺什么补什么，**不覆盖调用方已经给的具体 Referer**）
         val cdnKeyword = RequestRules.matchedMediaCdnKeyword(host)
         if (cdnKeyword != null) {
             // 只在命中媒体 CDN 时打印（不是每个请求都打），噪音很低。
@@ -44,8 +44,13 @@ val AutoBILIInfoPlugin = createClientPlugin("AutoBILIInfoPlugin", ::AutoBILIInfo
             // 这是判断"能否收窄 edge 关键字"的唯一依据（见 RequestRules 的说明）。
             Log.i("ASRequest", "媒体CDN请求: host=$host  命中关键字=$cdnKeyword")
 
-            request.headers.remove(HttpHeaders.Referrer)
-            request.headers.append(HttpHeaders.Referrer, RequestRules.DEFAULT_REFERER)
+            // ⚠️ 2026-09-15 复审 L3：原来是 `remove` + `append(DEFAULT_REFERER)` ——
+            // 那会把 `DownloadExecutor` 精心拼的**具体稿件 Referer**（`buildRefererUrl`：
+            // `/video/BV…` 或 `/bangumi/play/ss…`）直接抹掉，等于那段逻辑从来没生效过。
+            // 这里改成"只有缺失时才补默认值"，行为对没带 Referer 的调用方不变。
+            if (request.headers[HttpHeaders.Referrer] == null) {
+                request.headers.append(HttpHeaders.Referrer, RequestRules.DEFAULT_REFERER)
+            }
             if (request.headers[HttpHeaders.UserAgent] == null) {
                 request.headers.append(HttpHeaders.UserAgent, RequestRules.DEFAULT_USER_AGENT)
             }

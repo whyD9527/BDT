@@ -33,6 +33,19 @@ interface BILIUsersDao {
         uid: Long
     ): List<BILIUsersEntity>
 
+    /**
+     * 同一个 **B 站 mid** 下的全部平台账号（WEB / TV / MOBILE…）。
+     *
+     * ⚠️ 参数是 B 站 mid，**不是本地主键 id** —— 两者完全不同：
+     * `getBILIUserListByUid` 里的 `:uid` 是本地 `id` 主键（子查询按 `id` 匹配），
+     * 把 mid 传给它必然查不到人（2026-09-15 复审 A-M11：
+     * `UserInfoRepository.getBILIUserListByMid` 就是这么传的 → 账号自检恒失败 → 静默登出）。
+     */
+    @Query("select * from bili_users where mid = :mid")
+    suspend fun getBILIUserListByMid(
+        mid: Long
+    ): List<BILIUsersEntity>
+
 
     @Query("select * from bili_users where login_platform = :loginPlatform")
     suspend fun getBILIUserListByPlatform(

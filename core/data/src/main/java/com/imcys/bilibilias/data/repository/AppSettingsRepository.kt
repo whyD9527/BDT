@@ -5,8 +5,11 @@ import com.imcys.bilibilias.data.download.segmented.SegmentedDownloadPlan
 import com.imcys.bilibilias.database.entity.LoginPlatform
 import com.imcys.bilibilias.database.entity.download.MediaContainer
 import com.imcys.bilibilias.datastore.AppSettings
+import com.imcys.bilibilias.datastore.AppSettingsSerializer
 import com.imcys.bilibilias.datastore.copy
+import kotlinx.coroutines.CancellationException
 import kotlinx.coroutines.flow.Flow
+import kotlinx.coroutines.flow.catch
 import kotlinx.coroutines.flow.first
 import kotlinx.coroutines.flow.map
 
@@ -15,7 +18,19 @@ class AppSettingsRepository(
 ) {
     private val TAG: String = "AppSettingsRepository"
 
-    val appSettingsFlow: Flow<AppSettings> = dataStore.data
+    /**
+     * 设置的唯一出口，**带读盘兜底**（2026-09-15 复审 A-M4）。
+     *
+     * 原来直接暴露 `dataStore.data`：文件损坏或读取出错时，异常会抛给每一个收集者
+     * （首页、解析页、设置页、`first()` 调用点）→ 启动即崩、只能清应用数据。
+     * corruptionHandler 只兜 `CorruptionException`，普通 IO 异常仍会冒出来，所以这里再兜一层：
+     * 读不出来就按默认设置走（与 `AppSettingsRepository.storeMediaContainerFromExtension`
+     * 的"读不出来退化成老样子"是同一个原则）。
+     */
+    val appSettingsFlow: Flow<AppSettings> = dataStore.data.catch { e ->
+        if (e is CancellationException) throw e
+        emit(AppSettingsSerializer.appSettingsDefault)
+    }
 
     // ------------------------------------------------------------------
     // 多线程分片下载（开关 + 并发数）
@@ -68,7 +83,7 @@ class AppSettingsRepository(
 
     // 同意了隐私政策
     suspend fun hasAgreedPrivacyPolicy(): Boolean {
-        val currentSettings = dataStore.data.first()
+        val currentSettings = appSettingsFlow.first()
         return currentSettings.agreePrivacyPolicy == AppSettings.AgreePrivacyPolicyState.Agreed
     }
 
@@ -124,24 +139,34 @@ class AppSettingsRepository(
         }
     }
 
+    /**
+     * 取首页排版；缺的默认板块要**补进磁盘**。
+     *
+     * ⚠️ 2026-09-15 复审 L20（原审计 M11）：原实现的非空分支只在**返回值**里
+     * `addAll(missingItems)`，而两个调用方（`HomeViewModel` / `LayoutTypesetViewModel`）
+     * 都把返回值丢掉、只 collect 磁盘值 —— 于是"升级后新增的首页板块"既不显示、
+     * 也没法在排版页恢复，这段补齐就是死代码。
+     * 另外"先 `dataStore.data.first()` 读、再单独 `updateData` 写"不在同一个临界区，
+     * 与其它设置写入并发时会丢更新；现在整段放进 `updateData`。
+     */
     suspend fun asyncHomeLayoutTypesetList(): List<AppSettings.HomeLayoutItem> {
         val defaultList = createDefaultHomeLayoutItems()
-        val existingList = dataStore.data.first().homeLayoutTypesetList.toMutableList()
 
-        return if (existingList.isEmpty()) {
-            dataStore.updateData { currentSettings ->
-                currentSettings.toBuilder()
-                    .clearHomeLayoutTypeset()
-                    .addAllHomeLayoutTypeset(defaultList)
-                    .build()
+        val result = dataStore.updateData { currentSettings ->
+            val existingList = currentSettings.homeLayoutTypesetList
+            val builder = currentSettings.toBuilder()
+            if (existingList.isEmpty()) {
+                builder.clearHomeLayoutTypeset().addAllHomeLayoutTypeset(defaultList)
+            } else {
+                val existingTypes = existingList.map { it.type }.toSet()
+                val missingItems = defaultList.filterNot { it.type in existingTypes }
+                if (missingItems.isNotEmpty()) {
+                    builder.addAllHomeLayoutTypeset(missingItems)
+                }
             }
-            defaultList
-        } else {
-            val existingTypes = existingList.map { it.type }.toSet()
-            val missingItems = defaultList.filterNot { it.type in existingTypes }
-            existingList.addAll(missingItems)
-            existingList
+            builder.build()
         }
+        return result.homeLayoutTypesetList
     }
 
     private fun createDefaultHomeLayoutItems(): List<AppSettings.HomeLayoutItem> {

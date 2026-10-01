@@ -18,4 +18,9 @@ dependencies {
 
     implementation(libs.androidx.room.runtime)
     implementation(libs.androidx.room.ktx)
+
+    testImplementation(libs.junit)
+    // Android 单测里的 org.json 是 stub（调用即 "not mocked"），
+    // 而 NamingConventionConverter 的往返测试需要真的 JSONObject
+    testImplementation(libs.json)
 }

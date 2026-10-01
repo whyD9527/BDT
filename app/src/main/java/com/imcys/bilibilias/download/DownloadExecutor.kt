@@ -71,10 +71,17 @@ class DownloadExecutor(
         val tempFile = File("$savePath.downloading")
         val metaFile = SegmentedDownloader.metaFileFor(tempFile)
 
+        // CDN 线路替换先做：**探测与下载必须打同一台主机**（2026-09-15 复审 L3），
+        // 否则拿原主机的 Content-Length 去要求替换后的线路，长度/分片计划都可能对不上。
+        val segmentedUrl = replaceCdn(downloadUrl)
+
         // 检查文件是否已完整下载
-        val remote = remoteFileProbe.probe(downloadUrl, referer)
+        val remote = remoteFileProbe.probe(segmentedUrl, referer)
         val remoteLength = remote.length
-        if (remoteLength > 0 && file.exists() && file.length() >= remoteLength) {
+        // ⚠️ 必须是**恰好相等**（2026-09-15 复审 L1）：`>=` 会让"上一次合并/移动失败留下来的
+        // 私有成品"被当成已完整 —— 而用户这次可能换了清晰度，那条残留是旧码流，
+        // 等于用旧文件冒充新成品（长度对不上时重下才是对的；长度未知时不做这个判断）。
+        if (remoteLength > 0 && file.exists() && file.length() == remoteLength) {
             onProgress(1f)
             return@withContext true
         }
@@ -88,7 +95,6 @@ class DownloadExecutor(
         // 否则算出来的"连续前缀"会和实际落的盘对不上。
         val segmentedEnabled = appSettingsRepository.isSegmentedDownloadEnabled()
         val segmentedConcurrency = appSettingsRepository.getSegmentedDownloadConcurrency()
-        val segmentedUrl = replaceCdn(downloadUrl)
         Log.i(
             TAG,
             "开始下载: ${tempFile.name}  CDN主机=${
@@ -121,6 +127,11 @@ class DownloadExecutor(
         if (segmentedResult is SegmentedDownloadResult.Failed || metaFile.exists()) {
             val plan = SegmentedDownloadPlan.plan(remoteLength, segmentedConcurrency)
             val resumeFrom = SegmentedTempFileReconciler.reconcile(tempFile, metaFile, plan)
+            if (resumeFrom < 0) {
+                // 截断与删除都失败：现场不可信，单连接会把洞当已下载 → 宁可本次失败（2026-09-15 复审 L2）
+                Log.e(TAG, "分片残留既截不断也删不掉，放弃本次下载（避免写出内容错位的文件）: ${tempFile.name}")
+                return@withContext false
+            }
             Log.i(TAG, "分片未完成，回落单连接: ${file.name}  可续传位置=$resumeFrom 字节")
         } else if (segmentedResult is SegmentedDownloadResult.NotApplicable) {
             Log.d(TAG, "本次走单连接: ${file.name}  原因=${segmentedResult.reason}")
@@ -143,6 +154,10 @@ class DownloadExecutor(
                         )
                         return@withContext false
                     }
+                    // 单连接成功也要清掉分片边车（2026-09-15 复审 L5）：分片成功那条路自己会删，
+                    // 走单连接时原来不删，会留下一个永远没人用的 `.downloadpart`
+                    //（下次重下同一文件时它又会被当成"上次的分片进度"参与判定）。
+                    SegmentedDownloader.metaFileFor(tempFile).delete()
                     return@withContext true
                 }
                 Log.w(TAG, "第 ${attempt + 1}/$MAX_RETRY_ATTEMPTS 次下载未成功: ${file.name}")
@@ -186,6 +201,19 @@ class DownloadExecutor(
                 // 关键：原来不检查状态码，403/404 会把错误页当正文写进文件并「下载成功」。
                 // 这里显式拦截并记录状态码与主机，历史上 CDN 返回 403 就是这么被吞掉的。
                 if (!response.status.isSuccess()) {
+                    // ⚠️ 416 = 本地残留比远端还长（换线路 / 上次写坏）→ 要的 Range 越界，
+                    // 光重试 5 次必然次次 416（2026-09-15 复审 L4）。这里直接丢掉本地残留，
+                    // 让下一次尝试从 0 开始，能自愈。
+                    if (response.status == HttpStatusCode.RequestedRangeNotSatisfiable &&
+                        downloaded > 0
+                    ) {
+                        val deleted = tempFile.delete()
+                        Log.w(
+                            TAG,
+                            "服务端回 416（Range=$downloaded 越界），丢弃本地残留重下: " +
+                                "${tempFile.name} 已删除=$deleted",
+                        )
+                    }
                     Log.e(
                         TAG,
                         "下载被拒绝: HTTP ${response.status.value} ${response.status.description}" +

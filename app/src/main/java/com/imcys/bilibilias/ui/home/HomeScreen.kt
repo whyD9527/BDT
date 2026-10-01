@@ -341,8 +341,13 @@ private fun HomeContent(
     // 该域名已不在原作者控制下（实测解析到他人免费托管），返回的 url + forcedUpdate=true
     // 会直接变成"立即更新"弹窗并 openLink 任意地址 —— 是一条可被远程利用的投递路径。
     // 现在改成读**本仓库自己的 GitHub Release**，且失败静默、跳转指向 Release 页面。
-    LaunchedEffect(Unit) {
-        vm.checkForAppUpdate()
+    LaunchedEffect(appSettings.agreePrivacyPolicy) {
+        // ⚠️ 未同意隐私政策前**不出网**（2026-09-15 复审 M14）：App 内文案写着
+        // "所有网络请求均直接发往哔哩哔哩官方接口"，而更新检查打的是 api.github.com；
+        // 之前首次启动、隐私弹窗都还没点就已经发了请求。同意之后再检查。
+        if (appSettings.agreePrivacyPolicy == AppSettings.AgreePrivacyPolicyState.Agreed) {
+            vm.checkForAppUpdate()
+        }
     }
 
     Column(Modifier.fillMaxWidth(), horizontalAlignment = Alignment.CenterHorizontally) {
@@ -374,7 +379,7 @@ private fun HomeContent(
                                 // 内容相同（含「都没有公告」的情况），不展示
                                 return@forEach
                             }
-                            item {
+                            item(key = "home_Announcement") {
                                 CommonInfoCard(
                                     modifier = Modifier
                                         .animateItem()
@@ -412,7 +417,7 @@ private fun HomeContent(
                                 return@forEach
                             }
 
-                            item {
+                            item(key = "home_UpdateInfo") {
                                 val content = when (getASBuildType(BuildConfig.FLAVOR)) {
                                     ASBuildType.OFFICIAL,
                                     ASBuildType.BETA -> {
@@ -442,7 +447,7 @@ private fun HomeContent(
                         }
 
                         AppSettings.HomeLayoutType.DownloadList -> {
-                            item {
+                            item(key = "home_DownloadList") {
                                 DownloadListCard(
                                     modifier = Modifier
                                         .animateItem()
@@ -463,7 +468,7 @@ private fun HomeContent(
                         }
 
                         AppSettings.HomeLayoutType.Tools -> {
-                            item {
+                            item(key = "home_Tools") {
                                 Row(
                                     modifier = Modifier
                                         .fillMaxWidth(),
@@ -545,7 +550,7 @@ private fun HomeContent(
                 }
             }
 
-            item {
+            item(key = "home_footer") {
                 Text(
                     "请在Download/BiliDownloader目录下查看下载内容",
                     fontSize = 14.sp,

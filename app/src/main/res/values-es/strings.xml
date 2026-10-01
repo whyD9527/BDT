@@ -195,7 +195,7 @@
 
     <!-- Download screen related strings -->
     <string name="download_select_all">Seleccionar todo</string>
-    <string name="download_deselect_all">Invertir selección</string>
+    <string name="download_deselect_all">Deseleccionar todo</string>
     <string name="download_delete_confirm_title">Eliminar descarga</string>
     <string name="download_delete_confirm_message">¿Eliminar la tarea seleccionada y los archivos?</string>
     <string name="download_caching">Caché de vídeo AS...</string>

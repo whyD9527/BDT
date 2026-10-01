@@ -4,14 +4,23 @@ import android.content.Context
 import androidx.datastore.core.CorruptionException
 import androidx.datastore.core.DataStore
 import androidx.datastore.core.Serializer
+import androidx.datastore.core.handlers.ReplaceFileCorruptionHandler
 import androidx.datastore.dataStore
 import com.google.protobuf.InvalidProtocolBufferException
 import java.io.InputStream
 import java.io.OutputStream
 
+/**
+ * ⚠️ 必须带 [ReplaceFileCorruptionHandler]（2026-09-15 复审 A-M4）：
+ * 这个 serializer 解析失败时会抛 `CorruptionException`，而三处 DataStore 委托原本都没传
+ * corruptionHandler —— 文件一旦损坏（写一半被杀 / 磁盘写失败），异常就会从 `dataStore.data`
+ * 抛给每个收集者（首页、解析页、设置页），**启动即崩、且只能清应用数据才能恢复**。
+ * 现在损坏时回落到默认设置：至少能启动，用户还能在界面里改回来。
+ */
 val Context.userAppSettingsStore: DataStore<AppSettings> by dataStore(
     fileName = "app_setting.pb",
-    serializer = AppSettingsSerializer
+    serializer = AppSettingsSerializer,
+    corruptionHandler = ReplaceFileCorruptionHandler { AppSettingsSerializer.defaultValue },
 )
 
 /**

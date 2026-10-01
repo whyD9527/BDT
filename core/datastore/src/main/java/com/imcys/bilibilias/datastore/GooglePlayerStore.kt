@@ -4,15 +4,18 @@ import android.content.Context
 import androidx.datastore.core.CorruptionException
 import androidx.datastore.core.DataStore
 import androidx.datastore.core.Serializer
+import androidx.datastore.core.handlers.ReplaceFileCorruptionHandler
 import androidx.datastore.dataStore
 import com.google.protobuf.InvalidProtocolBufferException
 import com.imcys.bilibilias.datastore.User
 import java.io.InputStream
 import java.io.OutputStream
 
+/** 同样带损坏兜底（2026-09-15 复审 A-M4），见 `userAppSettingsStore` 的说明。 */
 val Context.googlePlayerStore: DataStore<GooglePlaySettings> by dataStore(
     fileName = "google_play.pb",
-    serializer = GooglePlayerSerializer
+    serializer = GooglePlayerSerializer,
+    corruptionHandler = ReplaceFileCorruptionHandler { GooglePlayerSerializer.defaultValue },
 )
 
 object GooglePlayerSerializer : Serializer<GooglePlaySettings> {

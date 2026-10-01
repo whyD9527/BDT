@@ -99,6 +99,50 @@ class FinalNameVerifyRulesTest {
     }
 
     @Test
+    fun `本次刚交付的那一份绝不能被当成旧文件删掉`() {
+        // 2026-09-15 复审：新版是"先改名、再删同名旧文件"，此刻磁盘上的正式名
+        // 就是**本次刚写好的成品**。若删除清单里不排除它，就会被自己删掉；
+        // 而判定只看媒体库回读（名字是对的）→ 报成功、磁盘上却没有文件。
+        val names = listOf(
+            "鸣潮 _ 先约电台EP.mp3", // ← 本次刚交付的这一份
+            "鸣潮 _ 先约电台EP (1).mp3",
+        )
+        // 不排除时：正式名也会被算进"同一份内容"（这正是那个洞）
+        assertTrue(
+            "前提：不排除时确实会命中自己",
+            FinalNameVerifyRules.siblingCopies("鸣潮 _ 先约电台EP.mp3", names)
+                .contains("鸣潮 _ 先约电台EP.mp3"),
+        )
+        // 排除之后：只剩真正的旧副本
+        assertEquals(
+            listOf("鸣潮 _ 先约电台EP (1).mp3"),
+            FinalNameVerifyRules.siblingCopies(
+                "鸣潮 _ 先约电台EP.mp3",
+                names,
+                keepName = "鸣潮 _ 先约电台EP.mp3",
+            ),
+        )
+    }
+
+    @Test
+    fun `暂存名是本次的文件时也要排除，旧副本照删`() {
+        // 真机上 MediaStore 改名不生效的形态：磁盘上还是 `.part`
+        val names = listOf(
+            "鸣潮 _ 先约电台EP.mp3.part",
+            "鸣潮 _ 先约电台EP.mp3",
+            "鸣潮 _ 先约电台EP (1).mp3",
+        )
+        assertEquals(
+            listOf("鸣潮 _ 先约电台EP.mp3", "鸣潮 _ 先约电台EP (1).mp3"),
+            FinalNameVerifyRules.siblingCopies(
+                "鸣潮 _ 先约电台EP.mp3",
+                names,
+                keepName = "鸣潮 _ 先约电台EP.mp3.part",
+            ),
+        )
+    }
+
+    @Test
     fun `回读名字必须是正式名才算改名成功`() {
         assertTrue(FinalNameVerifyRules.displayNameMatches(name, name))
         assertFalse("真机上回读到的就是暂存名", FinalNameVerifyRules.displayNameMatches(name, staging))

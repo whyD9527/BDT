@@ -2,6 +2,8 @@ package com.imcys.bilibilias.common.utils.download
 
 import com.imcys.bilibilias.network.model.video.BILIVideoCCInfo
 import java.text.DecimalFormat
+import java.text.DecimalFormatSymbols
+import java.util.Locale
 import java.util.concurrent.TimeUnit
 
 /**
@@ -40,11 +42,13 @@ object CCJsonToAss {
 
         val ccInfo = buildCCInfo(videoCCInfo)
 
-        // 封装身体
-        return """$headersInfo
-                  $fontStyleInfo
-                  $ccInfo
-        """.trimIndent()
+        // ⚠️ 不要再用多行 raw string + trimIndent 拼接（2026-09-15 复审 L7）：
+        // 模板里 `$fontStyleInfo` / `$ccInfo` 前面带着源码缩进，而 `trimIndent()` 的最小缩进
+        // 由首行（缩进 0）决定 → 结果里 `[V4+ Styles]` / `[Events]` 段头**带前导空格**，
+        // 严格按行首匹配的解析器（ffmpeg 的 assdec 就是 `strncmp`）会直接忽略整段。
+        return listOf(headersInfo, fontStyleInfo, ccInfo)
+            .filter { it.isNotBlank() }
+            .joinToString("\n")
     }
 
     fun getFontStyleInfo(): String {
@@ -84,13 +88,25 @@ object CCJsonToAss {
 
     /**
      * 时间格式化
+     *
+     * ⚠️ `DecimalFormat` 与 `String.format` 都必须绑 `Locale.ROOT`（2026-09-15 复审 A-M8）：
+     * 默认 Locale 在 de/fr 等区域用逗号做小数点 → 生成 `0:00:01,50`，ASS 时间戳非法，
+     * 而且逗号本身是 Dialogue 的字段分隔符，整行都会被切错。
+     * 负数（接口给脏数据时）先夹回 0，避免出现 `0:00:-1.50`。
      */
     fun formatSeconds(seconds: Double): String {
-        val formatter = DecimalFormat("00.00")
-        val hours = TimeUnit.SECONDS.toHours(seconds.toLong())
-        val minutes = TimeUnit.SECONDS.toMinutes(seconds.toLong()) % 60
+        val safeSeconds = if (seconds.isNaN() || seconds < 0) 0.0 else seconds
+        val formatter = DecimalFormat("00.00", DecimalFormatSymbols.getInstance(Locale.ROOT))
+        val hours = TimeUnit.SECONDS.toHours(safeSeconds.toLong())
+        val minutes = TimeUnit.SECONDS.toMinutes(safeSeconds.toLong()) % 60
         val remainingSeconds =
-            seconds - TimeUnit.HOURS.toSeconds(hours) - TimeUnit.MINUTES.toSeconds(minutes)
-        return "%d:%02d:%s".format(hours, minutes, formatter.format(remainingSeconds))
+            safeSeconds - TimeUnit.HOURS.toSeconds(hours) - TimeUnit.MINUTES.toSeconds(minutes)
+        return String.format(
+            Locale.ROOT,
+            "%d:%02d:%s",
+            hours,
+            minutes,
+            formatter.format(remainingSeconds),
+        )
     }
 }

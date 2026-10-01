@@ -65,6 +65,11 @@ class UserFolderViewModel(
         }
     }
 
+    /** 失败卡片上的「重试」：重新拉一次收藏夹列表（2026-09-15 复审 L10） */
+    fun retry() {
+        initFolderList()
+    }
+
     fun initMid(mid: Long) {
         if (mid != _uiState.value.mid) {
             _uiState.value = _uiState.value.copy(mid = mid, currentMediaId = 0L)

@@ -84,7 +84,19 @@ object FfmpegCommandBuilder {
             },
         ) && coverPath.isNotBlank()
 
-        val coverIdx = if (mapCover) mediaInputs.size + subtitles.size else -1
+        // 封面输入的**真实下标**必须按「实际被加进 `-i` 的输入个数」累加，
+        // 不能写 `mediaInputs.size + subtitles.size`（2026-09-15 复审 H3 的同处遗漏）：
+        // 字幕只有在 `mapSubtitles` 为真时才真的成为输入。典型反例：**仅音频 + M4A 容器 +
+        // 勾了字幕 + 勾了封面**时 `videoEnabled=false` ⇒ `mapSubtitles=false`（字幕根本不在输入列表里），
+        // 但封面下标仍多算了 `subtitles.size` → 生成 `-map 2:v:0`，而实际只有 [音频, 封面] 两个输入
+        // → ffmpeg 报 `Invalid input file index: 2` → 合并必然失败；子任务文件已完整，
+        // 重试只会再合并再失败 → **这一集永远下不下来**。
+        // （现有单测恰好只覆盖 MP3：`canEmbedCover()=false`，正好绕开这一支。）
+        val coverIdx = if (mapCover) {
+            mediaInputs.size + (if (mapSubtitles) subtitles.size else 0)
+        } else {
+            -1
+        }
 
         return buildList {
             // 基础参数
@@ -116,7 +128,11 @@ object FfmpegCommandBuilder {
             if (audioEnabled && audioFileCount > 0) {
                 repeat(audioFileCount) { i ->
                     add("-map")
-                    add("${audioFileStartIdx + i}:a:$i")
+                    // ⚠️ 流号恒为 `a:0`（2026-09-15 复审 L16）：每个音频子任务是**一个独立文件**、
+                    // 里面通常只有一条音频流。原来写 `:a:$i`（拿循环下标当文件内流号），
+                    // 一旦出现第 2 个音频子任务就会生成 `2:a:1` 这种不存在的映射 → ffmpeg 必然失败。
+                    // （当前只有 1 个音频子任务，属潜伏坑。）
+                    add("${audioFileStartIdx + i}:a:0")
                 }
             }
             if (mapEmbeddedAudio) {
@@ -176,7 +192,12 @@ object FfmpegCommandBuilder {
                 add("title=Cover")
             }
 
-            if (audioEnabled && mediaContainerConfig.audioContainer == MediaContainer.MP3) {
+            // ⚠️ 只有「仅音频」时"音频容器 = MP3"才是有意义的（2026-09-15 复审 M6）：
+            // AUDIO_VIDEO 的封装与后缀由 videoContainer 决定，这时再套 libmp3lame
+            // 等于把 AAC 二次有损转成 MP3 却仍装进 mp4 —— 白白损失音质、用户还看不出来。
+            if (downloadMode == DownloadMode.AUDIO_ONLY &&
+                mediaContainerConfig.audioContainer == MediaContainer.MP3
+            ) {
                 addAll(listOf("-codec:a", "libmp3lame", "-q:a", "2"))
             }
 

@@ -15,6 +15,7 @@ import com.imcys.bilibilias.common.event.sendToastEvent
 import com.imcys.bilibilias.common.utils.download.DanmakuXmlUtil
 import com.imcys.bilibilias.common.utils.toHttps
 import com.imcys.bilibilias.data.download.cache.EmbedCacheRules
+import com.imcys.bilibilias.data.download.cancel.DownloadCancellationRules
 import com.imcys.bilibilias.data.download.merge.DownloadSuccessorRules
 import com.imcys.bilibilias.data.download.predecessor.DownloadPredecessorRules
 import com.imcys.bilibilias.data.download.queue.DownloadQueueRules
@@ -44,6 +45,7 @@ import com.imcys.bilibilias.network.model.video.BILIVideoDurl
 import io.ktor.client.HttpClient
 import io.ktor.client.request.get
 import io.ktor.client.statement.bodyAsBytes
+import io.ktor.http.isSuccess
 import kotlinx.coroutines.CancellationException
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.Dispatchers
@@ -388,15 +390,16 @@ class NewDownloadManager(
         pausedTasks.forEach { resumeTask(it.downloadSegment.segmentId) }
     }
 
-    suspend fun downloadImageToAlbum(imageUrl: String, fileName: String, saveDirName: String) =
+    /** @return 是否真的写入相册（原来是 Unit，调用方无从知道失败） */
+    suspend fun downloadImageToAlbum(imageUrl: String, fileName: String, saveDirName: String): Boolean =
         withContext(Dispatchers.IO) {
             val response = okHttpClient.newCall(
                 okhttp3.Request.Builder().url(imageUrl).build()
             ).execute()
 
-            if (!response.isSuccessful) return@withContext
+            if (!response.isSuccessful) return@withContext false
 
-            val body = response.body ?: return@withContext
+            val body = response.body ?: return@withContext false
             val imageBytes = body.bytes()
 
             fileOutputManager.downloadImageToAlbum(imageBytes, fileName, saveDirName)
@@ -535,31 +538,65 @@ class NewDownloadManager(
         }
     }
 
+    /**
+     * 跑一个**可选**的附加步骤（内嵌字幕/封面、相册封面、弹幕、字幕文件）。
+     *
+     * ⚠️ 这些步骤原先都是"裸奔"的（没有任何 catch）：字幕接口一次 403/超时、封面请求抛异常、
+     * 文件名非法字符……异常会一路冒到 `handleTaskError` → **整集下载失败**，而这时媒体还没开始下
+     * —— 用户要的视频明明能下（2026-09-15 全量复审 H9）。
+     *
+     * ⚠️ 取消必须原样抛出：`CancellationException` 也是 `Exception`，吞掉它就又回到
+     * "用户点暂停、任务变失败"那条老路（复用 `DownloadCancellationRules` 的判据）。
+     */
+    private suspend fun runOptionalStep(label: String, task: AppDownloadTask, block: suspend () -> Unit) {
+        try {
+            block()
+        } catch (e: Exception) {
+            if (!DownloadCancellationRules.isRetryableFailure(e)) throw e
+            Log.w(
+                TAG,
+                "附加步骤失败（不影响媒体下载，跳过）: $label " +
+                    "platformId=${task.downloadSegment.platformId} 原因=${e.message}",
+                e,
+            )
+        }
+    }
+
     private suspend fun handlePredecessor(task: AppDownloadTask, service: DownloadService) {
         updateTaskState(task, DownloadState.PRE_TASK)
 
-        // 下载嵌入字幕
+        // 下载嵌入字幕（可选）
         if (task.downloadViewInfo.embedCC) {
-            val subtitles = subtitleDownloader.downloadSubtitlesForEmbed(
-                task.downloadViewInfo.videoPlayerInfoV2,
-                task.downloadSegment.segmentId
-            )
-            task.updateRuntimeInfo(task.taskRuntimeInfo.copy(subtitles = subtitles))
+            runOptionalStep("内嵌字幕", task) {
+                val subtitles = subtitleDownloader.downloadSubtitlesForEmbed(
+                    task.downloadViewInfo.videoPlayerInfoV2,
+                    task.downloadSegment.segmentId
+                )
+                task.updateRuntimeInfo(task.taskRuntimeInfo.copy(subtitles = subtitles))
+            }
         }
 
-        // 下载嵌入封面
+        // 下载嵌入封面（可选）
         if (task.downloadViewInfo.embedCover) {
             // ⚠️ 封面可能是 null（有些稿件/番剧没有封面字段）。原先无条件拼 `?: ""` 去请求，
             // 而空 URL 会让 Ktor 直接抛异常 → 一路冒到任务层 → **整集下载失败**。
             // 附加内容是可选活儿，没封面就跳过（用户要的是视频，不是封面）。
             val coverUrl = task.cover?.toHttps()
             if (DownloadPredecessorRules.canFetchCover(coverUrl)) {
-                val coverBytes = httpClient.get(coverUrl.orEmpty()).bodyAsBytes()
-                val tempDir = File(context.externalCacheDir, "cover")
-                if (!tempDir.exists()) tempDir.mkdirs()
-                val tempFile = File(tempDir, "embed_cover_${task.downloadSegment.segmentId}.jpg")
-                tempFile.writeBytes(coverBytes)
-                task.updateRuntimeInfo(task.taskRuntimeInfo.copy(coverPath = tempFile.absolutePath))
+                runOptionalStep("内嵌封面", task) {
+                    val response = httpClient.get(coverUrl.orEmpty())
+                    // 原来不看状态码：403/404 的错误页会被当成图片写进封面文件
+                    if (!response.status.isSuccess()) {
+                        Log.w(TAG, "封面请求失败: HTTP ${response.status.value}，跳过内嵌封面")
+                        return@runOptionalStep
+                    }
+                    val coverBytes = response.bodyAsBytes()
+                    val tempDir = File(context.externalCacheDir, "cover")
+                    if (!tempDir.exists()) tempDir.mkdirs()
+                    val tempFile = File(tempDir, "embed_cover_${task.downloadSegment.segmentId}.jpg")
+                    tempFile.writeBytes(coverBytes)
+                    task.updateRuntimeInfo(task.taskRuntimeInfo.copy(coverPath = tempFile.absolutePath))
+                }
             } else {
                 Log.w(
                     TAG,
@@ -568,23 +605,25 @@ class NewDownloadManager(
             }
         }
 
-        // 下载封面到相册
+        // 下载封面到相册（可选）
         if (task.downloadViewInfo.downloadCover) {
-            downloadCoverImageForTask(task)
+            runOptionalStep("相册封面", task) { downloadCoverImageForTask(task) }
         }
 
-        // 下载弹幕
+        // 下载弹幕（可选）
         if (task.downloadViewInfo.downloadDanmaku) {
-            downloadDanmakuForTask(task)
+            runOptionalStep("弹幕", task) { downloadDanmakuForTask(task) }
         }
 
-        // 下载字幕文件
+        // 下载字幕文件（可选）
         if (task.downloadViewInfo.downloadCC) {
-            subtitleDownloader.downloadSubtitlesToFile(
-                task.downloadViewInfo.videoPlayerInfoV2,
-                task.downloadSegment.title,
-                task.downloadViewInfo.ccFileType
-            )
+            runOptionalStep("字幕文件", task) {
+                subtitleDownloader.downloadSubtitlesToFile(
+                    task.downloadViewInfo.videoPlayerInfoV2,
+                    task.downloadSegment.title,
+                    task.downloadViewInfo.ccFileType
+                )
+            }
         }
 
         updateTaskState(task, DownloadState.WAITING)
@@ -803,9 +842,19 @@ class NewDownloadManager(
         // 而移动这一步在 try 之外：移动失败（空间不足/目录被占用/无权限）时
         // 源文件已经删了、成品孤留在私有目录，用户重试只能整集重下。
         // 删什么由 DownloadSuccessorRules 决定，规则要求先把"移动是否成功"交进去。
-        val uriStr = runCatching {
+        //
+        // ⚠️ **不能用 `runCatching`**（2026-09-15 复审 A-M1）：`runCatching` 连
+        // `CancellationException` 一起吞，而移动/拷贝动辄几秒 —— 用户这时点暂停/取消，
+        // 就会被当成"移动失败"：弹「下载失败」、写 ERROR，重启清理还会按 ERROR 把源文件删掉。
+        val uriStr = try {
             fileOutputManager.moveToDownloadAndRegister(tempOutputFile, lastFileName, mimeType)
-        }.getOrNull()
+        } catch (e: CancellationException) {
+            // 取消必须原样抛出：让 pauseTask/cancelTask 按自己的语义收尾
+            throw e
+        } catch (e: Exception) {
+            Log.e(TAG, "移入下载目录异常: ${tempOutputFile.name}", e)
+            null
+        }
 
         if (uriStr == null) {
             DownloadSuccessorRules.filesToDeleteAfterMove(
@@ -909,7 +958,15 @@ class NewDownloadManager(
     }
 
     private suspend fun downloadDanmakuForTask(task: AppDownloadTask) {
-        val oid = task.downloadSegment.platformUniqueId.toLong()
+        // platformUniqueId 来自 DB / 平台 JSON；解析不出来只是"这个可选步骤不做"，不该让整集挂掉
+        val oid = task.downloadSegment.platformUniqueId.toLongOrNull()
+        if (oid == null) {
+            Log.w(
+                TAG,
+                "弹幕 oid 不是数字，跳过: platformUniqueId=${task.downloadSegment.platformUniqueId}",
+            )
+            return
+        }
         val title = namingConventionHandler.buildFileName(
             task.downloadSegment.namingConventionInfo,
             "xml"
@@ -918,9 +975,18 @@ class NewDownloadManager(
         val elms = flow {
             var page = 0
             while (true) {
-                val list = videoInfoRepository.getDanmaku(oid = oid, segmentIndex = page)
-                    .getOrNull()?.elems
-                if (list.isNullOrEmpty()) break
+                val result = videoInfoRepository.getDanmaku(oid = oid, segmentIndex = page)
+                val list = result.getOrNull()?.elems
+                if (list == null) {
+                    // ⚠️ **失败**与"真的没有下一段"必须分开（2026-09-15 复审 L11）：
+                    // 原来一律 break，接口失败会被静默当成"弹幕抓完了"，半截弹幕当成品且没有任何日志。
+                    Log.w(
+                        TAG,
+                        "弹幕第 $page 段获取失败，用已抓到的内容收尾: ${result.exceptionOrNull()?.message}",
+                    )
+                    break
+                }
+                if (list.isEmpty()) break
                 emitAll(list.asFlow())
                 page++
             }
@@ -951,9 +1017,17 @@ class NewDownloadManager(
                 "${realTask?.platformId}_pic.$type"
             }
 
-            DownloadTaskType.BILI_VIDEO_SECTION -> error("封面所属任务类型异常")
+            DownloadTaskType.BILI_VIDEO_SECTION -> {
+                // 原来这里是 error(...)：一个"封面文件名算不出来"的边角情况会让整个前置阶段抛异常
+                Log.w(TAG, "封面所属任务类型异常，跳过封面下载")
+                return
+            }
         }
-        downloadImageToAlbum(coverUrl.orEmpty(), fileName, "BiliDownloader")
+        val saved = downloadImageToAlbum(coverUrl.orEmpty(), fileName, "BiliDownloader")
+        if (!saved) {
+            // 如实记一笔：旧实现在写失败时静默 no-op，用户以为存进相册了（2026-09-15 复审 L15）
+            Log.w(TAG, "封面写入相册失败: $fileName")
+        }
     }
 
     private suspend fun processDownloadTree(
@@ -1092,7 +1166,12 @@ class NewDownloadManager(
             DownloadSubTaskType.VIDEO -> "video"
             DownloadSubTaskType.AUDIO -> "audio"
         }
-        return context.getExternalFilesDir(dirName)?.absolutePath!!
+        // 外部存储不可用时 getExternalFilesDir 返回 null，原来 `!!` 直接 NPE，
+        // 被上层 catch 成"添加下载任务失败：null"（毫无信息，2026-09-15 复审 L12）。
+        // 退化到内部 filesDir：空间可能紧张，但至少任务能跑、错误看得见。
+        val dir = context.getExternalFilesDir(dirName) ?: File(context.filesDir, dirName)
+        if (!dir.exists()) dir.mkdirs()
+        return dir.absolutePath
     }
 
     private suspend fun getCoverForSegment(segment: DownloadSegment): String? {

@@ -37,7 +37,11 @@ import kotlin.math.ceil
 fun ASFramePlayer(modifier: Modifier, list: List<Bitmap>, fps: Int) {
     if (list.isEmpty()) return
     val totalFrames = list.size
-    val duration = ceil(totalFrames / fps * 1f).toInt()
+    // ⚠️ fps 必须夹到 ≥1（2026-09-15 复审 L11）：上游在"平均帧率解析为 0"时会把值夹到 0，
+    // 于是 `1000L / fps` 直接 ArithmeticException 崩在协程里；顺便把时长改成浮点除法
+    // （原来 `totalFrames / fps` 先整除再乘 1f，100 帧 30fps 会显示 3 秒而不是 4 秒）。
+    val safeFps = fps.coerceAtLeast(1)
+    val duration = ceil(totalFrames / safeFps.toFloat()).toInt()
     var currentFrame by remember { mutableIntStateOf(0) }
     var isPlaying by remember { mutableStateOf(true) }
     var isDragging by remember { mutableStateOf(false) }
@@ -45,7 +49,7 @@ fun ASFramePlayer(modifier: Modifier, list: List<Bitmap>, fps: Int) {
     // 自动播放逻辑
     LaunchedEffect(list, isPlaying, isDragging) {
         while (isPlaying && !isDragging) {
-            delay(1000L / fps)
+            delay(1000L / safeFps)
             currentFrame = (currentFrame + 1) % totalFrames
         }
     }

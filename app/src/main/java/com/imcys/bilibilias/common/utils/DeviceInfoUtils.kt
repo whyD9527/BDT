@@ -72,7 +72,10 @@ object DeviceInfoUtils {
         val systemVersion = Build.VERSION.RELEASE ?: "未知"
         val model = Build.MODEL ?: "未知"
         val marketModel = DeviceMarketName.getMarketName(context) ?: "未知"
-        val manufacturer = Build.BRAND ?: "未知"
+        // ⚠️ manufacturer 要用 Build.MANUFACTURER（2026-09-15 复审 L15）：
+        // 原来写的是 Build.BRAND，导致"厂商/品牌"两行永远一模一样（Xiaomi/Redmi 这种会被抹平），
+        // 用户复制设备信息来报障时反而误导排查。
+        val manufacturer = Build.MANUFACTURER ?: "未知"
         val brand = Build.BRAND ?: "未知"
         val brandName = try {
             getBrandName() ?: Build.DEVICE

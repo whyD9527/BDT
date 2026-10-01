@@ -33,20 +33,34 @@ class LikeVideoViewModel(
         MutableStateFlow<NetWorkResult<BILIUserVideoLikeInfo?>>(emptyNetWorkResult())
     val likeVideoList = _likeVideoList.asStateFlow()
 
+    /** 最近一次加载用的类型：重试时要按同一个类型重拉（2026-09-15 复审 L10） */
+    private var lastType: LikePageType = LikePageType.LIKE
+
     fun initMid(mid: Long, type: LikePageType) {
+        lastType = type
         if (mid != _uiState.value.mid) {
             _uiState.value = _uiState.value.copy(mid = mid, currentMediaId = 0L)
-            viewModelScope.launch {
-                when (type) {
-                    LikePageType.LIKE -> userInfoRepository.getLikeVideoList(mid).collect {
-                        _likeVideoList.value = it
-                    }
+            load()
+        }
+    }
 
-                    LikePageType.COIN -> userInfoRepository.getCoinVideoList(mid).collect {
-                        _likeVideoList.value = it
-                    }
+    /** 失败卡片上的「重试」：按当前 mid 与类型重新加载一次 */
+    fun retry() {
+        load()
+    }
+
+    private fun load() {
+        val mid = _uiState.value.mid
+        if (mid == 0L) return
+        viewModelScope.launch {
+            when (lastType) {
+                LikePageType.LIKE -> userInfoRepository.getLikeVideoList(mid).collect {
+                    _likeVideoList.value = it
                 }
 
+                LikePageType.COIN -> userInfoRepository.getCoinVideoList(mid).collect {
+                    _likeVideoList.value = it
+                }
             }
         }
     }

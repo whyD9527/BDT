@@ -1,6 +1,9 @@
 [versions]
 agp = "9.0.0"
 junit = "4.13.2"
+# 只用于测试：Android 单测里的 org.json 是 stub（调用即 "not mocked"），
+# 而 NamingConventionConverter 的往返测试需要真的 JSONObject
+json = "20231013"
 coroutinesVersion = "1.10.2"   # 与本仓库实际解析到的 kotlinx-coroutines-core 一致（见 :core:data:dependencies）
 kotlin = "2.3.0"
 coreKtx = "1.17.0"
@@ -56,6 +59,8 @@ androidx-ui-tooling-preview = { group = "androidx.compose.ui", name = "ui-toolin
 androidx-ui-test-manifest = { group = "androidx.compose.ui", name = "ui-test-manifest" }
 androidx-ui-test-junit4 = { group = "androidx.compose.ui", name = "ui-test-junit4" }
 junit = { group = "junit", name = "junit", version.ref = "junit" }
+# 只用于测试：见 [versions] 里 json 的说明
+json = { group = "org.json", name = "json", version.ref = "json" }
 # 只用于测试：用**虚拟时间**验"防抖"这类真实时间行为，避免测试随机器负载随机红（第二十六轮）
 kotlinx-coroutines-test = { group = "org.jetbrains.kotlinx", name = "kotlinx-coroutines-test", version.ref = "coroutinesVersion" }
 androidx-material3 = { group = "androidx.compose.material3", name = "material3" }

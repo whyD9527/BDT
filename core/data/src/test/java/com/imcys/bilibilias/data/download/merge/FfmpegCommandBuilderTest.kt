@@ -264,4 +264,46 @@ class FfmpegCommandBuilderTest {
         assertTrue(args.contains("libmp3lame"))
         assertTrue(args.contains("-q:a"))
     }
+
+    @Test
+    fun `仅音频 + M4A + 字幕 + 封面时封面下标不能多算没有被映射的字幕（H3 同处遗漏）`() {
+        // 2026-09-15 复审：coverIdx 原来写死 `mediaInputs.size + subtitles.size`，
+        // 但 AUDIO_ONLY 时 mapSubtitles=false（容器不支持字幕 / 没有视频轨），
+        // 字幕文件根本没进 `-i`。于是封面下标被算成 2，而实际只有 [音频, 封面] 两个输入
+        // → ffmpeg `Invalid input file index: 2` → 合并必然失败 → 这一集永远下不下来。
+        // 现有单测只覆盖 MP3（canEmbedCover()=false，绕开了这一支），所以这里用 M4A。
+        val args = build(
+            subTasks = listOf(subTask("/a.m4a", DownloadSubTaskType.AUDIO)),
+            downloadMode = DownloadMode.AUDIO_ONLY,
+            subtitles = listOf(SubtitleSpec("/s.srt", "zh-CN", "中文")),
+            coverPath = "/c.jpg",
+            config = MediaContainerConfig(
+                videoContainer = MediaContainer.MP4,
+                audioContainer = MediaContainer.M4A,
+            ),
+        )
+
+        // 字幕没被映射（M4A 不支持），所以封面是第 2 个输入（下标 1），不是第 3 个
+        assertFalse("M4A 容器不得映射字幕", args.any { it.endsWith(":s:0") })
+        assertTrue("封面要作为输入加入", args.contains("/c.jpg"))
+
+        val coverInputAt = args.indexOf("/c.jpg")
+        assertEquals("-map", args[coverInputAt + 1])
+        assertEquals("封面必须映射到它真实的输入下标", "1:v:0", args[coverInputAt + 2])
+    }
+
+    @Test
+    fun `视频容器下字幕确实进了输入，封面下标要跟着 +1`() {
+        // 反向用例：这条走的是"字幕真的被映射"的分支，锁定通用规则（按实际输入个数累加）
+        val args = build(
+            subTasks = listOf(subTask("/v.mp4", DownloadSubTaskType.VIDEO)),
+            downloadMode = DownloadMode.VIDEO_ONLY,
+            subtitles = listOf(SubtitleSpec("/s.srt", "zh-CN", "中文")),
+            coverPath = "/c.jpg",
+        )
+        assertTrue("mp4 容器应映射字幕", args.any { it.endsWith(":s:0") })
+        val coverInputAt = args.indexOf("/c.jpg")
+        assertEquals("-map", args[coverInputAt + 1])
+        assertEquals("有字幕输入时可封面下标应为 2", "2:v:0", args[coverInputAt + 2])
+    }
 }

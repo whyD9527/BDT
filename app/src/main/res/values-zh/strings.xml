@@ -196,7 +196,7 @@
 
     <!-- Download screen related strings -->
     <string name="download_select_all">全选</string>
-    <string name="download_deselect_all">反选</string>
+    <string name="download_deselect_all">取消全选</string>
     <string name="download_delete_confirm_title">删除下载任务</string>
     <string name="download_delete_confirm_message">确定要删除选中的任务记录和文件吗？</string>
     <string name="download_caching">AS视频缓存中...</string>

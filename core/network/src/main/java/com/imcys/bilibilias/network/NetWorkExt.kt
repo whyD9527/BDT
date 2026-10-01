@@ -10,6 +10,8 @@ import io.ktor.client.call.body
 import io.ktor.client.request.HttpRequestBuilder
 import io.ktor.client.statement.HttpResponse
 import io.ktor.client.statement.request
+import android.util.Log
+import kotlinx.coroutines.CancellationException
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.flow.Flow
 import kotlinx.coroutines.flow.FlowCollector
@@ -88,8 +90,14 @@ inline fun <reified Data> HttpClient.httpRequest(
             }
             val (data, apiResponse) = (body.data ?: body.result) to body
             handleSuccess(data, apiResponse, response)
+        } catch (e: CancellationException) {
+            // ⚠️ 取消不是"业务失败"（2026-09-15 复审 L19）：`CancellationException` 也是 Exception，
+            // 原写法会把它吞成一个空错误态（`e.message` 还可能是 null → 界面出现空错误），
+            // 既丢了取消语义、又没有任何日志可查。原样抛出，让取消正常传播。
+            throw e
         } catch (e: Exception) {
-            emit(NetWorkResult.Error(null, null, e.message ?: ""))
+            Log.e("ASRequest", "请求失败: ${e.javaClass.simpleName}: ${e.message}", e)
+            emit(NetWorkResult.Error(null, null, e.message ?: e.javaClass.simpleName))
         }
     }.flowOn(Dispatchers.IO)
 

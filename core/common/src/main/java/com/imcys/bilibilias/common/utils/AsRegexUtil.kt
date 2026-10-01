@@ -31,11 +31,24 @@ package com.imcys.bilibilias.common.utils
  */
 object AsRegexUtil {
 
-    /** B 站域名：出现这些才算"这是一条 B 站链接"，才允许从混杂文本里抽 ID */
-    private val BILI_HOSTS = listOf("bilibili.com", "b23.tv", "bili2233.cn")
+    /**
+     * B 站域名：出现这些才算"这是一条 B 站链接"，才允许从混杂文本里抽 ID。
+     *
+     * ⚠️ 必须是**域名边界**匹配，不能是子串（2026-09-15 复审 L2）：
+     * `text.contains("bilibili.com")` 会把 `notbilibili.com`、`bilibili.com.evil.com`、
+     * `我的bilibili.com.cn` 都当成 B 站，于是 `av`/`ss`/`ep` 的"整串才算"门槛被放开，
+     * 非 B 站文本里的 `ss123`、`.../av123456` 就会被认成番剧/视频。
+     */
+    private val BILI_HOST_PATTERN = Regex(
+        "(?:^|[^A-Za-z0-9.-])(?:[A-Za-z0-9-]+\\.)*" +
+            "(?:bilibili\\.com|b23\\.tv|bili2233\\.cn)" +
+            "(?![A-Za-z0-9.-])",
+        RegexOption.IGNORE_CASE,
+    )
 
-    // BV：左边界防 "ABV1234567890" 这类误命中；后 10 位与 B 站实际字符集一致（放宽到字母数字）
-    private val regexBV = Regex("""(?<![A-Za-z0-9])[Bb][Vv]([A-Za-z0-9]{10})""")
+    // BV：左边界防 "ABV1234567890" 这类误命中；**右边界**防把更长的 token 截成 10 位
+    // （`BV1xx411c7mDextra` 原来会被当成 `BV1xx411c7mD`）；BV 号恒以 `BV1` 开头
+    private val regexBV = Regex("""(?<![A-Za-z0-9])[Bb][Vv](1[A-Za-z0-9]{9})(?![0-9A-Za-z])""")
 
     // av：左边界防 "nav123"；大小写都认
     private val regexAV = Regex("""(?<![A-Za-z0-9])[Aa][Vv]([0-9]+)""")
@@ -50,7 +63,7 @@ object AsRegexUtil {
     private val regexUserSpace = Regex("""space\.bilibili\.com/?([0-9]+)""")
 
     private fun containsBiliHost(text: String): Boolean =
-        BILI_HOSTS.any { text.contains(it, ignoreCase = true) }
+        BILI_HOST_PATTERN.containsMatchIn(text)
 
     /**
      * 从混杂文本里抽取：不带 B 站域名时，只接受"整串就是这个 ID"。

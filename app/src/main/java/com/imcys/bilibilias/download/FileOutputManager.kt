@@ -16,6 +16,7 @@ import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.withContext
 import java.io.File
 import java.io.FileOutputStream
+import java.io.FilterOutputStream
 import java.io.OutputStream
 
 /**
@@ -45,13 +46,16 @@ class FileOutputManager(
         }
 
     /**
-     * 下载图片到相册
+     * 下载图片到相册。
+     *
+     * 返回是否**真的**写成功了 —— 原先返回 Unit，insert 失败时静默 no-op，
+     * 而调用方（`AnalysisViewModel.downloadImageToAlbum`）无条件弹"保存成功"（2026-09-15 复审 L15）。
      */
     suspend fun downloadImageToAlbum(
         imageBytes: ByteArray,
         fileName: String,
         saveDirName: String
-    ) = withContext(Dispatchers.IO) {
+    ): Boolean = withContext(Dispatchers.IO) {
         if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.Q) {
             saveImageMediaStore(imageBytes, fileName, saveDirName)
         } else {
@@ -84,31 +88,73 @@ class FileOutputManager(
 
     // Private helper methods
 
+    /**
+     * 打开一个"下载目录下的新文件"输出流（弹幕 / 字幕）。
+     *
+     * ⚠️ `fileName` 里**可能带 `/`**：命名规则模板支持 `{author}/{p_title}` 这类写法（设置页明确宣传可用），
+     * 这里必须像媒体那条路一样 split 出子目录，不能把整串当 `DISPLAY_NAME` ——
+     * MediaStore 会拒绝含 `/` 的名字、legacy 直接 `FileNotFoundException`，
+     * 而这两条都会经 `handlePredecessor` 变成**整集下载失败**（2026-09-15 复审 H8）。
+     *
+     * ⚠️ 返回的流在 `close()` 时会顺手删掉"同名的旧行/旧文件"（排除本次这一行）：
+     * 弹幕/字幕以前只 insert、不删旧，重下同一集会在下载目录里攒出 `xxx (1).xml` / `(1).srt`
+     * （2026-09-15 复审 L7）。清理放在**写完并关闭之后**，所以不会像旧媒体路径那样
+     * "先删旧、再写新"地把用户已有的文件弄没。
+     */
     private fun createDownloadOutputStream(
         fileName: String,
         mimeType: String,
         relativePath: String
     ): OutputStream {
+        val parts = fileName.split('/').filter { it.isNotBlank() }
+        val actualFileName = parts.lastOrNull()
+            ?: throw IllegalArgumentException("文件名为空: '$fileName'")
+        val subPath = parts.dropLast(1).joinToString("/")
+        val fullRelative = listOf(relativePath, subPath)
+            .filter { it.isNotBlank() }
+            .joinToString("/")
+
         return if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.Q) {
             val uri = context.contentResolver.insert(
                 MediaStore.Downloads.EXTERNAL_CONTENT_URI,
                 ContentValues().apply {
-                    put(MediaStore.Downloads.DISPLAY_NAME, fileName)
+                    put(MediaStore.Downloads.DISPLAY_NAME, actualFileName)
                     put(MediaStore.Downloads.MIME_TYPE, mimeType)
-                    put(MediaStore.Downloads.RELATIVE_PATH, "Download/$relativePath")
+                    put(MediaStore.Downloads.RELATIVE_PATH, "Download/$fullRelative")
                 }
             ) ?: throw Exception("MediaStore insert failed")
-            context.contentResolver.openOutputStream(uri)
+            val raw = context.contentResolver.openOutputStream(uri)
+                ?: throw Exception("OutputStream == null")
+            val excludeId = runCatching { ContentUris.parseId(uri) }.getOrDefault(-1L)
+            object : FilterOutputStream(raw) {
+                override fun close() {
+                    super.close()
+                    // 新文件已经完整写出来，这时删同名旧文件才是安全的（排除自己这一行）
+                    runCatching {
+                        deleteExistingSameName(
+                            resolver = context.contentResolver,
+                            fileName = actualFileName,
+                            relativePath = "Download/$fullRelative",
+                            excludeId = excludeId,
+                        )
+                    }
+                }
+            }
         } else {
             val dir = File(
                 Environment.getExternalStoragePublicDirectory(Environment.DIRECTORY_DOWNLOADS),
-                relativePath
+                fullRelative
             ).apply { mkdirs() }
-            FileOutputStream(File(dir, fileName))
-        }.let { checkNotNull(it) { "OutputStream == null" } }
+            FileOutputStream(File(dir, actualFileName))
+        }
     }
 
-    private fun saveImageMediaStore(imageBytes: ByteArray, fileName: String, saveDirName: String) {
+    /** @return 是否真的写入成功（insert 返回 null / openOutputStream 返回 null 都算失败） */
+    private fun saveImageMediaStore(
+        imageBytes: ByteArray,
+        fileName: String,
+        saveDirName: String,
+    ): Boolean {
         val resolver = context.contentResolver
         val relativeRoot = Environment.DIRECTORY_PICTURES
         val relativePath = "$relativeRoot/$saveDirName"
@@ -120,24 +166,41 @@ class FileOutputManager(
             put(MediaStore.Images.Media.IS_PENDING, 1)
         }
 
+        // ⚠️ 原写法是 `uri?.let { ... }`：insert 失败时**静默 no-op**，而调用方照样弹"保存成功"
+        // （2026-09-15 复审 L15）。现在返回 false，让上层如实告诉用户。
         val uri = resolver.insert(MediaStore.Images.Media.EXTERNAL_CONTENT_URI, values)
-        uri?.let {
-            try {
-                resolver.openOutputStream(it)?.use { out ->
-                    out.write(imageBytes)
-                    out.flush()
-                }
-            } catch (e: Exception) {
-                runCatching { resolver.delete(it, null, null) }
-                throw e
-            } finally {
-                val update = ContentValues().apply { put(MediaStore.Images.Media.IS_PENDING, 0) }
-                runCatching { resolver.update(it, update, null, null) }
+            ?: return false
+
+        var written = false
+        try {
+            val out = resolver.openOutputStream(uri)
+            if (out == null) {
+                runCatching { resolver.delete(uri, null, null) }
+                return false
             }
+            out.use {
+                it.write(imageBytes)
+                it.flush()
+                written = true
+            }
+        } catch (e: Exception) {
+            runCatching { resolver.delete(uri, null, null) }
+            throw e
+        } finally {
+            // 没写成功的那一行不能留成 0 字节图片
+            if (!written) runCatching { resolver.delete(uri, null, null) }
+            val update = ContentValues().apply { put(MediaStore.Images.Media.IS_PENDING, 0) }
+            runCatching { resolver.update(uri, update, null, null) }
         }
+        return written
     }
 
-    private fun saveImageLegacy(imageBytes: ByteArray, fileName: String, saveDirName: String) {
+    /** @return 是否真的写入成功 */
+    private fun saveImageLegacy(
+        imageBytes: ByteArray,
+        fileName: String,
+        saveDirName: String,
+    ): Boolean {
         val baseDir = Environment.getExternalStoragePublicDirectory(Environment.DIRECTORY_PICTURES)
             .absolutePath + "/$saveDirName"
         val albumDir = File(baseDir).apply { if (!exists()) mkdirs() }
@@ -154,6 +217,7 @@ class FileOutputManager(
             arrayOf("image/${fileName.substringAfterLast('.')}"),
             null
         )
+        return true
     }
 
     private fun moveToDownloadMediaStore(
@@ -199,38 +263,49 @@ class FileOutputManager(
         // 也就是**改名静默失败**（回读还是 `.part`）、**旧文件也没被删掉**，两个失败叠在一起，
         // 用户每重下一次就多攒一份整集大小的副本。旧代码只把这两件事各打一条日志就当成功了。
         //
-        // 现在：改名 → 删旧 → **回读校验**，不对就重试一轮删旧文件；最终仍不对就
-        // **删掉这次的新文件并返回 null**（宁可让上层报"移动失败"，也不留副本、不报假成功）。
+        // ⚠️ 2026-09-15 复审又逮到第二个洞：删"同名旧文件"时**必须排除本次刚交付的那一份**。
+        // 新版是"先改名再删"，此刻磁盘上的正式名就是刚写好的成品：
+        //  · 改名生效时 → `deleteSiblingCopies` 把它自己删掉；而判定只看媒体库回读（名字是对的）
+        //    → 报成功、磁盘上却没有文件；
+        //  · 按名字查媒体库那条更狠：刚插入的那一行名字也已经改成了正式名 → **连行带文件一起删**。
+        // 所以两条删除路径都要把"自己"排除（ownName / ownRowId）。
         renameStaging(resolver, uri, fileName, stagingName)
+        val ownRowId = runCatching { ContentUris.parseId(uri) }.getOrDefault(-1L)
+        // 本次成品在磁盘上的名字。**回读不到时按"改名已生效"处理**（即把正式名排除掉）：
+        // 那最多退化成"旧同名文件没删掉"这种无害 no-op（与旧代码同等），
+        // 总比反过来把刚写好的成品删掉强。
+        val ownName = storedDisplayName(resolver, uri) ?: fileName
 
         // ① 先按**目录枚举**把同一份内容的旧文件删掉（真机上 MediaStore 那条"按名字查"命中=0，
-        //    只有这条路真的能删掉，详见 deleteSiblingCopies 的注释）
-        directoryOf(uri)?.let { dir -> deleteSiblingCopies(fileName, dir) }
+        //    只有这条路真的能删掉，详见 deleteSiblingCopies 的注释）；ownName 是本次的成品，排除
+        directoryOf(uri)?.let { dir -> deleteSiblingCopies(fileName, dir, keepName = ownName) }
 
-        // ② MediaStore 那条也照旧走一遍（能命中就命中，命中不了也不影响 ①）
-        deleteExistingSameName(resolver, fileName, relativePath)
+        // ② MediaStore 那条也照旧走一遍（能命中就命中，命中不了也不影响 ①；排除本次自己的行）
+        deleteExistingSameName(resolver, fileName, relativePath, excludeId = ownRowId)
 
         if (!verifyFinalName(resolver, uri, stagingName, fileName)) {
             // 重试一轮：目录枚举再删一次（新插入的那一行可能刚被 MediaStore 标了名）
             Log.w(TAG, "第一次交付后名字不符，重试删除同名旧文件: 期望=$fileName")
-            directoryOf(uri)?.let { dir -> deleteSiblingCopies(fileName, dir) }
-            deleteExistingSameName(resolver, fileName, relativePath)
+            directoryOf(uri)?.let { dir -> deleteSiblingCopies(fileName, dir, keepName = ownName) }
+            deleteExistingSameName(resolver, fileName, relativePath, excludeId = ownRowId)
         }
 
         val verdict = finalNameVerdict(resolver, uri, fileName, stagingName)
         if (verdict != FinalNameVerifyRules.Verdict.OK) {
-            Log.e(
+            // ⚠️ 这里**不再删行删文件**（2026-09-15 复审）。原实现在"名字对不上"时
+            // `resolver.delete(uri)` + return null，等于把刚下好的成品连记录一起丢掉；
+            // 而这台设备上 MediaStore 改名本来就不生效 → 每次下载都以"失败 + 丢文件"收场。
+            // 名字不完美可以忍，文件没了不能忍 —— 交给 ensureStoredName 尽力修正，修不好也保留。
+            Log.w(
                 TAG,
-                "交付失败（$verdict）：期望=$fileName 回读=${storedDisplayName(resolver, uri)}",
+                "交付名不是期望值（$verdict）：期望=$fileName 回读=${storedDisplayName(resolver, uri)}" +
+                    " —— 保留文件，交给 ensureStoredName 尽力修正",
             )
-            runCatching { resolver.delete(uri, null, null) }
-            return null
         }
 
         // 磁盘上已经是正式名了，但**媒体库那一行**可能还记着暂存名
         // （真机取证：改名返回 0 行、回读仍是 `xxx.mp3.part.mp3`）。
-        // 用户在图库/文件里看到的就是这个名字，所以必须把它也修好：
-        // 先试一次 update；还是不认就删掉这一行、让媒体扫描按磁盘上的真实名字重建。
+        // 用户在图库/文件里看到的就是这个名字，所以尽力修好；**修不好也不删文件**。
         val fixedUri = ensureStoredName(resolver, uri, fileName, directoryOf(uri))
         file.delete()
         return fixedUri.toString()
@@ -239,7 +314,11 @@ class FileOutputManager(
     /**
      * 保证媒体库里那一行的 DISPLAY_NAME 与磁盘上的正式名一致。
      *
-     * 返回可用的 uri（修不好时返回原 uri —— 文件本身是好的，不能让整次下载白费）。
+     * ⚠️ **无论修不修得成，都返回一个可用的 uri、绝不删文件**（2026-09-15 复审）：
+     * 原实现在"改名仍不生效"时会 `resolver.delete(uri)` + 重扫，扫不出来就返回一个**已删除的 uri**
+     * —— 文件与记录一起没了，用户看到"已完成"却打不开。名字不好看可以忍，文件没了不能忍。
+     *
+     * 返回可用的 uri（修不好时就是原 uri —— 文件本身是好的，不能让整次下载白费）。
      */
     private fun ensureStoredName(
         resolver: android.content.ContentResolver,
@@ -255,33 +334,15 @@ class FileOutputManager(
         if (FinalNameVerifyRules.displayNameMatches(fileName, storedDisplayName(resolver, uri))) {
             return uri
         }
-        // 2) 改名这条路在这台设备上不可靠 → 删掉这一行，扫一次目录让它重建
-        Log.w(TAG, "改名仍不生效，改为删行+重新扫描: 期望=$fileName")
-        runCatching { resolver.delete(uri, null, null) }
-        val target = dir?.let { File(it, fileName) }
-        if (target == null || !target.exists()) return uri
-        runCatching {
-            MediaScannerConnection.scanFile(context, arrayOf(target.absolutePath), null, null)
-        }
-        // 3) 按新扫描出来的行回读一次，拿到正确的 uri
-        return runCatching {
-            resolver.query(
-                MediaStore.Downloads.EXTERNAL_CONTENT_URI,
-                arrayOf(MediaStore.Downloads._ID, MediaStore.Downloads.DISPLAY_NAME),
-                "${MediaStore.Downloads.DISPLAY_NAME}=?",
-                arrayOf(fileName),
-                null,
-            )?.use { c ->
-                if (c.moveToFirst()) {
-                    android.content.ContentUris.withAppendedId(
-                        MediaStore.Downloads.EXTERNAL_CONTENT_URI,
-                        c.getLong(0),
-                    )
-                } else {
-                    uri
-                }
-            } ?: uri
-        }.getOrDefault(uri)
+        // 2) 改名这条路在这台设备上不可靠 → **保留文件与记录**，只把差异记进日志。
+        //    不再"删行 + 重扫"：scanFile 是异步的，紧接着查往往查不到，旧实现正好在这里
+        //    返回一个已删除的 uri。
+        Log.w(
+            TAG,
+            "MediaStore 改名仍不生效，保留文件与记录: 期望=$fileName " +
+                "回读=${storedDisplayName(resolver, uri)} 目录=$dir",
+        )
+        return uri
     }
 
     /** 把刚插入的暂存名改成正式名（失败只记日志，由后面的回读校验统一判定） */
@@ -304,20 +365,29 @@ class FileOutputManager(
         }
     }
 
-    /** 交付结果判定：先看回读到的 DISPLAY_NAME，再用目录里实际存在的名字兜一层 */
+    /** 交付结果判定：**以目录里实际存在的名字为准**，目录拿不到时才退回媒体库回读 */
     private fun finalNameVerdict(
         resolver: android.content.ContentResolver,
         uri: android.net.Uri,
         fileName: String,
         stagingName: String,
     ): FinalNameVerifyRules.Verdict {
-        val stored = storedDisplayName(resolver, uri)
-        if (FinalNameVerifyRules.displayNameMatches(fileName, stored)) {
-            return FinalNameVerifyRules.Verdict.OK
+        // ⚠️ 必须先看磁盘（2026-09-15 复审）。原来只看媒体库回读到的 DISPLAY_NAME，
+        // 于是"文件已经被删掉、行里的名字却还是对的"会被判成 OK → 报成功但文件不存在。
+        val names = directoryOf(uri)?.listFiles()?.map { it.name }
+        if (names != null) {
+            return FinalNameVerifyRules.verify(fileName, stagingName, names)
         }
-        val dir = directoryOf(uri) ?: return FinalNameVerifyRules.Verdict.MISSING
-        val names = dir.listFiles()?.map { it.name } ?: emptyList()
-        return FinalNameVerifyRules.verify(fileName, stagingName, names)
+        // 拿不到目录（这台设备可能限制 DATA 查询）时才退回媒体库回读：至少要求名字对
+        return if (FinalNameVerifyRules.displayNameMatches(
+                fileName,
+                storedDisplayName(resolver, uri),
+            )
+        ) {
+            FinalNameVerifyRules.Verdict.OK
+        } else {
+            FinalNameVerifyRules.Verdict.MISSING
+        }
     }
 
     private fun verifyFinalName(
@@ -338,10 +408,13 @@ class FileOutputManager(
      * 删完再用 `MediaScannerConnection` 让媒体库跟上（不让磁盘与媒体库分叉）。
      *
      * 返回真正删掉的个数。
+     *
+     * @param keepName 本次**刚交付**的那一份的名字，必须排除 —— 否则会把刚写好的成品删掉
+     *   （2026-09-15 复审：新版先改名再删，磁盘上的正式名就是本次的成品）。
      */
-    private fun deleteSiblingCopies(expectedName: String, dir: File): Int {
+    private fun deleteSiblingCopies(expectedName: String, dir: File, keepName: String?): Int {
         val names = dir.listFiles()?.map { it.name } ?: return 0
-        val targets = FinalNameVerifyRules.siblingCopies(expectedName, names)
+        val targets = FinalNameVerifyRules.siblingCopies(expectedName, names, keepName = keepName)
         var deleted = 0
         targets.forEach { name ->
             if (File(dir, name).delete()) deleted++
@@ -377,11 +450,18 @@ class FileOutputManager(
             ?.use { cursor -> if (cursor.moveToFirst()) cursor.getString(0) else null }
     }.getOrNull()
 
-    /** 删掉下载目录里与 [fileName] 同名的旧文件（调用前必须确认新文件已经写好） */
+    /**
+     * 删掉下载目录里与 [fileName] 同名的旧文件（调用前必须确认新文件已经写好）。
+     *
+     * @param excludeId 本次**刚插入的那一行**的 `_ID`。它的 DISPLAY_NAME 在改名之后
+     *   也叫 [fileName]，不排除就会被当成"同名旧文件"**连行带文件一起删掉**
+     *   （2026-09-15 复审）。传 -1 表示不排除。
+     */
     private fun deleteExistingSameName(
         resolver: android.content.ContentResolver,
         fileName: String,
         relativePath: String,
+        excludeId: Long,
     ) {
         // ⚠️ RELATIVE_PATH 要**两种写法都试**：调用方给的是 "Download/BiliDownloader"，
         // 而 MediaStore 存的是带结尾斜杠的 "Download/BiliDownloader/" ——
@@ -389,12 +469,14 @@ class FileOutputManager(
         // 真机表现为重下时旧文件不删、新文件被自动改名成 "xxx (1).mp4"）。
         val pathForms = DownloadRecordReuseRules.relativePathCandidates(relativePath)
         val selection =
-            "${MediaStore.Downloads.DISPLAY_NAME}=? AND ${MediaStore.Downloads.RELATIVE_PATH} IN (?,?)"
+            "${MediaStore.Downloads.DISPLAY_NAME}=? AND " +
+                "${MediaStore.Downloads.RELATIVE_PATH} IN (?,?) AND " +
+                "${MediaStore.Downloads._ID} != ?"
         resolver.query(
             MediaStore.Downloads.EXTERNAL_CONTENT_URI,
             arrayOf(MediaStore.Downloads._ID),
             selection,
-            arrayOf(fileName, pathForms[0], pathForms[1]),
+            arrayOf(fileName, pathForms[0], pathForms[1], excludeId.toString()),
             null,
         )?.use { cursor ->
             // 先把 id 全收出来再删：一边遍历游标一边删会让游标失效。
@@ -431,7 +513,7 @@ class FileOutputManager(
         if (!targetDir.exists()) targetDir.mkdirs()
 
         if (folderPath.isNotEmpty()) {
-            folderPath.split("/").forEach { part ->
+            folderPath.split("/").filter { it.isNotBlank() }.forEach { part ->
                 targetDir = File(targetDir, part)
                 if (!targetDir.exists()) targetDir.mkdirs()
             }
@@ -441,29 +523,46 @@ class FileOutputManager(
         // 与 MediaStore 那条路径同一个道理：**先写临时文件、写成功了才动旧文件**。
         // 直接往 targetFile 写会在"打开流"的瞬间就把旧文件截断清空，中途失败就把它毁了。
         val stagingFile = File(targetDir, DownloadRecordReuseRules.stagingFileName(fileName))
+        // ⚠️ 旧成品的让位顺序（2026-09-15 复审 H10）：**先把旧成品改名成 `.bak`，不是先删**。
+        // 原实现在这里直接 `targetFile.delete()`，紧接着 `stagingFile.renameTo(targetFile)` ——
+        // 一旦改名失败就是"旧文件没了、新的也没了"，而日志还写着"旧文件已保留"（与事实相反）。
+        // 现在：写完新文件 → 旧成品改名为 `.bak` → 新文件改名成正式名 → 删 `.bak`；
+        // 任一步失败都把 `.bak` 改回来，用户原有的文件永远不会凭空消失。
+        val backupFile = File(targetDir, "$fileName.bak")
         return try {
             file.inputStream().use { inputStream ->
                 stagingFile.outputStream().use { outputStream ->
                     inputStream.copyTo(outputStream)
                 }
             }
-            // 新文件已经完整写出来，这时删旧文件才是安全的
-            if (DownloadRecordReuseRules.canDeleteExistingFile(newFileWritten = true) &&
-                targetFile.exists()
-            ) {
-                targetFile.delete()
+            val hadOld = targetFile.exists()
+            if (hadOld) {
+                backupFile.delete()
+                if (!targetFile.renameTo(backupFile)) {
+                    // 旧成品动不了（被占用/无权限）→ 放弃本次移动，现场原样保留
+                    Log.e(TAG, "旧成品无法让位，放弃本次移动（旧文件未动）: $fileName")
+                    stagingFile.delete()
+                    return null
+                }
             }
             if (!stagingFile.renameTo(targetFile)) {
-                Log.e(TAG, "改名失败，放弃本次移动（旧文件已保留）: $fileName")
+                Log.e(TAG, "改名失败，回滚（旧文件已恢复）: $fileName")
                 stagingFile.delete()
+                if (hadOld && !backupFile.renameTo(targetFile)) {
+                    Log.e(TAG, "旧文件回滚也失败了，仍是 .bak: ${backupFile.absolutePath}")
+                }
                 return null
             }
+            if (hadOld) backupFile.delete()
             file.delete()
             targetFile.absolutePath
         } catch (e: Exception) {
-            // 新文件没写成：删掉半截的临时文件，**旧文件原样保留**
+            // 新文件没写成：删掉半截的临时文件，**旧文件原样保留/恢复**
             Log.e(TAG, "写入下载目录失败，已回滚（旧文件未动）: $fileName", e)
             stagingFile.delete()
+            if (backupFile.exists() && !targetFile.exists()) {
+                backupFile.renameTo(targetFile)
+            }
             null
         }
     }

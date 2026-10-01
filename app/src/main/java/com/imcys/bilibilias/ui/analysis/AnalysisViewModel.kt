@@ -12,6 +12,7 @@ import com.imcys.bilibilias.common.utils.FirebaseExt
 import com.imcys.bilibilias.common.utils.TextType
 import com.imcys.bilibilias.common.utils.toHttps
 import com.imcys.bilibilias.data.analysis.AnalysisInputPipeline
+import com.imcys.bilibilias.data.download.predecessor.DownloadPredecessorRules
 import com.imcys.bilibilias.data.model.download.CCFileType
 import com.imcys.bilibilias.data.model.download.DownloadViewInfo
 import com.imcys.bilibilias.data.model.download.MediaContainerConfig
@@ -119,6 +120,16 @@ class AnalysisViewModel(
             inputPipeline.requests.collect { inputAsText ->
                 if (inputAsText.isEmpty()) return@collect
                 analysisInputText(inputAsText)
+                // 记下"当前结果是从哪段文本解析出来的"：下载前会拿它跟输入框比对，
+                // 防止解析还没跟上就点下载、结果下到上一个视频（2026-09-15 复审 M1）。
+                // 只在这段文本**仍是当前输入**时才记（用户在解析途中又改了输入就不算数）。
+                _uiState.update {
+                    if (it.inputAsText == inputAsText) {
+                        it.copy(parsedFromInput = inputAsText)
+                    } else {
+                        it
+                    }
+                }
             }
         }
 
@@ -130,7 +141,10 @@ class AnalysisViewModel(
             appSettings.collect { appSetting->
                 _uiState.update {
                     it.copy(
-                        episodeListMode = it.episodeListMode,
+                        // ⚠️ 这里原先是自赋值 `episodeListMode = it.episodeListMode`
+                        // （`it` 是 UI state，外层 appSetting 压根没用上）—— 用户把选集切成
+                        // 「列表」并已落盘，下次进解析页却永远回到默认网格（2026-09-15 复审 M12）。
+                        episodeListMode = appSetting.episodeListMode,
                         downloadInfo = _uiState.value.downloadInfo?.updateVideoContainer(
                             mediaContainer = appSettingsRepository.storeMediaContainerFromExtension(appSetting.useVideoContainer)
                         )?.updateAudioContainer(
@@ -190,15 +204,21 @@ class AnalysisViewModel(
             sendToastEvent("图片链接不能为空")
             return@withContext
         }
-        val type = imageUrl.substringAfterLast(".")
-        downloadManager.downloadImageToAlbum(
-            imageUrl, when (val result = _uiState.value.asLinkResultType) {
-                is ASLinkResultType.BILI.Donghua -> "${result.currentEpId}_pic.${type}"
-                is ASLinkResultType.BILI.Video -> "${result.viewInfo.data?.cid}_pic.${type}"
-                else -> "${System.currentTimeMillis()}.${type}"
-            }, saveDirName
-        )
-        sendToastEvent("保存成功")
+        // ⚠️ 后缀统一走 DownloadPredecessorRules.coverExtension（2026-09-15 复审 L9）：
+        // 原来用 `substringAfterLast(".")`，URL 没有扩展名时会把 `/`、`?` 带进 DISPLAY_NAME
+        // （MediaStore 直接拒绝），与下载那条路的后缀规则也不一致。
+        val type = DownloadPredecessorRules.coverExtension(imageUrl)
+        val saved = runCatching {
+            downloadManager.downloadImageToAlbum(
+                imageUrl, when (val result = _uiState.value.asLinkResultType) {
+                    is ASLinkResultType.BILI.Donghua -> "${result.currentEpId}_pic.$type"
+                    is ASLinkResultType.BILI.Video -> "${result.viewInfo.data?.cid}_pic.$type"
+                    else -> "${System.currentTimeMillis()}_pic.$type"
+                }, saveDirName
+            )
+        }.getOrDefault(false)
+        // ⚠️ 只有真的写进相册才报成功（原来无条件弹"保存成功"，insert 失败时是在误导用户）
+        sendToastEvent(if (saved) "保存成功" else "保存失败（相册写入被拒绝或网络异常）")
     }
 
     /**
@@ -210,6 +230,13 @@ class AnalysisViewModel(
             analysisBaseInfo = AnalysisBaseInfo(),
             // 输入变了，上一次的解析错误就不再适用（错误卡片随输入消失）
             parseErrorMessage = null,
+            // ⚠️ 输入变了就必须把**上一次的解析结果一起清掉**（2026-09-15 复审 M1）：
+            // 原来只清 baseInfo / error，`asLinkResultType` 与 `downloadInfo` 都留着，
+            // 而下载按钮只看 downloadInfo 有没有值 —— 用户粘贴新链接后在防抖+网络窗口内点下载，
+            // 下到的是**上一个视频**。清掉之后按钮会等新结果出来才可用。
+            asLinkResultType = null,
+            downloadInfo = null,
+            parsedFromInput = null,
         )
         if (inputAsText.isEmpty()) return
         inputPipeline.submit(inputAsText)
@@ -548,8 +575,21 @@ class AnalysisViewModel(
     }
 
     fun createDownloadTask() {
+        // 重入保护：UI 没有禁用按钮，双击会并发跑两次建任务（DB 侧虽已加锁，这里早退更干净）
+        if (_uiState.value.isCreateDownloadLoading) return
         _uiState.value = _uiState.value.copy(isCreateDownloadLoading = true)
         viewModelScope.launch(Dispatchers.IO) {
+            // ⚠️ 结果必须**确实来自当前输入**（2026-09-15 复审 M1）：粘贴新链接后立即点下载时，
+            // 界面上留着的还是上一个视频的结果 —— 这道防线就是为此加的。
+            val state = _uiState.value
+            if (state.parsedFromInput != null &&
+                state.inputAsText.isNotBlank() &&
+                state.parsedFromInput != state.inputAsText
+            ) {
+                _uiState.value = _uiState.value.copy(isCreateDownloadLoading = false)
+                sendToastEvent("输入已经变了，请等解析完成后再下载")
+                return@launch
+            }
             if (uiState.value.asLinkResultType != null && uiState.value.downloadInfo != null) {
                 var authMid = 0L
                 var currentVideo = ""

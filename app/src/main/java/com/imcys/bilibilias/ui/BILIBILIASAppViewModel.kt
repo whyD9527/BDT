@@ -69,27 +69,30 @@ class BILIBILIASAppViewModel(
                 return@launch
             }
 
-            var isResult = false
-            userList.forEach loginCheck@{
-                usersDataSource.setUserId(it.id)
+            // ⚠️ 找到第一个可用账号就必须**立刻停下**（2026-09-15 复审 A-M10）：
+            // 原来失败分支会 `setUserId(0)` 且成功后不退出循环 —— 只要最后一个平台账号失效，
+            // 前面已经验证成功的账号就会被清成"未登录"，而 `isResult == true` 又会直接 return，
+            // 界面回到 Default、实际却处于未登录态（未使用的 `loginCheck@` 标签正是原意）。
+            var winner: Long? = null
+            for (user in userList) {
+                usersDataSource.setUserId(user.id)
                 asCookiesStorage.syncDataBaseCookies()
                 val loginInfo =
-                    qrCodeLoginRepository.getLoginUserInfo(it.loginPlatform).lastOrNull()
-                loginInfo?.let { info ->
-                    if (info.status == ApiStatus.SUCCESS) {
-                        if (!isResult) {
-                            uiState.emit(UIState.Default)
-                        }
-                        isResult = true
-                    } else {
-                        usersDataSource.setUserId(0)
-                    }
+                    qrCodeLoginRepository.getLoginUserInfo(user.loginPlatform).lastOrNull()
+                if (loginInfo?.status == ApiStatus.SUCCESS) {
+                    winner = user.id
+                    break
                 }
             }
 
-            if (isResult) return@launch
+            if (winner != null) {
+                usersDataSource.setUserId(winner)
+                asCookiesStorage.syncDataBaseCookies()
+                uiState.emit(UIState.Default)
+                return@launch
+            }
 
-            // 到达此处
+            // 一个可用的都没有
             usersDataSource.setUserId(0)
             uiState.emit(UIState.AccountCheck(false))
             delay(1500)

@@ -44,6 +44,11 @@ class CookieLoginViewModel(
         // `onValueChange` **每次按键**同步调用、链路无 try/catch，
         // 于是用户每敲一个字符都可能让应用崩掉（2026-09-14 全量审计 H5）。
         // 现在解码失败会退回原串，绝不抛。
+        // ⚠️ 2026-09-15 复审 A-M7：这个方法由输入框的 `onValueChange` **每次按键**调用，
+        // 而 `currentCookies` 是 ViewModel 级字段 —— 原来只 `addAll` 不 `clear`，
+        // 打 13 个字符就把整串 Cookie 累积 13 遍：内存里重复、`saveLoginCookie()` 逐条 insert
+        // 会把 `bili_user_cookies` 写成成百上千条重复行、Cookie 头里同名多值。
+        currentCookies.clear()
         currentCookies.addAll(
             CookieParsingRules.parse(cookiesStr).map { pair ->
                 Cookie(

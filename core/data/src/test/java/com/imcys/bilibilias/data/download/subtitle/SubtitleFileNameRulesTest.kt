@@ -1,6 +1,7 @@
 package com.imcys.bilibilias.data.download.subtitle
 
 import org.junit.Assert.assertEquals
+import org.junit.Assert.assertTrue
 import org.junit.Test
 
 /**
@@ -46,5 +47,16 @@ class SubtitleFileNameRulesTest {
         assertEquals("ass", SubtitleFileNameRules.extensionFor("ASS"))
         assertEquals("srt", SubtitleFileNameRules.extensionFor("SRT"))
         assertEquals("srt", SubtitleFileNameRules.extensionFor(null))
+    }
+
+    @Test
+    fun `标题很长时按字节截断，但后缀必须留着（L8）`() {
+        // 汉字 3 字节；85 个汉字就超过 255 字节上限 → MediaStore/文件系统直接拒收，
+        // 表现是"这一集因为标题太长整份失败"。截断后必须仍是一个带后缀的合法名字。
+        val longTitle = "音乐".repeat(120)
+        val name = SubtitleFileNameRules.build(longTitle, "zh-CN", "SRT")
+        assertTrue("截断后不能超过上限", name.toByteArray(Charsets.UTF_8).size <= 200)
+        assertTrue("后缀必须保留", name.endsWith(".srt"))
+        assertTrue("前缀仍是标题内容", name.startsWith("音乐"))
     }
 }

@@ -102,6 +102,27 @@ class NamingConventionRendererTest {
     }
 
     @Test
+    fun `取值以_结尾且后面占位符为空时，取值那个下划线也要留住`() {
+        // 2026-09-15 复审 L1：尾部收尾原来是对整个字符串做 `_+$`，
+        // 于是"取值本身以 `_` 结尾 + 后面的占位符为空"时，分隔符和取值尾部的下划线
+        // 会**一起**被删掉 —— 值与分隔符又混在一起了。
+        val name = renderVideo(
+            template = "{title}_{p_title}",
+            values = mapOf("{title}" to "我的_世界_", "{p_title}" to ""),
+        )
+        assertEquals("我的_世界_.mp4", name)
+    }
+
+    @Test
+    fun `取值尾部多个下划线加空占位符时一个都不许少`() {
+        val name = renderVideo(
+            template = "{title}_{author}",
+            values = mapOf("{title}" to "A__", "{author}" to null),
+        )
+        assertEquals("A__.mp4", name)
+    }
+
+    @Test
     fun `占位符值不会被再当成模板处理`() {
         // {p_title} 的值本身可以含有花括号（B 站标题偶见），
         // 收拾分隔符的时机如果放在"还没替换完"的中间态就会把它弄坏。
@@ -183,5 +204,15 @@ class NamingConventionRendererTest {
             "某视频.mp4",
             renderVideo("{title}_{author}", mapOf("{title}" to "某视频", "{author}" to null)),
         )
+    }
+
+    @Test
+    fun `标题过长时按字节截断并保留后缀（L8）`() {
+        // MediaStore/文件系统的单个名字上限是 255 字节，汉字 3 字节 —— 不截断就会整集落盘失败
+        val longTitle = "很长的标题".repeat(60)
+        val name = renderVideo("{title}", mapOf("{title}" to longTitle))
+        assertTrue("不能超过上限", name.toByteArray(Charsets.UTF_8).size <= 200)
+        assertTrue("后缀必须保留", name.endsWith(".mp4"))
+        assertTrue("前缀仍是标题内容", name.startsWith("很长的标题"))
     }
 }

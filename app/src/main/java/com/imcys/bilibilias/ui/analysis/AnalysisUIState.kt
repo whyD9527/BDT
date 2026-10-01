@@ -23,4 +23,12 @@ data class AnalysisUIState(
      * 被风控、还是 App 卡死了。见交接文档第十八轮审查。
      */
     val parseErrorMessage: String? = null,
+    /**
+     * 当前界面上的解析结果**是从哪段文本解析出来的**。
+     *
+     * 存在的理由（2026-09-15 复审 M1）：输入变了却不复位结果时，用户粘贴新链接后
+     * 在"防抖 + 网络"窗口内点下载，会**下到上一个视频**（下载按钮只看 `downloadInfo` 有没有值）。
+     * 下载前拿它跟当前输入比一下，就能挡住这种"下错稿件"。
+     */
+    val parsedFromInput: String? = null,
     )

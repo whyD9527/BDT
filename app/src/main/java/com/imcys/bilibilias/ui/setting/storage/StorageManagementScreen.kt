@@ -10,6 +10,7 @@ import android.widget.Toast
 import androidx.activity.compose.rememberLauncherForActivityResult
 import androidx.activity.result.contract.ActivityResultContracts
 import androidx.compose.foundation.layout.Arrangement
+import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.PaddingValues
 import androidx.compose.foundation.layout.Row
@@ -57,6 +58,7 @@ import com.imcys.bilibilias.ui.widget.BILIBILIASTopAppBarStyle
 import com.imcys.bilibilias.ui.widget.tip.ASWarringTip
 import com.imcys.bilibilias.widget.ASCommonLoadingScreen
 import com.imcys.bilibilias.widget.AnimatedStorageRing
+import com.imcys.bilibilias.widget.CommonError
 import kotlinx.serialization.Serializable
 import org.koin.androidx.compose.koinViewModel
 import java.io.File
@@ -92,7 +94,13 @@ fun StorageManagementContent(
 
 
     when (val state = uiState) {
-        is StorageManagementViewModel.StorageManagementUIState.Error -> {}
+        // ⚠️ 失败分支原来是个空壳 `is Error -> {}`：整屏只剩顶栏，既没文案也没重试
+        //（2026-09-15 复审 L10）。这里给出错误卡片 + 重试。
+        is StorageManagementViewModel.StorageManagementUIState.Error -> {
+            Box(modifier = modifier.padding(16.dp)) {
+                CommonError(errorMsg = state.errorMsg, onRetry = { vm.loadStorageInfo(context) })
+            }
+        }
         StorageManagementViewModel.StorageManagementUIState.Loading -> {
             ASCommonLoadingScreen()
         }

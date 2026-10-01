@@ -131,9 +131,16 @@ class BILIBILIWebAPIService(
         }
 
     /**
-     * 获取登录信息
+     * 获取登录信息（**必须带 code/data 包装层**）。
+     *
+     * ⚠️ 原写法是 `.body<BILILoginUserInfo>()`：真实响应是 `{"code":0,"data":{…}}`，
+     * 用户字段全嵌在 `data` 里；而模型顶层字段全是可空、Json 又开了 `explicitNulls=false`
+     * → 解码**不抛异常**、得到一个"字段全 null 的对象"，调用方按 `Result.isSuccess` 判断时
+     * **永远认为账号有效**（失效/被风控的账号永不被清理，`wbiImg` 也永远拿不到）。
+     * 2026-09-15 复审 A-M2；与同文件 `getWebIInfoNoCheckLogin` 的取法保持一致。
      */
-    suspend fun checkLoginUserInfo(): BILILoginUserInfo = httpClient.get(WEB_LOGIN_INFO_URL).body()
+    suspend fun checkLoginUserInfo(): BiliApiResponse<BILILoginUserInfo> =
+        httpClient.get(WEB_LOGIN_INFO_URL).body()
 
 
 
@@ -322,6 +329,10 @@ class BILIBILIWebAPIService(
             put(FOURK, "1")
             curLanguage?.let { put("cur_language", it) }
             curProductionType?.let { put("cur_production_type", it.toString()) }
+            // ⚠️ 2026-09-15 复审：`tryLook` 参数声明了却**从没放进请求**（调用方
+            // `VideoInfoRepository` 在未登录时认真传了 "1"）→ 匿名试看/预览从来没生效，
+            // `TRY_LOOK` 常量成了死代码。补上。
+            tryLook?.let { put(TRY_LOOK, it) }
         } + BROWSER_FINGERPRINT
 
         get(WEB_VIDEO_PLAYER_URL) {
@@ -507,7 +518,14 @@ class BILIBILIWebAPIService(
     ) {
         val result = runCatching {
             val response = httpClient.get(SPACE_BASE_URL + mid).bodyAsText()
-            val regex = "\"__RENDER_DATA__\" type=\"application/json\">(.*)</script>".toRegex()
+            // ⚠️ 2026-09-15 复审 L4：原来是贪婪的 `(.*)</script>` 且没有 DOT_MATCHES_ALL ——
+            // 同一行里只要还有别的 `</script>`，就会把后面的 HTML 一起吞进来 → 解析抛异常 →
+            // 被 runCatching 吞成 emptyMap() → `w_webid` 永远为空、用户空间接口缺参（静默 no-op）。
+            // 改成非贪婪 + 允许跨行；真认不出来就老实返回空。
+            val regex = Regex(
+                "\"__RENDER_DATA__\"[^>]*>(.*?)</script>",
+                RegexOption.DOT_MATCHES_ALL,
+            )
             val result =
                 regex.find(response)?.groupValues?.get(1)?.ifEmpty { return@runCatching emptyMap() }
                     ?: return@runCatching emptyMap()

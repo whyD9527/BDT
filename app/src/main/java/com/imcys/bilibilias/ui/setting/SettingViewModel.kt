@@ -83,21 +83,28 @@ class SettingViewModel(
         user?.let {
             val cookies = biliUserCookiesDao.getBILIUserCookiesByUid(it.id)
 
-            val biliJct =
-                cookies.firstOrNull { cookie -> cookie.name == "bili_jct" }?.value?.apply {
-                    usersDataSource.setUserId(0L)
-                    biliUserCookiesDao.deleteBILICookiesByUid(user.id)
-                    biliUsersDao.deleteBILIUserByUid(user.id)
-                } ?: return
+            // ⚠️ 2026-09-15 复审 A-M9：本地清理必须**无条件**执行，不能挂在"拿得到 bili_jct"上。
+            // 原写法是 `…?.value?.apply { 删 Cookie/删用户/setUserId(0) } ?: return` ——
+            // TV/非常规登录（或 cookie 缺失）时取不到 bili_jct 就直接 return，
+            // 本地一条都不清，而 UI 那边照样关弹窗回首页 → 用户以为退出了，其实还是登录态。
+            val biliJct = cookies.firstOrNull { cookie -> cookie.name == "bili_jct" }?.value
+
+            usersDataSource.setUserId(0L)
+            biliUserCookiesDao.deleteBILICookiesByUid(user.id)
+            biliUsersDao.deleteBILIUserByUid(user.id)
 
             _uiState.value = _uiState.value.copy(
                 isLogin = false,
                 currentMid = 0
             )
 
-            userInfoRepository.logout(biliJct).last()
             asCookiesStorage.clearCookies()
             asCookiesStorage.syncDataBaseCookies()
+
+            // 服务端注销是"尽力而为"：没有 bili_jct（或接口失败）都不该影响本地已完成的登出
+            if (biliJct != null) {
+                runCatching { userInfoRepository.logout(biliJct).last() }
+            }
         }
     }
 

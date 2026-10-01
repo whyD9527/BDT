@@ -1,5 +1,7 @@
 package com.imcys.bilibilias.data.download.subtitle
 
+import com.imcys.bilibilias.data.download.naming.FileNameLengthRules
+
 /**
  * 「字幕文件名」的纯规则（可单测）。
  *
@@ -45,6 +47,8 @@ object SubtitleFileNameRules {
      */
     fun build(title: String, language: String, ccFileTypeName: String?): String {
         val ext = extensionFor(ccFileTypeName)
-        return "${title}_${language}.$ext"
+        // ⚠️ 标题很长时要按字节截断（2026-09-15 复审 L8）：这里拼出来的名字**直接就是显示名**，
+        // 超过文件系统/MediaStore 的 255 字节上限就会落盘失败（标题 85 个汉字以上就会超）。
+        return FileNameLengthRules.truncateToUtf8Bytes("${title}_${language}.$ext")
     }
 }

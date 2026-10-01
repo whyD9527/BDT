@@ -95,6 +95,14 @@ class DownloadService : Service() {
         progress: Int,
         indeterminate: Boolean = false
     ) {
+        // ⚠️ `notificationCompat` 是 lateinit，只在 `onStartCommand → startForeground()` 里赋值。
+        // 服务若只被 `bindService(BIND_AUTO_CREATE)` 创建（或 `startForegroundService` 抛异常被
+        // `NewDownloadManager` 的 runCatching 吞掉、只剩 bind 成功），这里就会抛
+        // `UninitializedPropertyAccessException` —— 而它发生在**每个进度回调**里，
+        // 会被下载层当成"读写异常"，重试 5 次后任务误报失败（2026-09-15 复审 A-M6）。
+        if (!::notificationCompat.isInitialized) {
+            notificationCompat = buildDownloadFileNotification()
+        }
         notificationCompat.setContentTitle(title)
             .setContentText(text)
             .setProgress(100, progress, indeterminate)

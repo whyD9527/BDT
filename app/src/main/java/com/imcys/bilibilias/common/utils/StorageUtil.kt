@@ -155,9 +155,11 @@ object StorageUtil: KoinComponent {
     private fun deleteFolderRecursively(file: File?): Boolean {
         if (file == null || !file.exists()) return true
         if (file.isFile) return file.delete()
+        // ⚠️ 不能短路（2026-09-15 复审 L12）：原来的 `success = success && delete(it)` 在某个子项删失败后
+        // **剩余子项一个都不再尝试**，而 clearCache 只重建顶层目录 → 残留垃圾 + 报"失败"。
         var success = true
         file.listFiles()?.forEach {
-            success = success && deleteFolderRecursively(it)
+            if (!deleteFolderRecursively(it)) success = false
         }
         return file.delete() && success
     }

@@ -159,4 +159,34 @@ class AsRegexUtilTest {
             AsRegexUtil.parse("在 bilibili.com 看到 av170001 这个视频"),
         )
     }
+
+    // ---------------------------------------------------------------- 第二轮复审补的边界（L2）
+
+    @Test
+    fun `域名要按边界匹配，含 bilibili_com 的假域名不算 B 站`() {
+        // 旧实现是 `text.contains("bilibili.com")` → 这三种都会被当成 B 站域名，
+        // 于是 av/ss/ep 的"整串才算"门槛被放开，非 B 站文本里的 ID 也被认走
+        assertNull("notbilibili.com", AsRegexUtil.parse("https://notbilibili.com/av123456"))
+        assertNull("bilibili.com.evil.com", AsRegexUtil.parse("https://bilibili.com.evil.com/av123456"))
+        assertNull("bilibili.com.cn", AsRegexUtil.parse("https://bilibili.com.cn/ss123"))
+        // 真子域仍要认
+        assertEquals(
+            TextType.BILI.AV(170001),
+            AsRegexUtil.parse("https://api.bilibili.com/x/av170001"),
+        )
+    }
+
+    @Test
+    fun `BV 号必须恰好 10 位且以 1 开头，更长的 token 不能被截断`() {
+        // 原来没有右边界：`BV1xx411c7mDextra` 会被静默截成 `BV1xx411c7mD`，
+        // 得到一个"看起来合法、其实是另一个视频"的号
+        assertNull(AsRegexUtil.parse("BV1xx411c7mDextra"))
+        assertNull(AsRegexUtil.parse("bv1234567890abcdef"))
+        // 合法形状照旧
+        assertEquals(TextType.BILI.BV("BV1xx411c7mD"), AsRegexUtil.parse("BV1xx411c7mD"))
+        assertEquals(
+            TextType.BILI.BV("BV1xx411c7mD"),
+            AsRegexUtil.parse("https://www.bilibili.com/video/BV1xx411c7mD?p=2"),
+        )
+    }
 }

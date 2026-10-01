@@ -56,6 +56,8 @@ fun LikeVideoScreen(likeVideoRoute: LikeVideoRoute, onToBack: () -> Unit) {
             vm,
             likeVideoList,
             paddingValues,
+            // 失败卡片上的「重试」：按当前 mid / 类型重新拉一次（2026-09-15 复审 L10）
+            onRetry = { vm.retry() },
         )
     }
 }
@@ -64,7 +66,8 @@ fun LikeVideoScreen(likeVideoRoute: LikeVideoRoute, onToBack: () -> Unit) {
 fun LikeVideoContent(
     vm: LikeVideoViewModel,
     likeVideoList: NetWorkResult<BILIUserVideoLikeInfo?>,
-    paddingValues: PaddingValues
+    paddingValues: PaddingValues,
+    onRetry: () -> Unit = {}
 ) {
     LazyVerticalGrid(
         modifier = Modifier
@@ -82,11 +85,19 @@ fun LikeVideoContent(
 
         if (likeVideoList.status == ApiStatus.ERROR) {
             item(span = { androidx.compose.foundation.lazy.grid.GridItemSpan(2) }) {
-                AsAutoError(likeVideoList)
+                // 失败要给「重试」（2026-09-15 复审 L10）：原来没传 onRetry，
+                // 用户只能退出页面重进。
+                AsAutoError(likeVideoList, onRetry = onRetry)
             }
         }
 
-        items(likeVideoList.data?.list ?: emptyList(), key = { it.cid ?: it.bvid}) { item ->
+        // ⚠️ key 用 aid（唯一），不要 `cid ?: bvid`：同一条视频的 cid 可能为空、
+        // bvid 在分页重叠时也会重复 → LazyGrid 撞 key 直接崩（2026-09-15 复审 H11）。
+        // 顺带按 aid 去重，从源头避免重复项。
+        items(
+            likeVideoList.data?.list?.distinctBy { it.aid } ?: emptyList(),
+            key = { it.aid },
+        ) { item ->
             UserWorkCard(
                 modifier = Modifier.animateItem(),
                 bvId = item.bvid,

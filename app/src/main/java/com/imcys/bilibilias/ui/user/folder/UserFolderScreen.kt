@@ -97,7 +97,9 @@ fun UserFolderContent(
 
         item(span = { GridItemSpan(2) }) {
             Surface(shape = CardDefaults.shape) {
-                AsAutoError(folderList, onSuccessContent = {
+                // 失败要给「重试」（2026-09-15 复审 L10）：原来只有 initMid 会触发加载，
+                // 首包失败后用户只能退出页面重进。
+                AsAutoError(folderList, onRetry = { vm.retry() }, onSuccessContent = {
                     folderList.data?.list?.let {
                         Column(Modifier.padding(5.dp)) {
                             ASToggleButtonRowGroup(

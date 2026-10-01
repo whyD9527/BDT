@@ -75,9 +75,14 @@ fun UserPlayHistoryContent(vm: UserPlayHistoryViewModel, paddingValues: PaddingV
     ) {
 
 
+        // ⚠️ key 用 history.cid（唯一），不要用 bvid（2026-09-15 复审 H11）：
+        // 同一条视频的不同分 P / 重复记录会有相同 bvid，撞 key 会让 Compose 直接崩；
+        // 原来那个 `ifBlank { "empty_$index" }` 兜底也正是因为 bvid 不唯一。
         items(itemList.itemCount, key = { index ->
             val item = itemList[index]
-            item?.history?.bvid?.ifBlank { "empty_$index" } ?: "empty_$index"
+            item?.history?.cid?.takeIf { it != 0L }?.toString()
+                ?: item?.history?.bvid?.ifBlank { "empty_$index" }
+                ?: "empty_$index"
         }) { index ->
             itemList[index]?.let { item ->
                 HistoryPlayVideoCard(

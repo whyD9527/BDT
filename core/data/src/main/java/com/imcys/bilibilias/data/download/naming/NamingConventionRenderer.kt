@@ -54,9 +54,6 @@ object NamingConventionRenderer {
     /** 模板字面段里的连续下划线（只对本段生效，见类的说明） */
     private val runsOfSeparators = Regex("_+")
 
-    /** 收尾时要丢掉的尾部独立分隔下划线（只对"取值为空留下的"那种生效） */
-    private val trailingSeparators = Regex("_+$")
-
     /**
      * 渲染文件名。
      *
@@ -78,12 +75,19 @@ object NamingConventionRenderer {
         // 「上一个有效段落是取值为空的占位符」——它会在末尾留下一个独立分隔下划线，
         // 而那个下划线只有在**后面接上真东西**（或字符串结束）时才该被收掉。
         var lastTokenWasEmptyValue = false
+        // ⚠️ 末尾有多少个字符是"模板分隔下划线"（收的时候只收这些）。
+        // 2026-09-15 复审 L1：原来的 trimOrphanSeparator 对整个字符串做 `_+$`，
+        // 于是"取值本身以 `_` 结尾 + 后面那个占位符为空"时，**取值里的下划线也被吃掉**
+        // （`{title}_{p_title}` + title="我的_世界_" + p_title="" 会得到"我的_世界"）。
+        // 用这个计数把"模板分隔"和"取值内容"彻底分开：取值的下划线永远不进计数。
+        var trimmableTail = 0
 
         parts.forEach { part ->
             if (part.isPlaceholder) {
                 if (!known.contains(part.text)) {
                     // 模板里的未知成分（例如 `{unknown}`）：原样留着（老行为）
                     builder.append(part.text)
+                    trimmableTail = trailingUnderscoreCount(part.text)
                     lastTokenWasEmptyValue = false
                     return@forEach
                 }
@@ -96,10 +100,12 @@ object NamingConventionRenderer {
                     lastTokenWasEmptyValue = true
                 } else {
                     if (lastTokenWasEmptyValue) {
-                        trimOrphanSeparator(builder)
+                        trimmableTail = dropOrphanSeparator(builder, trimmableTail)
                         lastTokenWasEmptyValue = false
                     }
                     builder.append(value)
+                    // 取值里的下划线是**内容**，一个都不能算进"可收尾"
+                    trimmableTail = 0
                 }
             } else {
                 // 模板字面段：只塌它自己内部的下划线（老行为）
@@ -113,32 +119,37 @@ object NamingConventionRenderer {
                     lastTokenWasEmptyValue = false
                 }
                 builder.append(literal)
+                trimmableTail = trailingUnderscoreCount(literal)
             }
         }
 
         if (lastTokenWasEmptyValue) {
-            trimOrphanSeparator(builder)
+            dropOrphanSeparator(builder, trimmableTail)
         }
 
         var filePath = builder.toString()
         if (!filePath.endsWith(".$fileExtension")) {
             filePath += ".$fileExtension"
         }
-        return filePath
+        return FileNameLengthRules.truncateToUtf8Bytes(filePath)
     }
 
+    /** 这段文本末尾有几个下划线（只有"模板字面段"产出的下划线才允许被收掉） */
+    private fun trailingUnderscoreCount(text: String): Int =
+        text.length - text.trimEnd('_').length
+
     /**
-     * 去掉"上一个占位符取值为空"留下的那个尾部独立下划线。
+     * 去掉"上一个占位符取值为空"留下的尾部独立下划线。
      *
-     * ⚠️ 只在**模板末尾**那个占位符取值为空时调用：这时末尾那个 `_` 一定是分隔符
-     * （取值内容根本没产出字符），删掉它正是老实现 `replace(Regex("_+$"), "")` 想干的事。
-     * 值中间的情况由"吃掉本段开头那一个下划线"处理（见 [render] 里那段注释）——
-     * 那里不能顺手 trim 尾部，否则会把**取值内容**里的下划线也删掉。
+     * ⚠️ 只删 [trimmableTail] 个字符（它们一定是模板分隔下划线）：
+     * 不能对整个字符串做 `_+$` —— 那样连**取值内容**末尾的下划线都会被删掉
+     * （2026-09-15 复审 L1）。
      */
-    private fun trimOrphanSeparator(builder: StringBuilder) {
-        val trimmed = trailingSeparators.replace(builder.toString(), "")
-        builder.setLength(0)
-        builder.append(trimmed)
+    private fun dropOrphanSeparator(builder: StringBuilder, trimmableTail: Int): Int {
+        if (trimmableTail > 0) {
+            builder.setLength(maxOf(0, builder.length - trimmableTail))
+        }
+        return 0
     }
 
     /** 模板按"占位符 / 字面文本"交替切分 */

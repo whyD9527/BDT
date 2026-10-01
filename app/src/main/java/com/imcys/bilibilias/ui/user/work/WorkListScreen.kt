@@ -137,7 +137,10 @@ private fun WorkList(
                 elevation = CardDefaults.cardElevation(defaultElevation = 0.dp), modifier = Modifier.animateItem())
         }
 
-        items(uiState.items, key = { it.bvid }) {
+        // ⚠️ key 必须是"这一条记录"的唯一标识（2026-09-15 复审 H11）：
+        // 原先用 `bvid` —— 同一 UP 的视频在翻页窗口里出现两次（B 站分页整体后移）就会撞 key，
+        // Compose 抛 "Key was already used" 直接崩进程。aid 才是唯一键。
+        items(uiState.items, key = { it.aid }) {
             WorkCard(
                 modifier = Modifier.animateItem(),
                 bvId = it.bvid,

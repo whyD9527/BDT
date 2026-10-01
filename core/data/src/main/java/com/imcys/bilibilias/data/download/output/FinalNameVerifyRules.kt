@@ -89,9 +89,18 @@ object FinalNameVerifyRules {
      * 既然文件就在我们能直接枚举的目录里，就**按目录枚举来判断"哪些是同一份内容"**，
      * 不再依赖 MediaStore 的等值匹配（这正是 H8/RELATIVE_PATH 那类坑的同源教训：
      * 匹配条件写错时，删除会**静默变成 no-op**）。
+     *
+     * @param keepName 本次**刚交付的那一份**在磁盘上的名字（通常传媒体库回读到的 DISPLAY_NAME）。
+     *   它绝不是"旧文件"，必须排除，否则刚写好的成品会被自己删掉 ——
+     *   而判定又只看媒体库回读（名字是对的）→ 报成功、磁盘上却没有文件（2026-09-15 复审）。
      */
-    fun siblingCopies(expectedName: String, names: Collection<String>): List<String> =
+    fun siblingCopies(
+        expectedName: String,
+        names: Collection<String>,
+        keepName: String? = null,
+    ): List<String> =
         names.filter { it == expectedName || isDuplicateNameOf(it, expectedName) }
+            .filterNot { keepName != null && it == keepName }
 
     /**
      * 回读到的 `DISPLAY_NAME` 是不是我们要的正式名。

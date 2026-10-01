@@ -1,6 +1,7 @@
 package com.imcys.bilibilias.download
 
 import android.app.Application
+import android.util.Log
 import com.imcys.bilibilias.common.utils.download.CCJsonToAss
 import com.imcys.bilibilias.common.utils.download.CCJsonToSrt
 import com.imcys.bilibilias.common.utils.toHttps
@@ -43,6 +44,13 @@ class SubtitleDownloader(
                 videoInfoRepository.getVideoCCInfo((finalUrl + url).toHttps())
             }.onSuccess { ccInfo ->
                 val fileContentStr = CCJsonToSrt.jsonToSrt(ccInfo)
+                // ⚠️ 空字幕不要落成 0 字节文件再塞给 ffmpeg（2026-09-15 复审 F7）：
+                // 没有正文（body 为空）时 jsonToSrt 返回空串，原来照样写文件并登记为"内嵌字幕"，
+                // ffmpeg 会拿到一个空输入。
+                if (fileContentStr.isBlank()) {
+                    Log.w("SubtitleDownloader", "字幕内容为空，跳过内嵌: $language")
+                    return@onSuccess
+                }
                 val tempDir = File(context.externalCacheDir, "cc")
                 if (!tempDir.exists()) tempDir.mkdirs()
 
@@ -72,6 +80,11 @@ class SubtitleDownloader(
             val finalUrl = if (!url.contains("https")) "https:" else ""
             val videoCCInfo = videoInfoRepository.getVideoCCInfo((finalUrl + url).toHttps())
             val content = convertCc(videoCCInfo, ccFileType)
+            // 空字幕不写出（同 downloadSubtitlesForEmbed 的理由）
+            if (content.isBlank()) {
+                Log.w("SubtitleDownloader", "字幕内容为空，跳过写出: ${cc.lan}")
+                return@forEach
+            }
             // ⚠️ 后缀必须拼上：这里拼出来的名字**直接就是下载目录里的显示名**，
             // 中间没有哪一层会补后缀。原先是 `"${title}_${cc.lan}_${ccFileType.lowercase()}"`，
             // 于是落盘的是没有后缀的 `某番剧_第1话_zh-CN`（弹幕/媒体那两条路都自带后缀）。

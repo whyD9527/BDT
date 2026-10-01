@@ -54,7 +54,15 @@ class UserInfoRepository(
 
     suspend fun deleteBILIUserByUid(userId: Long) = biliUsersDao.deleteBILIUserByUid(userId)
 
-    suspend fun getBILIUserListByMid(mid: Long) = biliUsersDao.getBILIUserListByUid(mid)
+    /**
+     * 同一个 B 站 mid 下的全部平台账号。
+     *
+     * ⚠️ 2026-09-15 复审 A-M11：原写法 `= biliUsersDao.getBILIUserListByUid(mid)` 把 **B 站 mid**
+     * 传进了"按本地 id 主键子查询"的方法里，子查询必然空 → 调用方（`BILIBILIASAppViewModel`）
+     * 判定"没找到合适的账户平台" → `setUserId(0)` → **用户被静默登出**；
+     * 而这段逻辑本意是"切到同一 mid 的其它平台账号"，从来没有生效过。
+     */
+    suspend fun getBILIUserListByMid(mid: Long) = biliUsersDao.getBILIUserListByMid(mid)
 
     suspend fun getBILIUserListByPlatform(
         loginPlatform: LoginPlatform

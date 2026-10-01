@@ -49,7 +49,9 @@ class QRCodeLoginRepository(
         return when (loginPlatform) {
             LoginPlatform.WEB -> webApiService.qrcodePoll(qrcodeKey).map { networkResult ->
                 networkResult.mapData { tvQRCodeInfo, apiResponse ->
-                    Log.d("networkResult", "getLoginQRCodeInfo: ${apiResponse?.responseHeader}")
+                    // ⚠️ 不要再把整个响应头打进 logcat（2026-09-15 复审 L18）：
+                    // 扫码轮询的响应头里带 `Set-Cookie`，那是登录凭据。
+                    Log.d("networkResult", "getLoginQRCodeInfo: code=${apiResponse?.code}")
                     tvQRCodeInfo
                 }
             }
@@ -112,13 +114,26 @@ class QRCodeLoginRepository(
 
     }
 
+    /**
+     * 校验某个平台账号现在还管不管用。
+     *
+     * ⚠️ 2026-09-15 复审 A-M2：两个 service 的 `checkLoginUserInfo` 原先把响应**剥掉包装层**
+     * 直接解成用户模型，于是真实字段（在 `data` 里）永远解不出来、`code != 0` 也看不出来，
+     * `Result.isSuccess` 恒为 true —— 失效/被风控的账号永远不会被清理，用户也不会被重新登录。
+     * 现在按 `code` 判定：非 0 一律当成**失败**（`runCatching` 转成 Result.failure）。
+     */
     suspend fun checkLoginUserInfo(
         loginPlatform: LoginPlatform,
         accessKey: String? = null
     ): Result<BILILoginUserModel> {
         return runCatching {
             when (loginPlatform) {
-                LoginPlatform.WEB -> webApiService.checkLoginUserInfo().let { loginInfo ->
+                LoginPlatform.WEB -> {
+                    val response = webApiService.checkLoginUserInfo()
+                    if (response.code != 0) {
+                        error("登录信息获取失败: ${response.message ?: response.code}")
+                    }
+                    val loginInfo = response.data ?: error("登录信息为空")
                     if (WebiTokenUtils.key == null) {
                         // 检测Webi
                         loginInfo.wbiImg?.let { WebiTokenUtils.setKey(it) }
@@ -133,16 +148,20 @@ class QRCodeLoginRepository(
                 }
 
                 LoginPlatform.MOBILE,
-                LoginPlatform.TV -> tvAPIService.checkLoginUserInfo(accessKey ?: "")
-                    .let { loginInfo ->
-                        BILILoginUserModel(
-                            face = loginInfo.face,
-                            mid = loginInfo.mid,
-                            level = loginInfo.level,
-                            name = loginInfo.name,
-                            vipState = loginInfo.vip?.status,
-                        )
+                LoginPlatform.TV -> {
+                    val response = tvAPIService.checkLoginUserInfo(accessKey ?: "")
+                    if (response.code != 0) {
+                        error("登录信息获取失败: ${response.message ?: response.code}")
                     }
+                    val loginInfo = response.data ?: error("登录信息为空")
+                    BILILoginUserModel(
+                        face = loginInfo.face,
+                        mid = loginInfo.mid,
+                        level = loginInfo.level,
+                        name = loginInfo.name,
+                        vipState = loginInfo.vip?.status,
+                    )
+                }
             }
         }
     }

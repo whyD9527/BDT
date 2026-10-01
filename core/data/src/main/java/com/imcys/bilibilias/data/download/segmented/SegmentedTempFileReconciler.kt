@@ -26,7 +26,9 @@ import java.io.RandomAccessFile
 object SegmentedTempFileReconciler {
 
     /**
-     * @return 整理后单连接应当认为"已下载"的字节数（即临时文件的新长度）
+     * @return 整理后单连接应当认为"已下载"的字节数（即临时文件的新长度）。
+     *   **返回 -1 表示"截断也没成功、现场不可信"**：调用方必须放弃本次下载，
+     *   绝不能继续（否则单连接会把中间的洞当成已下载，写出长度对、内容错的文件）。
      */
     fun reconcile(
         tempFile: File,
@@ -39,8 +41,21 @@ object SegmentedTempFileReconciler {
         val prefix = (trusted?.contiguousPrefixLength() ?: 0L).coerceAtMost(fileLength)
 
         if (tempFile.exists() && fileLength != prefix) {
-            runCatching {
+            // ⚠️ 截断**必须成功**（2026-09-15 复审 L2）：原来 `runCatching` 把失败吞掉、
+            // 返回值也只用于打日志，而单连接接着会重新读 `tempFile.length()` ——
+            // 截断失败就等于把"有洞的整长文件"交给单连接，产出的坏文件还带着正确长度。
+            // 截断失败时退而求其次：把文件删掉（从 0 重新下）；连删都失败就返回 -1 让上层停手。
+            val truncated = runCatching {
                 RandomAccessFile(tempFile, "rw").use { it.setLength(prefix) }
+                tempFile.length() == prefix
+            }.getOrDefault(false)
+
+            if (!truncated) {
+                val deleted = runCatching { tempFile.delete() }.getOrDefault(false)
+                metaFile.delete()
+                File("${metaFile.path}.tmp").delete()
+                // 删除成功 ⇒ 从 0 开始是安全的；删除失败 ⇒ 现场不可信，让调用方放弃
+                return if (deleted) 0L else -1L
             }
         }
         // 边车已经交给单连接了，留着只会让下次的分片尝试信任一份过期的进度

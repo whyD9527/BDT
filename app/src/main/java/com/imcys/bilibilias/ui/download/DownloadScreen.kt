@@ -381,9 +381,11 @@ private fun EditTopTools(
         OutlinedButton(
             shape = CardDefaults.shape,
             onClick = {
-                completedSegments.forEach { segment ->
-                    toggleSelection(selectDeleteList, segment)
-                }
+                // ⚠️ 按钮文案是「取消全选 / Deselect All」（`download_deselect_all`），
+                // 而原实现是**逐个取反 = 反选** —— 英/日/韩等 9 种语言下，用户想清空选择，
+                // 结果未选中的全被选中，接着点删除就会**删掉本不想删的任务与文件**（2026-09-15 复审 M3）。
+                // 行为改成与文案一致：清空选择（删得更少，是安全的方向）。
+                selectDeleteList.clear()
             },
             border = CardDefaults.outlinedCardBorder()
         ) {

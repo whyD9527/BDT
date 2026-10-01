@@ -19,6 +19,7 @@ import com.imcys.bilibilias.network.config.QN
 import com.imcys.bilibilias.network.config.SIGN
 import com.imcys.bilibilias.network.config.TS
 import com.imcys.bilibilias.network.httpRequest
+import com.imcys.bilibilias.network.model.BiliApiResponse
 import com.imcys.bilibilias.network.model.TVBILILoginUserInfo
 import com.imcys.bilibilias.network.model.TVQRCodeInfo
 import com.imcys.bilibilias.network.model.TvQRCodePollInfo
@@ -77,7 +78,13 @@ class BILIBILITVAPIService(
             }
         }
 
-    suspend fun checkLoginUserInfo(accessKey: String): TVBILILoginUserInfo =
+    /**
+     * TV / APP 端登录信息（同样必须带 `code/data` 包装层）。
+     *
+     * 原写法直接 `.body<TVBILILoginUserInfo>()` → 字段全 null、`code` 判断也无从谈起，
+     * 账号有效性校验形同虚设（2026-09-15 复审 A-M2）。
+     */
+    suspend fun checkLoginUserInfo(accessKey: String): BiliApiResponse<TVBILILoginUserInfo> =
         httpClient.get(TV_LOGIN_INFO_URL) {
             setAppParams(
                 mutableMapOf(

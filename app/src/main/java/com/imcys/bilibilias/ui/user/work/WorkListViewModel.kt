@@ -107,8 +107,14 @@ class WorkListViewModel(
                             val data = result.data
                             val newList = data?.list ?: emptyList()
                             _uiState.update { s ->
-                                val merged =
-                                    if (isRefresh || isClear) newList else s.items + newList
+                                // ⚠️ 追加时按 aid 去重（2026-09-15 复审 H11）：B 站分页在翻页期间
+                                // 会整体后移，同一视频可能同时出现在前后两页 —— 不去重就会给
+                                // LazyGrid 喂重复 key（"Key was already used" 直接崩）。
+                                val merged = if (isRefresh || isClear) {
+                                    newList.distinctBy { it.aid }
+                                } else {
+                                    (s.items + newList).distinctBy { it.aid }
+                                }
                                 s.copy(
                                     items = merged,
                                     page = page,

@@ -64,7 +64,6 @@ import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
-import androidx.lifecycle.ViewModelStoreOwner
 import coil3.compose.AsyncImage
 import com.imcys.bilibilias.R
 import com.imcys.bilibilias.common.event.AnalysisEvent
@@ -108,8 +107,12 @@ internal fun UserScreen(
     onToCoinVide: (mid: Long) -> Unit,
     onToPlayHistory: () -> Unit,
 ) {
-    val owner = LocalContext.current as ViewModelStoreOwner
-    val vm = koinViewModel<UserViewModel>(viewModelStoreOwner = owner)
+    // ⚠️ 不要 `LocalContext.current as ViewModelStoreOwner`（2026-09-15 复审 L13）：
+    // 宿主不是 Activity（被 ContextThemeWrapper 包住、或 ComposeView 嵌在非 Activity 场景）时
+    // 直接 ClassCastException 崩溃；就算成立，也会把 VM 提到 Activity 作用域、跨用户页共享旧状态。
+    // 直接走 `koinViewModel()` 的默认 owner（内部就是 LocalViewModelStoreOwner；它本身可空，
+    // 不要自己取出来当非空参数传）。
+    val vm = koinViewModel<UserViewModel>()
     val pageInfoState by vm.userPageInfoState.collectAsState()
     val userStatInfoState by vm.userStatInfoState.collectAsState()
     val spaceArchiveInfoState by vm.spaceArchiveInfoState.collectAsState()

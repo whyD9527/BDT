@@ -25,6 +25,8 @@ import com.imcys.bilibilias.network.model.video.BILIDonghuaSeasonInfo
 import com.imcys.bilibilias.network.model.video.BILIVideoViewInfo
 import com.imcys.bilibilias.network.model.video.filterWithSinglePage
 import kotlinx.coroutines.flow.last
+import kotlinx.coroutines.sync.Mutex
+import kotlinx.coroutines.sync.withLock
 import kotlinx.serialization.json.Json
 import java.util.Date
 import kotlin.text.ifEmpty
@@ -39,13 +41,23 @@ class DownloadTaskRepository(
 ) {
 
     /**
+     * 「查已有记录 → 决定插/改」这段必须串行（2026-09-15 复审 M9 的一部分）。
+     *
+     * `download_segment` 上**没有** `(node_id, platform_id)` 唯一约束、全仓也没有事务，
+     * 所以两个并发调用都会读到 `existing == null` → 各插一条 → 又回到
+     * "两条同名记录、其中一条永远指向不存在的文件"。UI 没有禁用按钮，双击就能触发。
+     * （真正彻底的修法是加唯一索引 + 事务，那要动 Room schema/迁移，按上一份审计的建议单独立批。）
+     */
+    private val createTaskMutex = Mutex()
+
+    /**
      * 统一入口：根据链接类型创建下载任务
      */
     suspend fun createDownloadTask(
         asLinkResultType: ASLinkResultType,
         downloadViewInfo: DownloadViewInfo
-    ): Result<DownloadTaskTree> {
-        return when (asLinkResultType) {
+    ): Result<DownloadTaskTree> = createTaskMutex.withLock {
+        val result = when (asLinkResultType) {
             is ASLinkResultType.BILI.Donghua -> {
                 createDonghuaDownloadTask(
                     downloadViewInfo.downloadMode,
@@ -66,7 +78,20 @@ class DownloadTaskRepository(
 
             else -> Result.failure(IllegalArgumentException("不支持的链接类型"))
         }
+
+        // ⚠️ 空选择不能当成功（2026-09-15 复审 M2）：原来 pages 过滤后为空会返回空 roots，
+        // 上层却无条件弹「已添加到下载队列」—— 队列里什么都没有，DB 里还留一条没有 segment 的 task。
+        result.mapCatching { tree ->
+            val segmentCount = countSegments(tree.roots)
+            if (segmentCount == 0) {
+                throw IllegalStateException("没有可下载的分集（勾选可能已过期，请重新勾选后再试）")
+            }
+            tree
+        }
     }
+
+    private fun countSegments(nodes: List<DownloadTreeNode>): Int =
+        nodes.sumOf { node -> node.segments.size + countSegments(node.children) }
 
     private suspend fun <T> autoRequestRetry(
         onErrorTip: (NetWorkResult<T?>?) -> String,
@@ -233,9 +258,13 @@ class DownloadTaskRepository(
         cover: String,
         type: DownloadTaskType
     ): DownloadTask {
-        return downloadTaskDao.getTaskByPlatformId(platformId)?.copy(updateTime = Date())?.also {
-            downloadTaskDao.updateTask(it)
-        } ?: DownloadTask(
+        // ⚠️ 必须按 **type** 一起匹配（2026-09-15 复审 M9）：番剧 seasonId 与合集 ugcSeasonId
+        // 是同一个数字命名空间，只按 platform_id 查会把两种任务混成一条（后续只取第一行）。
+        return downloadTaskDao.getTaskByPlatformId(platformId)
+            ?.takeIf { it.type == type }
+            ?.copy(updateTime = Date())
+            ?.also { downloadTaskDao.updateTask(it) }
+            ?: DownloadTask(
             title = title,
             description = description,
             platformId = platformId,

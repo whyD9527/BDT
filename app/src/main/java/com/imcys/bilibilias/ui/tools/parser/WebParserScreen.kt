@@ -38,6 +38,7 @@ import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.viewinterop.AndroidView
 import androidx.navigation3.runtime.NavKey
+import com.imcys.bilibilias.BuildConfig
 import com.imcys.bilibilias.common.event.AnalysisEvent
 import com.imcys.bilibilias.common.event.sendAnalysisEvent
 import com.imcys.bilibilias.common.utils.openLink
@@ -86,7 +87,10 @@ fun WebParserContent(
                 ViewGroup.LayoutParams.MATCH_PARENT,
                 ViewGroup.LayoutParams.MATCH_PARENT
             )
-            setWebContentsDebuggingEnabled(true)
+            // ⚠️ 远程调试只允许 debug 包（2026-09-15 复审 L14）：release 也开着的话，
+            // 任何能连 adb 的人都可以用 chrome://inspect 注入 JS、读这个 WebView 里的页面内容
+            // （它承载的是 B 站页面）。
+            setWebContentsDebuggingEnabled(BuildConfig.DEBUG)
             webChromeClient = object : WebChromeClient() {
                 override fun onProgressChanged(view: WebView?, newProgress: Int) {
                     loadProgress = newProgress
