@@ -47,6 +47,10 @@ class DownloadViewModel(
     private val _duplicateGroups = MutableStateFlow<List<DuplicateDownloadRules.DuplicateGroup>>(emptyList())
     val duplicateGroups = _duplicateGroups.asStateFlow()
 
+    /** 需要用户确认才能删除的那些行（不是本 app 拥有的副本）→ 界面去发起系统确认框 */
+    private val _pendingDeleteUris = MutableStateFlow<List<android.net.Uri>>(emptyList())
+    val pendingDeleteUris = _pendingDeleteUris.asStateFlow()
+
     /** 刷新重复文件分组（进入页面时 / 清理后调用） */
     fun refreshDuplicateGroups() {
         viewModelScope.launch {
@@ -57,16 +61,36 @@ class DownloadViewModel(
         }
     }
 
-    /** 用户确认后清理选中的重复文件；返回是否真的删掉了东西（用于提示文案） */
+    /**
+     * 用户确认后清理选中的重复文件。
+     *
+     * ⚠️ 分两种情况：**本 app 自己下载的文件**可以直接删；**不属于本 app 的行**
+     * （上一版安装留下的、别的 App 写进来的副本）在 Android 11+ 必须走
+     * `MediaStore.createDeleteRequest` 让系统弹确认框 —— 所以这里把这类 uri 通过
+     * [pendingDeleteUris] 交给界面去发起系统确认，而不是静默失败。
+     */
     fun cleanDuplicateFiles(names: List<String>) {
         if (names.isEmpty()) return
         viewModelScope.launch {
-            val deleted = withContext(Dispatchers.IO) {
+            val result = withContext(Dispatchers.IO) {
                 fileOutputManager.deleteFilesByName(DOWNLOAD_RELATIVE_PATH, names)
             }
-            sendToast(if (deleted > 0) "已清理 $deleted 个重复文件" else "没有文件被删除（可能已被移动或没有权限）")
+            if (result.deleted > 0) {
+                sendToast("已清理 ${result.deleted} 个重复文件")
+            }
+            if (result.needsUserConsent.isNotEmpty()) {
+                _pendingDeleteUris.value = result.needsUserConsent
+            } else if (result.deleted == 0) {
+                sendToast("没有文件被删除（可能已被移动，或需要「所有文件访问」权限）")
+            }
             refreshDuplicateGroups()
         }
+    }
+
+    /** 系统删除确认框结束后调用：清掉待确认列表并重新扫描 */
+    fun onDeleteRequestFinished() {
+        _pendingDeleteUris.value = emptyList()
+        refreshDuplicateGroups()
     }
 
     // region 事件流

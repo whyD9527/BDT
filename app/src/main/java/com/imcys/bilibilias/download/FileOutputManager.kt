@@ -504,6 +504,20 @@ class FileOutputManager(
     }.getOrNull()?.let { File(it).parentFile }
 
     /**
+     * 「清理重复文件」的结果。
+     *
+     * [needsUserConsent] 是**不属于本 app** 的那些行（别的 App 写进来的、或上一版安装留下的副本）——
+     * Android 11+ 规定删这些行必须走 `MediaStore.createDeleteRequest` 让系统弹确认框，
+     * 直接 `resolver.delete` 会被拒（真机表现：`实际删除=0`、目录纹丝不动）。
+     * 调用方拿到这些 uri 后必须去启动那个系统确认框，否则清理就变成"静默 no-op"。
+     */
+    data class CleanupResult(
+        val deleted: Int,
+        val needsUserConsent: List<android.net.Uri>,
+    )
+
+
+    /**
      * 「挪到一边」的旧文件：记住它的原名（回滚要用），以及"怎么删/怎么还原"。
      *
      * 两种模式：
@@ -812,29 +826,66 @@ class FileOutputManager(
      *
      * @return 实际删掉的个数（0 也要打日志 —— "删除静默失效"是这次踩过好几次的坑）
      */
-    fun deleteFilesByName(relativePath: String, names: List<String>): Int {
-        if (names.isEmpty()) return 0
+    fun deleteFilesByName(relativePath: String, names: List<String>): CleanupResult {
+        if (names.isEmpty()) return CleanupResult(0, emptyList())
         val dir = resolveDownloadDir(relativePath)
         val resolver = context.contentResolver
         val direct = hasAllFilesAccess()
         var deleted = 0
+        val needsConsent = mutableListOf<android.net.Uri>()
         names.forEach { name ->
             val target = File(dir, name)
             if (direct) {
                 if (runCatching { target.delete() }.getOrDefault(false)) deleted++
                 return@forEach
             }
-            val uri = scanFileBlocking(target) ?: return@forEach
-            val dataPath = contentDataPath(resolver, uri)
-            if (dataPath != null && dataPath != target.absolutePath) {
-                Log.w(TAG, "扫描回来的行不是目标文件，跳过删除: $name → $dataPath")
+            // 先 scanFile 拿行；拿不到再按名字 + 相对路径查一次（能出现在枚举结果里就说明行是存在的）
+            val uri = scanFileBlocking(target) ?: queryUriByName(resolver, relativePath, name)
+            if (uri == null) {
+                trace("清理重复文件: 找不到 $name 对应的媒体库行，跳过")
                 return@forEach
             }
-            runCatching { resolver.delete(uri, null, null) }.onSuccess { deleted += it }
+            val dataPath = contentDataPath(resolver, uri)
+            if (dataPath != null && dataPath != target.absolutePath) {
+                trace("清理重复文件: 扫描回来的行不是目标文件，跳过: $name → $dataPath")
+                return@forEach
+            }
+            val rows = runCatching { resolver.delete(uri, null, null) }.getOrDefault(0)
+            if (rows > 0) {
+                deleted += rows
+            } else {
+                // ⚠️ 不是本 app 的行（上一版安装留下的、别的 App 写进来的副本）：
+                // Android 11+ 必须走 MediaStore.createDeleteRequest 让系统弹确认框，
+                // 直接 delete 会被拒 —— 真机表现就是"实际删除=0、目录纹丝不动"。
+                needsConsent += uri
+            }
         }
-        trace("清理重复文件: 目标=${names.size} 实际删除=$deleted 直删=$direct 目录=${dir.absolutePath}")
-        return deleted
+        trace(
+            "清理重复文件: 目标=${names.size} 实际删除=$deleted 待用户确认=${needsConsent.size} " +
+                "直删=$direct 目录=${dir.absolutePath}",
+        )
+        return CleanupResult(deleted, needsConsent)
     }
+
+    /** 按显示名 + 相对路径前缀找出某个文件的媒体库行 uri（删除/发起用户确认都要用它） */
+    fun queryUriByName(
+        resolver: android.content.ContentResolver,
+        relativePath: String,
+        displayName: String,
+    ): android.net.Uri? = runCatching {
+        val rel = relativePath.trim('/')
+        val collection = MediaStore.Files.getContentUri("external")
+        resolver.query(
+            collection,
+            arrayOf(MediaStore.Files.FileColumns._ID),
+            "${MediaStore.Files.FileColumns.DISPLAY_NAME} = ? AND " +
+                "${MediaStore.Files.FileColumns.RELATIVE_PATH} LIKE ?",
+            arrayOf(displayName, "$rel/%"),
+            null,
+        )?.use { c ->
+            if (c.moveToFirst()) ContentUris.withAppendedId(collection, c.getLong(0)) else null
+        }
+    }.getOrNull()
 
     /** 某个 MediaStore 行当前指向的磁盘路径 */
     private fun contentDataPath(

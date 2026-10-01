@@ -1,5 +1,7 @@
 package com.imcys.bilibilias.ui.download
 
+import android.provider.MediaStore
+import androidx.activity.result.IntentSenderRequest
 import android.Manifest
 import android.content.pm.PackageManager
 import android.os.Build
@@ -152,6 +154,28 @@ fun DownloadScreen(route: DownloadRoute, onToBack: () -> Unit) {
                 ) == PackageManager.PERMISSION_GRANTED,
         )
     }
+    // 系统删除确认框（删"不是本 app 拥有"的副本时必须走它）
+    val pendingDeleteUris by vm.pendingDeleteUris.collectAsState()
+    val deleteRequestLauncher = rememberLauncherForActivityResult(
+        ActivityResultContracts.StartIntentSenderForResult(),
+    ) {
+        vm.onDeleteRequestFinished()
+    }
+    LaunchedEffect(pendingDeleteUris) {
+        val uris = pendingDeleteUris
+        if (uris.isNotEmpty() && Build.VERSION.SDK_INT >= Build.VERSION_CODES.R) {
+            runCatching {
+                val intent = MediaStore.createDeleteRequest(context.contentResolver, uris)
+                deleteRequestLauncher.launch(
+                    IntentSenderRequest.Builder(intent.intentSender).build(),
+                )
+            }.onFailure {
+                vm.onDeleteRequestFinished()
+                sendToastEventOnBlocking("无法发起系统删除确认，请改用「所有文件访问」权限")
+            }
+        }
+    }
+
     val videoPermissionLauncher = rememberLauncherForActivityResult(
         ActivityResultContracts.RequestPermission(),
     ) { granted ->
