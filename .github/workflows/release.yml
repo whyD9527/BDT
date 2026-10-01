@@ -90,6 +90,8 @@ jobs:
       # ⚠️ 这一步是防"tag 与代码里的版本号对不上"：Release 页面显示的版本号必须和
       # APK 里的一致，否则用户会以为下载错了版本（也会让"哪些人升过级"无法判断）。
       - name: Verify version matches tag
+        # 只在 tag 触发时校验；手动触发（分支）没有 tag 可比，跳过而不是报错
+        if: github.ref_type == 'tag'
         run: |
           VERSION_NAME=$(grep -E 'versionName = "' app/build.gradle.kts | head -1 | sed -E 's/.*"([^"]+)".*/\1/')
           TAG="${GITHUB_REF_NAME#v}"
