@@ -267,4 +267,33 @@
     <string name="cd_web_scan">Web Scan</string>
     <string name="cd_tv_scan">TV Scan</string>
     <string name="cd_server_error_icon">Server Error Icon</string>
+
+    <!-- 2026-10-02 A/B 组新增文案（新功能一律走资源，便于本地化） -->
+    <string name="check_duplicate_files">Check for duplicate downloads</string>
+    <string name="duplicate_files_found">%1$d duplicate group(s) found</string>
+    <string name="duplicate_files_removable">Duplicate copies exist; %1$d can be cleaned (keeps the properly named one)</string>
+    <string name="duplicate_files_clean">Clean up</string>
+    <string name="duplicate_cleanup_title">Clean duplicate downloads</string>
+    <string name="duplicate_keep_prefix">Keep: </string>
+    <string name="duplicate_delete_selected">Delete selected (%1$d)</string>
+    <string name="diagnostic_log">Diagnostic log</string>
+    <string name="diagnostic_log_desc">View the last 500 lines of delivery/cleanup/failure trace</string>
+    <string name="download_dir_files">Files in download folder</string>
+    <string name="download_dir_files_desc">List files in Download/BDT and flag those with no download record</string>
+    <string name="export_diagnostic_log">Export diagnostic log</string>
+    <string name="export_diagnostic_log_desc">Export the delivery/cleanup trace to Download/BDT</string>
+    <string name="backup_settings">Back up settings</string>
+    <string name="backup_settings_desc">Export naming rules, platform and quality preferences as JSON</string>
+    <string name="restore_settings">Restore settings</string>
+    <string name="restore_settings_desc">Restore from a backup file (only entries present in the backup are applied)</string>
+    <string name="wifi_only_download">Wi-Fi only</string>
+    <string name="wifi_only_download_desc">Do not start downloads on mobile data</string>
+    <string name="download_speed_limit">Download speed limit</string>
+    <string name="speed_limit_none">Unlimited</string>
+    <string name="retry_all_failed">Retry all</string>
+    <string name="retry_failed_count">%1$d task(s) failed</string>
+    <string name="retry_failed_hint">The failure reason is written to the diagnostic log</string>
+    <string name="file_missing">File missing</string>
+    <string name="view_button">View</string>
+    <string name="export_button">Export</string>
 </resources>

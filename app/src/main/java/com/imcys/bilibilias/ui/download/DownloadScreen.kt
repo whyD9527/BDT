@@ -719,13 +719,13 @@ private fun RetryAllFailedCard(
             verticalAlignment = Alignment.CenterVertically,
         ) {
             Column(Modifier.weight(1f)) {
-                Text("有 $count 个任务下载失败", style = MaterialTheme.typography.titleSmall)
+                Text(stringResource(R.string.retry_failed_count, count), style = MaterialTheme.typography.titleSmall)
                 Text(
-                    "失败原因已写进诊断日志（存储管理 → 诊断日志）",
+                    stringResource(R.string.retry_failed_hint),
                     fontSize = 11.sp,
                 )
             }
-            TextButton(onClick = onRetry) { Text("全部重试") }
+            TextButton(onClick = onRetry) { Text(stringResource(R.string.retry_all_failed)) }
         }
     }
 }

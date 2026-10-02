@@ -248,8 +248,8 @@ fun SettingScreen(
             item {
                 BaseSettingsItem(
                     painter = rememberVectorPainter(Icons.Outlined.Save),
-                    text = "备份设置",
-                    descriptionText = "把命名规则、平台、画质/编码偏好等导出到 Download/BDT（JSON）",
+                    text = stringResource(R.string.backup_settings),
+                    descriptionText = stringResource(R.string.backup_settings_desc),
                     onClick = {
                         val settings = currentAppSettings
                         if (settings == null) {
@@ -285,8 +285,8 @@ fun SettingScreen(
             item {
                 BaseSettingsItem(
                     painter = rememberVectorPainter(Icons.Outlined.Cloud),
-                    text = "恢复设置",
-                    descriptionText = "从备份文件恢复（只覆盖备份里有的项，其余不动）",
+                    text = stringResource(R.string.restore_settings),
+                    descriptionText = stringResource(R.string.restore_settings_desc),
                     onClick = { restoreSettingsLauncher.launch(arrayOf("application/json", "*/*")) }
                 )
             }
@@ -307,8 +307,8 @@ fun SettingScreen(
             item {
                 SwitchSettingsItem(
                     imageVector = Icons.Outlined.Cloud,
-                    text = "仅 Wi-Fi 下载",
-                    description = "移动数据下不开始下载（避免偷跑流量）；Wi-Fi 下不受影响",
+                    text = stringResource(R.string.wifi_only_download),
+                    description = stringResource(R.string.wifi_only_download_desc),
                     checked = wifiOnlyDownload,
                 ) { check ->
                     haptics.switchHapticFeedback(check)
@@ -319,8 +319,8 @@ fun SettingScreen(
             item {
                 BaseSettingsItem(
                     painter = rememberVectorPainter(Icons.Outlined.Speed),
-                    text = "下载限速",
-                    descriptionText = if (speedLimitKbps <= 0) "不限速" else "$speedLimitKbps KB/s",
+                    text = stringResource(R.string.download_speed_limit),
+                    descriptionText = if (speedLimitKbps <= 0) stringResource(R.string.speed_limit_none) else "$speedLimitKbps KB/s",
                     onClick = { showSpeedLimitDialog = true }
                 )
             }

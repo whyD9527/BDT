@@ -1,5 +1,6 @@
 package com.imcys.bilibilias.ui.setting.storage
 
+import androidx.compose.ui.res.stringResource
 import androidx.compose.foundation.layout.Spacer
 import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.heightIn
@@ -258,10 +259,10 @@ fun StorageManagementSuccessScreen(
         }
 
         StorageContent(
-            title = "导出诊断日志",
+            title = stringResource(R.string.export_diagnostic_log),
             dataNumStr = "",
-            description = "把下载/清理的轨迹日志导出到 Download/BDT，排查问题时发给开发者",
-            buttonText = "导出",
+            description = stringResource(R.string.export_diagnostic_log_desc),
+            buttonText = stringResource(R.string.export_button),
             buttonColor = MaterialTheme.colorScheme.primary,
             onClick = {
                 diagnosticScope.launch {
@@ -280,10 +281,10 @@ fun StorageManagementSuccessScreen(
         )
 
         StorageContent(
-            title = "诊断日志",
+            title = stringResource(R.string.diagnostic_log),
             dataNumStr = "",
-            description = "看最近 500 行交付/清理/失败轨迹（可导出、可清空）",
-            buttonText = "查看",
+            description = stringResource(R.string.diagnostic_log_desc),
+            buttonText = stringResource(R.string.view_button),
             buttonColor = MaterialTheme.colorScheme.primary,
             onClick = {
                 diagnosticScope.launch {
@@ -295,10 +296,10 @@ fun StorageManagementSuccessScreen(
         )
 
         StorageContent(
-            title = "下载目录文件",
+            title = stringResource(R.string.download_dir_files),
             dataNumStr = "",
-            description = "列出 Download/BDT 里的文件（含子目录），标出没有下载记录的孤儿文件",
-            buttonText = "查看",
+            description = stringResource(R.string.download_dir_files_desc),
+            buttonText = stringResource(R.string.view_button),
             buttonColor = MaterialTheme.colorScheme.primary,
             onClick = {
                 diagnosticScope.launch {
