@@ -1,6 +1,8 @@
 package com.imcys.bilibilias.ui.analysis
 
 import android.content.Context
+import com.imcys.bilibilias.R
+import com.imcys.bilibilias.common.utils.AppStrings
 import android.util.Log
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
@@ -59,6 +61,12 @@ class AnalysisViewModel(
     private val appSettingsRepository: AppSettingsRepository,
     // 解析失败也写进轨迹：这台 ROM 会过滤 logcat，"为什么没解析出来"以前只能靠用户复述
     private val fileOutputManager: com.imcys.bilibilias.download.FileOutputManager,
+    /**
+     * 只用来取文案（i18n 批次 E7c）：VM 里原本写死中文，英文环境下永远是中文。
+     * `AppStrings` 只是 `Application.getString` 的小包装 —— 为什么不直接注 `Application`，
+     * 见那个类的注释（Koin 4.1.1 + `viewModelOf` 没有直接注入 Application 的先例）。
+     */
+    private val strings: AppStrings,
 ) : ViewModel() {
 
     private val _uiState = MutableStateFlow(AnalysisUIState())
@@ -203,7 +211,7 @@ class AnalysisViewModel(
         saveDirName: String
     ) = withContext(Dispatchers.IO) {
         if (imageUrl.isNullOrEmpty()) {
-            sendToastEvent("图片链接不能为空")
+            sendToastEvent(strings.get(R.string.analysis_image_url_empty))
             return@withContext
         }
         // ⚠️ 后缀统一走 DownloadPredecessorRules.coverExtension（2026-09-15 复审 L9）：
@@ -220,7 +228,11 @@ class AnalysisViewModel(
             )
         }.getOrDefault(false)
         // ⚠️ 只有真的写进相册才报成功（原来无条件弹"保存成功"，insert 失败时是在误导用户）
-        sendToastEvent(if (saved) "保存成功" else "保存失败（相册写入被拒绝或网络异常）")
+        sendToastEvent(
+            strings.get(
+                if (saved) R.string.analysis_image_saved else R.string.analysis_image_save_failed
+            )
+        )
     }
 
     /**
@@ -459,7 +471,7 @@ class AnalysisViewModel(
             null -> {
                 // 原先这里是空的：非 B 站文本（或畸形链接）被识别为 null 之后什么都不做，
                 // 页面就停在空白上 —— 用户以为"点了解析没反应"。
-                reportParseFailure("没有识别出 B 站链接或 ID（支持 av/BV/ep/ss、短链与 UID）")
+                reportParseFailure(strings.get(R.string.analysis_no_bili_link))
             }
 
         }
@@ -496,7 +508,10 @@ class AnalysisViewModel(
                 }
 
                 else -> reportParseFailure(
-                    "番剧信息获取失败：${it.errorMsg ?: "接口未返回数据"}"
+                    strings.get(
+                        R.string.analysis_bangumi_failed,
+                        it.errorMsg ?: strings.get(R.string.analysis_api_no_data),
+                    )
                 )
             }
         }
@@ -591,7 +606,7 @@ class AnalysisViewModel(
                 state.parsedFromInput != state.inputAsText
             ) {
                 _uiState.value = _uiState.value.copy(isCreateDownloadLoading = false)
-                sendToastEvent("输入已经变了，请等解析完成后再下载")
+                sendToastEvent(strings.get(R.string.analysis_input_changed))
                 return@launch
             }
             if (uiState.value.asLinkResultType != null && uiState.value.downloadInfo != null) {
@@ -629,9 +644,9 @@ class AnalysisViewModel(
                         uiState.value.asLinkResultType!!,
                         uiState.value.downloadInfo!!
                     )
-                    sendToastEvent("已添加到下载队列")
+                    sendToastEvent(strings.get(R.string.analysis_added_to_queue))
                 } catch (e: Exception) {
-                    sendToastEvent("添加下载任务失败：${e.message}")
+                    sendToastEvent(strings.get(R.string.analysis_add_failed, e.message.orEmpty()))
                 }
             }
             _uiState.value = _uiState.value.copy(isCreateDownloadLoading = false)
@@ -747,7 +762,7 @@ class AnalysisViewModel(
         // 而这里跑在 viewModelScope 的 collect 里、没有 try/catch → 会直接崩进程（见 AsRegexUtil 注释）
         val uid = text.toLongOrNull()
         if (uid == null) {
-            reportParseFailure("UID 格式不正确：$text")
+            reportParseFailure(strings.get(R.string.analysis_uid_invalid, text))
             return
         }
         userInfoRepository.getUserPageInfo(uid).collect {
@@ -768,7 +783,10 @@ class AnalysisViewModel(
                 // 原先这里是空的：短链展开失败（被拦、超时、链接已失效）时页面**什么都不显示**，
                 // 用户看到的就是一个永久空白的解析页。
                 reportParseFailure(
-                    "短链展开失败：${it.message ?: it.javaClass.simpleName}（链接可能已失效，或网络/接口异常）"
+                    strings.get(
+                        R.string.analysis_short_link_failed,
+                        it.message ?: it.javaClass.simpleName,
+                    )
                 )
             }
     }
@@ -851,10 +869,10 @@ class AnalysisViewModel(
      */
     val AnalysisUIState.contentTypeDescription: String
         get() = when {
-            isVideoType -> "视频"
-            isDonghuaType -> "动画"
-            isUserType -> "用户"
-            else -> "未知"
+            isVideoType -> strings.get(R.string.analysis_type_video)
+            isDonghuaType -> strings.get(R.string.analysis_type_anime)
+            isUserType -> strings.get(R.string.analysis_type_user)
+            else -> strings.get(R.string.analysis_type_unknown)
         }
 
     fun updateSelectSingleModel(isSelectSingleModel: Boolean) {

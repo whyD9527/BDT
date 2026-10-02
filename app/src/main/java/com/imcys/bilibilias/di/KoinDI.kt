@@ -2,6 +2,7 @@ package com.imcys.bilibilias.di
 
 import androidx.datastore.core.DataStore
 import com.imcys.bilibilias.BILIBILIASApplication
+import com.imcys.bilibilias.common.utils.AppStrings
 import com.imcys.bilibilias.datastore.AppSettings
 import com.imcys.bilibilias.datastore.userAppSettingsStore
 import com.imcys.bilibilias.download.DownloadExecutor
@@ -41,6 +42,7 @@ import org.koin.dsl.module
 
 
 val appModule = module {
+    single { AppStrings(androidApplication()) }
     single { androidContext().assets }
     single { androidContext().contentResolver }
     single<DataStore<AppSettings>> {

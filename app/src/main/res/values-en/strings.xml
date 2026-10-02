@@ -512,4 +512,20 @@
     <string name="coding_a2">○ HDR10 is the most basic HDR format: static metadata only (no dynamic colour/luminance adjustment), supporting both PQ and HLG curves — Bilibili seems to use only PQ.\n○ HDR Vivid is a domestic HDR standard comparable to Dolby Vision; it supports PQ and HLG, though Bilibili seems to use only PQ, and HDR Vivid videos also output an HDR10 stream for the web and older apps.\n○ Dolby Vision is the highest-standard HDR format, split into several encoding levels called Profiles; Bilibili supports the common streaming Profiles 8.4 and 5.\n▷ Profile8.4 is based on the HLG curve, which lets non-Dolby-Vision devices show it as ordinary HDR10 or map it to SDR without much distortion — very compatible.\n▷ Profile5 is based on the PQ curve; forced playback on unsupported devices looks washed out, and because of its special ICtCp colour space (unlike the common YCbCr) such devices show purple/green colour-mapping errors — but on supported devices Profile5 looks better than Profile8.4.</string>
     <string name="coding_note_dolby">☆ So Bilibili does not deliver full Dolby Vision to every device: P8.4 is broadly supported, P5 is not. If you download a dvh1 file, check in the Bilibili app that Dolby Vision plays correctly before downloading.</string>
     <string name="coding_corrections">(If anything above is wrong or missing, corrections are welcome.)</string>
+    <!-- i18n batch E7c: analysis ViewModel (Application injected for getString) -->
+    <string name="analysis_image_url_empty">Image URL cannot be empty</string>
+    <string name="analysis_image_saved">Saved</string>
+    <string name="analysis_image_save_failed">Save failed (the gallery write was denied, or a network error occurred)</string>
+    <string name="analysis_no_bili_link">No Bilibili link or ID recognised (av/BV/ep/ss, short links and UID are supported)</string>
+    <string name="analysis_bangumi_failed">Failed to load bangumi info: %1$s</string>
+    <string name="analysis_api_no_data">the API returned no data</string>
+    <string name="analysis_input_changed">The input has changed; wait for parsing to finish before downloading</string>
+    <string name="analysis_added_to_queue">Added to the download queue</string>
+    <string name="analysis_add_failed">Failed to add the download task: %1$s</string>
+    <string name="analysis_uid_invalid">Invalid UID format: %1$s</string>
+    <string name="analysis_short_link_failed">Failed to expand the short link: %1$s (the link may have expired, or a network/API error occurred)</string>
+    <string name="analysis_type_video">Video</string>
+    <string name="analysis_type_anime">Anime</string>
+    <string name="analysis_type_user">User</string>
+    <string name="analysis_type_unknown">Unknown</string>
 </resources>

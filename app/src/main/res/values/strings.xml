@@ -512,4 +512,20 @@
     <string name="coding_a2">○ HDR真彩就是HDR10——最基础的HDR格式,只支持静态元数据(整个视频不会有色彩亮度的动态调节) , 支持PQ和HLG两种曲线,不过B站貌似仅支持PQ曲线\n○ HDR Vivid是国产的HDR标准,对标杜比视界,支持PQ和HLG两种曲线,不过B站貌似仅支持PQ曲线,并且HDR Vivid视频还会输出一路HDR真彩用于web及旧版app\n○ 杜比视界是标准最高的HDR格式,不过其分为几个编码等级(level),杜比称作Profile,B站支持流媒体中常见的Profile8.4和Profile5\n▷ Profile8.4基于HLG曲线,这种曲线支持在不支持杜比视界的设备将画面调整为普通的HDR10,也可以直接映射到SDR,不会产生太大的画面失真,兼容性很好\n▷ Profile5基于PQ曲线,这种曲线在不支持的设备上强制播放会显得发灰,并且由于其特殊的ICtCp色彩空间,不同于常见的YCbCr,在不支持的设备上会呈现色彩映射错误的紫绿色,不过在支持的设备上Profile5显示效果是会比Profile8.4更好的</string>
     <string name="coding_note_dolby">☆ 所以B站杜比视界并不是对每个设备都满血提供,P8.4大家都支持,P5可就不一定咯,所以下载到dvh1时最好打开B站看看能不能正常打开播放杜比视界,确保可以正常播放再下载.</string>
     <string name="coding_corrections">（以上内容如有错漏 劳烦各位大佬指正）</string>
+    <!-- i18n 批次 E7c：解析 ViewModel（注入 Application 后用 getString） -->
+    <string name="analysis_image_url_empty">图片链接不能为空</string>
+    <string name="analysis_image_saved">保存成功</string>
+    <string name="analysis_image_save_failed">保存失败（相册写入被拒绝或网络异常）</string>
+    <string name="analysis_no_bili_link">没有识别出 B 站链接或 ID（支持 av/BV/ep/ss、短链与 UID）</string>
+    <string name="analysis_bangumi_failed">番剧信息获取失败：%1$s</string>
+    <string name="analysis_api_no_data">接口未返回数据</string>
+    <string name="analysis_input_changed">输入已经变了，请等解析完成后再下载</string>
+    <string name="analysis_added_to_queue">已添加到下载队列</string>
+    <string name="analysis_add_failed">添加下载任务失败：%1$s</string>
+    <string name="analysis_uid_invalid">UID 格式不正确：%1$s</string>
+    <string name="analysis_short_link_failed">短链展开失败：%1$s（链接可能已失效，或网络/接口异常）</string>
+    <string name="analysis_type_video">视频</string>
+    <string name="analysis_type_anime">动画</string>
+    <string name="analysis_type_user">用户</string>
+    <string name="analysis_type_unknown">未知</string>
 </resources>
