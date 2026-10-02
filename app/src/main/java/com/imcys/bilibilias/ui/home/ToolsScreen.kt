@@ -1,5 +1,6 @@
 package com.imcys.bilibilias.ui.home
 
+import com.imcys.bilibilias.ui.setting.feedback.FeedbackRoute
 import android.content.ClipData
 import android.content.ClipboardManager
 import android.content.Context
@@ -138,7 +139,10 @@ private fun ToolsContent(vm: HomeViewModel, onToPage: (NavKey) -> Unit) {
         vm.updateUseToolRecord(toolInfo)
         when (toolInfo) {
             ToolInfo.Feedback -> {
-                showFeedbackDialog = true
+                // 合并（2026-10-02 用户反馈"入口太散"）：这里原来弹的是**又一份自己实现的反馈对话框**
+                // （复制设备信息 + 打开 Issues），与存储管理/版本页重复 ✗ —— 现在直接跳转唯一的
+                // 「问题反馈」诊断中心（状态自检 + 设备信息 + 诊断日志 + 一键导出反馈包 + Issue）。
+                onToPage(FeedbackRoute)
             }
             else -> {
                 onToPage.invoke(toolInfo.navKey)

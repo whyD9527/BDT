@@ -25,6 +25,7 @@ import androidx.compose.material.icons.automirrored.outlined.AirplaneTicket
 import androidx.compose.material.icons.automirrored.outlined.ListAlt
 import androidx.compose.material.icons.filled.ContentPaste
 import androidx.compose.material.icons.outlined.Android
+import androidx.compose.material.icons.outlined.BugReport
 import androidx.compose.material.icons.outlined.Bolt
 import androidx.compose.material.icons.outlined.Cloud
 import androidx.compose.material.icons.outlined.Edit
@@ -103,6 +104,7 @@ fun SettingScreen(
     onToBack: () -> Unit,
     onToAbout: () -> Unit = {},
     onToVersionInfo: () -> Unit = {},
+    onToFeedback: () -> Unit = {},
     onToSystemExpand: () -> Unit = {},
     onToStorageManagement: () -> Unit = {},
     onToNamingConvention: () -> Unit = {},
@@ -496,11 +498,14 @@ fun SettingScreen(
             }
 
             item {
+                // 合并后的**唯一**反馈/诊断入口：状态自检 + 设备与版本信息 + 诊断日志 + 一键导出反馈包
+                // （原先散在三处：存储管理导出日志、版本信息复制信息、工具列表的 BugReport；
+                //   2026-10-02 用户反馈"入口太散、还得自己找文件"→ 收敛到这里）
                 BaseSettingsItem(
-                    painter = rememberVectorPainter(Icons.Outlined.Android),
-                    text = stringResource(R.string.setting_device_info),
-                    descriptionText = stringResource(R.string.setting_device_info_desc),
-                    onClick = onToVersionInfo
+                    painter = rememberVectorPainter(Icons.Outlined.BugReport),
+                    text = stringResource(R.string.feedback_title),
+                    descriptionText = stringResource(R.string.feedback_subtitle),
+                    onClick = onToFeedback
                 )
 
             }

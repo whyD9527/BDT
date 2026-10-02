@@ -106,6 +106,51 @@ class AppCrashActivity : ComponentActivity() {
                 }) {
                     Text(stringResource(R.string.error_copy_error))
                 }
+                Spacer(Modifier.width(10.dp))
+                Button(onClick = {
+                    // 合并（2026-10-02 用户反馈）：崩溃时**一键**导出反馈包并分享 ——
+                    // 不再让用户自己跑去「存储管理 → 导出诊断日志」找文件（原先提示就是这么写的 ✗）。
+                    coroutineScope.launch {
+                        runCatching {
+                            val manager = org.koin.core.context.GlobalContext.get()
+                                .get<com.imcys.bilibilias.download.FileOutputManager>()
+                            val crashTail = java.io.File(getExternalFilesDir(null), "logs/crash.log")
+                                .takeIf { it.exists() }
+                                ?.readLines()
+                                ?.takeLast(200)
+                                ?.joinToString("\n")
+                            val report = com.imcys.bilibilias.data.diagnostics.FeedbackReportRules.buildReportText(
+                                status = emptyList(),
+                                deviceInfo = com.imcys.bilibilias.common.utils.DeviceInfoUtils
+                                    .getDeviceInfoCopyString(this@AppCrashActivity)
+                                    .lines()
+                                    .mapNotNull { line ->
+                                        val i = line.indexOf('：').takeIf { it > 0 } ?: line.indexOf(':')
+                                        if (i > 0) line.substring(0, i).trim() to line.substring(i + 1).trim() else null
+                                    },
+                                logTail = appErrorMsg,
+                                crashTail = crashTail,
+                            )
+                            val fileName = com.imcys.bilibilias.data.diagnostics.FeedbackReportRules.reportFileName(
+                                java.text.SimpleDateFormat("yyyyMMdd-HHmmss", java.util.Locale.US)
+                                    .format(java.util.Date()),
+                            )
+                            manager.exportTextToDownload(fileName, report, "text/plain")
+                            startActivity(
+                                android.content.Intent.createChooser(
+                                    android.content.Intent(android.content.Intent.ACTION_SEND).apply {
+                                        type = "text/plain"
+                                        putExtra(android.content.Intent.EXTRA_SUBJECT, fileName)
+                                        putExtra(android.content.Intent.EXTRA_TEXT, report)
+                                    },
+                                    getString(R.string.feedback_export_share_title),
+                                ),
+                            )
+                        }
+                    }
+                }) {
+                    Text(stringResource(R.string.crash_export_report))
+                }
 
 
             }

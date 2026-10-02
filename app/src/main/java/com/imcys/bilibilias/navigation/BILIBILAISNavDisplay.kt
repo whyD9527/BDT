@@ -1,5 +1,7 @@
 package com.imcys.bilibilias.navigation
 
+import com.imcys.bilibilias.ui.setting.feedback.FeedbackRoute
+import com.imcys.bilibilias.ui.setting.feedback.FeedbackScreen
 import androidx.compose.ui.res.stringResource
 import com.imcys.bilibilias.R
 import androidx.compose.animation.ContentTransform
@@ -309,6 +311,7 @@ fun BILIBILAISNavDisplay() {
                         onToLayoutTypeset = { backStack.addWithReuse(LayoutTypesetRoute) },
                         onToAbout = { backStack.addWithReuse(AboutRouter) },
                         onToVersionInfo = { backStack.addWithReuse(AppVersionInfoRoute) },
+                        onToFeedback = { backStack.addWithReuse(FeedbackRoute) },
                         onToSystemExpand = { backStack.addWithReuse(SystemExpandRoute) },
                         onToStorageManagement = { backStack.addWithReuse(StorageManagementRoute) },
                         onToNamingConvention = { backStack.addWithReuse(NamingConventionRoute) },
@@ -394,6 +397,15 @@ fun BILIBILAISNavDisplay() {
                 ) {
                     AppVersionInfoScreen(
                         appVersionInfoRoute = it,
+                        onToBack = { backStack.removeLastOrNullSafe() }
+                    )
+                }
+
+                entry<FeedbackRoute>(
+                    metadata = ListDetailSceneStrategy.detailPane()
+                ) {
+                    FeedbackScreen(
+                        feedbackRoute = it,
                         onToBack = { backStack.removeLastOrNullSafe() }
                     )
                 }

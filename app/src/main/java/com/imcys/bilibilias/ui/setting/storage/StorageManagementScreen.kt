@@ -260,42 +260,6 @@ fun StorageManagementSuccessScreen(
             }
         }
 
-        StorageContent(
-            title = stringResource(R.string.export_diagnostic_log),
-            dataNumStr = "",
-            description = stringResource(R.string.export_diagnostic_log_desc),
-            buttonTextRes = R.string.export_button,
-            buttonColor = MaterialTheme.colorScheme.primary,
-            onClick = {
-                diagnosticScope.launch {
-                    val name = withContext(Dispatchers.IO) { fileOutputManager.exportTraceLog() }
-                    Toast.makeText(
-                        context,
-                        if (name != null) {
-                            context.getString(R.string.storage_exported_in_download_dir, name)
-                        } else {
-                            context.getString(R.string.storage_no_log_to_export)
-                        },
-                        Toast.LENGTH_LONG,
-                    ).show()
-                }
-            },
-        )
-
-        StorageContent(
-            title = stringResource(R.string.diagnostic_log),
-            dataNumStr = "",
-            description = stringResource(R.string.diagnostic_log_desc),
-            buttonTextRes = R.string.view_button,
-            buttonColor = MaterialTheme.colorScheme.primary,
-            onClick = {
-                diagnosticScope.launch {
-                    val text = withContext(Dispatchers.IO) { fileOutputManager.readTraceText(500) }
-                    traceLines = text.lines()
-                    showDiagnosticLogDialog = true
-                }
-            },
-        )
 
         StorageContent(
             title = stringResource(R.string.download_dir_files),
@@ -313,33 +277,6 @@ fun StorageManagementSuccessScreen(
             },
         )
 
-        if (showDiagnosticLogDialog) {
-            DiagnosticLogDialog(
-                lines = traceLines,
-                onExport = {
-                    diagnosticScope.launch {
-                        val name = withContext(Dispatchers.IO) { fileOutputManager.exportTraceLog() }
-                        Toast.makeText(
-                            context,
-                            if (name != null) {
-                                context.getString(R.string.storage_exported, name)
-                            } else {
-                                context.getString(R.string.storage_no_log_to_export_short)
-                            },
-                            Toast.LENGTH_LONG,
-                        ).show()
-                    }
-                },
-                onClear = {
-                    diagnosticScope.launch {
-                        withContext(Dispatchers.IO) { fileOutputManager.clearTrace() }
-                        traceLines = emptyList()
-                        Toast.makeText(context, context.getString(R.string.storage_log_cleared), Toast.LENGTH_SHORT).show()
-                    }
-                },
-                onDismiss = { showDiagnosticLogDialog = false },
-            )
-        }
 
         if (showLocalFilesDialog) {
             LocalFilesDialog(

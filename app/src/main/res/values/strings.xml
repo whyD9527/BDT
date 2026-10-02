@@ -236,7 +236,7 @@
     <!-- 崩溃页（2026-10-02 重开 AppCrashHandler 时新增） -->
     <string name="crash_error_title">发生错误：%1$s</string>
     <string name="crash_unknown_error">未知错误</string>
-    <string name="crash_log_saved_hint">完整堆栈已写入应用私有目录的 logs/crash.log；可用「存储管理 → 导出诊断日志」一起导出。</string>
+    <string name="crash_log_saved_hint">完整报告已保存，可在「设置 → 问题反馈」一键导出并分享</string>
     
     <!-- Download info related strings -->
     <string name="download_info_title">下载信息</string>
@@ -685,4 +685,41 @@
     <string name="quality_suffix_smooth">流畅</string>
     <string name="update_download">下载</string>
     <string name="update_skip_version">跳过此版本</string>
+    <!-- i18n：问题反馈（合并后的诊断中心） -->
+    <string name="feedback_title">问题反馈</string>
+    <string name="feedback_subtitle">一屏看清状态，一键导出反馈包</string>
+    <string name="feedback_section_status">状态自检</string>
+    <string name="feedback_section_device">设备与版本信息</string>
+    <string name="feedback_section_log">诊断日志</string>
+    <string name="feedback_status_app_version">应用版本</string>
+    <string name="feedback_status_update">更新检查</string>
+    <string name="feedback_status_privacy">隐私政策</string>
+    <string name="feedback_status_all_files">所有文件访问</string>
+    <string name="feedback_status_notification">通知权限</string>
+    <string name="feedback_status_line">当前线路</string>
+    <string name="feedback_status_naming">命名规则</string>
+    <string name="feedback_value_agreed">已同意</string>
+    <string name="feedback_value_declined">未同意</string>
+    <string name="feedback_value_granted">已授权</string>
+    <string name="feedback_value_denied">未授权</string>
+    <string name="feedback_value_enabled">已开启</string>
+    <string name="feedback_value_disabled">已关闭</string>
+    <string name="feedback_value_unknown">未知</string>
+    <string name="feedback_hint_privacy">未同意时：不会自动识别剪贴板、不会检查更新</string>
+    <string name="feedback_hint_all_files">未授权时：新下载可能无法入库、同名覆盖可能失效</string>
+    <string name="feedback_hint_notification">关闭后：收不到下载通知，也无法在通知栏「全部暂停/取消」</string>
+    <string name="feedback_action_export">一键导出反馈包</string>
+    <string name="feedback_action_copy_all">复制全部信息</string>
+    <string name="feedback_action_open_issue">打开 GitHub Issue</string>
+    <string name="feedback_action_view_log">查看诊断日志</string>
+    <string name="feedback_action_check_update">检查更新</string>
+    <string name="feedback_exporting">正在导出反馈包…</string>
+    <string name="feedback_export_done">已导出，正在打开分享…</string>
+    <string name="feedback_export_failed">导出失败：%1$s</string>
+    <string name="feedback_export_share_title">分享反馈包</string>
+    <string name="feedback_copy_done">已复制到剪贴板</string>
+    <string name="feedback_open_issue_failed">打不开浏览器</string>
+    <string name="feedback_need_attention">需要处理</string>
+    <string name="feedback_issue_body">请在应用内「问题反馈」页导出反馈包后一并附上。</string>
+    <string name="crash_export_report">导出反馈包并分享</string>
 </resources>

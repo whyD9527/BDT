@@ -236,7 +236,7 @@
     <!-- Crash page (added when AppCrashHandler was re-enabled) -->
     <string name="crash_error_title">Error: %1$s</string>
     <string name="crash_unknown_error">Unknown error</string>
-    <string name="crash_log_saved_hint">The full stack trace was saved to logs/crash.log; export it together from Storage → Export diagnostic log.</string>
+    <string name="crash_log_saved_hint">The full report is saved — export and share it in Settings → Feedback</string>
 
     <!-- Download info related strings -->
     <string name="download_info_title">Download Information</string>
@@ -685,4 +685,41 @@
     <string name="quality_suffix_smooth">Smooth</string>
     <string name="update_download">Download</string>
     <string name="update_skip_version">Skip this version</string>
+    <!-- i18n: feedback / diagnostics hub -->
+    <string name="feedback_title">Feedback &amp; diagnostics</string>
+    <string name="feedback_subtitle">Check status and export a report in one tap</string>
+    <string name="feedback_section_status">Status check</string>
+    <string name="feedback_section_device">Device &amp; version</string>
+    <string name="feedback_section_log">Diagnostic log</string>
+    <string name="feedback_status_app_version">App version</string>
+    <string name="feedback_status_update">Update check</string>
+    <string name="feedback_status_privacy">Privacy policy</string>
+    <string name="feedback_status_all_files">All files access</string>
+    <string name="feedback_status_notification">Notification permission</string>
+    <string name="feedback_status_line">Current line</string>
+    <string name="feedback_status_naming">Naming rule</string>
+    <string name="feedback_value_agreed">Agreed</string>
+    <string name="feedback_value_declined">Not agreed</string>
+    <string name="feedback_value_granted">Granted</string>
+    <string name="feedback_value_denied">Not granted</string>
+    <string name="feedback_value_enabled">On</string>
+    <string name="feedback_value_disabled">Off</string>
+    <string name="feedback_value_unknown">Unknown</string>
+    <string name="feedback_hint_privacy">While not agreed: no clipboard auto-detect, no update check</string>
+    <string name="feedback_hint_all_files">While not granted: new downloads may not be indexed; same-name replace may fail</string>
+    <string name="feedback_hint_notification">While off: no download notifications, no PAUSE/CANCEL ALL from the shade</string>
+    <string name="feedback_action_export">Export report</string>
+    <string name="feedback_action_copy_all">Copy all info</string>
+    <string name="feedback_action_open_issue">Open a GitHub issue</string>
+    <string name="feedback_action_view_log">View diagnostic log</string>
+    <string name="feedback_action_check_update">Check for updates</string>
+    <string name="feedback_exporting">Exporting report…</string>
+    <string name="feedback_export_done">Exported, opening share…</string>
+    <string name="feedback_export_failed">Export failed: %1$s</string>
+    <string name="feedback_export_share_title">Share report</string>
+    <string name="feedback_copy_done">Copied to clipboard</string>
+    <string name="feedback_open_issue_failed">Couldn't open the browser</string>
+    <string name="feedback_need_attention">Needs attention</string>
+    <string name="feedback_issue_body">Please export the report from the in-app Feedback page and attach it.</string>
+    <string name="crash_export_report">Export report &amp; share</string>
 </resources>
