@@ -203,6 +203,7 @@
     <string name="download_deselect_all">取消全选</string>
     <string name="download_delete_confirm_title">删除下载任务</string>
     <string name="download_delete_confirm_message">确定要删除选中的任务记录和文件吗？</string>
+    <string name="download_delete_single_message">是否删除该下载任务及其文件？</string>
     <string name="download_caching">AS视频缓存中...</string>
     
     <!-- User screen related strings -->
@@ -258,11 +259,22 @@
     <string name="status_completed_title">已完成下载</string>
     <string name="status_failed">失败</string>
     <string name="status_waiting">等待中</string>
+    <string name="status_error">错误</string>
+    <string name="status_cancelled">已取消</string>
+    <string name="status_downloading_percent">下载中:%1$d%%</string>
+    <string name="status_merging_percent">合并中:%1$d%%</string>
+    <string name="status_pre_task">前置任务中</string>
+    <string name="status_post_task">后置任务中</string>
     
     <!-- Content descriptions -->
     <string name="cd_back">返回</string>
     <string name="cd_more_actions">操作</string>
     <string name="cd_download_qrcode">下载二维码</string>
+    <string name="cd_cover_image">封面图片</string>
+    <string name="cd_cancel_download">取消下载</string>
+    <string name="cd_pause_download">暂停下载</string>
+    <string name="cd_resume_download">继续下载</string>
+    <string name="cd_delete_download_task">删除下载任务</string>
     <string name="cd_go_scan">去扫描</string>
     <string name="cd_login_qrcode">登录二维码</string>
     <string name="cd_not_agree_privacy">未勾选同意隐私政策</string>

@@ -203,6 +203,7 @@
     <string name="download_deselect_all">Deselect All</string>
     <string name="download_delete_confirm_title">Delete Download Task</string>
     <string name="download_delete_confirm_message">Are you sure you want to delete the selected task record and files?</string>
+    <string name="download_delete_single_message">Delete this download task and its files?</string>
     <string name="download_caching">AS video caching...</string>
 
     <!-- User screen related strings -->
@@ -258,11 +259,22 @@
     <string name="status_completed_title">Download Completed</string>
     <string name="status_failed">Failed</string>
     <string name="status_waiting">Waiting</string>
+    <string name="status_error">Error</string>
+    <string name="status_cancelled">Cancelled</string>
+    <string name="status_downloading_percent">Downloading: %1$d%%</string>
+    <string name="status_merging_percent">Merging: %1$d%%</string>
+    <string name="status_pre_task">Running pre-task</string>
+    <string name="status_post_task">Running post-task</string>
 
     <!-- Content descriptions -->
     <string name="cd_back">Back</string>
     <string name="cd_more_actions">Actions</string>
     <string name="cd_download_qrcode">Download QR Code</string>
+    <string name="cd_cover_image">Cover image</string>
+    <string name="cd_cancel_download">Cancel download</string>
+    <string name="cd_pause_download">Pause download</string>
+    <string name="cd_resume_download">Resume download</string>
+    <string name="cd_delete_download_task">Delete download task</string>
     <string name="cd_go_scan">Go to Scan</string>
     <string name="cd_login_qrcode">Login QR Code</string>
     <string name="cd_not_agree_privacy">Privacy Policy Not Agreed</string>

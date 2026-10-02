@@ -97,7 +97,7 @@ fun DownloadTaskCard(
                     modifier = Modifier
                         .fillMaxSize(),
                     shape = CardDefaults.shape,
-                    contentDescription = "封面图片"
+                    contentDescription = stringResource(R.string.cd_cover_image)
                 )
             }
 
@@ -158,15 +158,23 @@ fun DownloadTaskCard(
 
                     Text(
                         when (task.downloadState) {
-                            DownloadState.WAITING -> "等待中"
-                            DownloadState.PAUSE -> "已暂停"
-                            DownloadState.DOWNLOADING -> "下载中:${ceil(animatedProgress * 100).toInt()}%"
-                            DownloadState.MERGING -> "合并中:${ceil(animatedProgress * 100).toInt()}%"
-                            DownloadState.COMPLETED -> "已完成"
-                            DownloadState.ERROR -> "错误"
-                            DownloadState.CANCELLED -> "已取消"
-                            DownloadState.PRE_TASK -> "前置任务中"
-                            DownloadState.POST_TASK -> "后置任务中"
+                            DownloadState.WAITING -> stringResource(R.string.status_waiting)
+                            DownloadState.PAUSE -> stringResource(R.string.status_paused)
+                            DownloadState.DOWNLOADING -> stringResource(
+                                R.string.status_downloading_percent,
+                                ceil(animatedProgress * 100).toInt(),
+                            )
+
+                            DownloadState.MERGING -> stringResource(
+                                R.string.status_merging_percent,
+                                ceil(animatedProgress * 100).toInt(),
+                            )
+
+                            DownloadState.COMPLETED -> stringResource(R.string.status_completed)
+                            DownloadState.ERROR -> stringResource(R.string.status_error)
+                            DownloadState.CANCELLED -> stringResource(R.string.status_cancelled)
+                            DownloadState.PRE_TASK -> stringResource(R.string.status_pre_task)
+                            DownloadState.POST_TASK -> stringResource(R.string.status_post_task)
                         },
                         fontSize = 14.sp,
                         fontWeight = FontWeight.W400
@@ -198,7 +206,7 @@ fun DownloadTaskCard(
                         Spacer(Modifier.width(10.dp))
                         Icon(
                             Icons.Outlined.Close,
-                            contentDescription = "取消下载",
+                            contentDescription = stringResource(R.string.cd_cancel_download),
                             modifier = Modifier.clickable {
                                 onCancel()
                             }
@@ -215,9 +223,9 @@ fun DownloadTaskCard(
                                 Icons.Outlined.PlayArrow
                             },
                             contentDescription = if (task.downloadState == DownloadState.DOWNLOADING) {
-                                "暂停下载"
+                                stringResource(R.string.cd_pause_download)
                             } else {
-                                "继续下载"
+                                stringResource(R.string.cd_resume_download)
                             },
                             modifier = Modifier.clickable {
                                 if (task.downloadState == DownloadState.DOWNLOADING) {
@@ -273,7 +281,7 @@ fun DownloadFinishTaskCard(
                     modifier = Modifier
                         .fillMaxSize(),
                     shape = CardDefaults.shape,
-                    contentDescription = "封面图片"
+                    contentDescription = stringResource(R.string.cd_cover_image)
                 )
             }
 
@@ -356,7 +364,7 @@ fun DownloadFinishTaskCard(
                         ASIconButton(onClick = {
                             showDeleteDialog = true
                         }) {
-                            Icon(Icons.Outlined.Delete, contentDescription = "删除下载任务")
+                            Icon(Icons.Outlined.Delete, contentDescription = stringResource(R.string.cd_delete_download_task))
                         }
                     } else {
                         Checkbox(
@@ -375,7 +383,7 @@ fun DownloadFinishTaskCard(
             AlertDialog(
                 onDismissRequest = { showDeleteDialog = false },
                 title = { Text(stringResource(R.string.download_delete_confirm_title)) },
-                text = { Text("是否删除该下载任务及其文件？") },
+                text = { Text(stringResource(R.string.download_delete_single_message)) },
                 confirmButton = {
                     ASTextButton(
                         onClick = {
