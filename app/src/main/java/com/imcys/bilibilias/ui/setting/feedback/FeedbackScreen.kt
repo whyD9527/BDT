@@ -72,7 +72,9 @@ fun FeedbackContent(
     LaunchedEffect(Unit) {
         runCatching { privacyAgreed = appSettingsRepository.hasAgreedPrivacyPolicy() }
         runCatching {
-            val text = fileOutputManager.exportTraceLog().orEmpty()
+            // ⚠️ 这里**必须用 readTraceText**（读内容）；exportTraceLog 的语义是「导出并返回文件名」✗ ——
+            // 真机复验就抓到过这个 bug：日志段为空、更新检查显示 '-'，还每次打开页面都多导出一份日志文件。
+            val text = runCatching { fileOutputManager.readTraceText(500) }.getOrDefault("")
             traceText = text
             lastUpdateLine = text.lineSequence()
                 .lastOrNull { it.contains("[更新检查]") }
