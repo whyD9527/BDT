@@ -114,6 +114,16 @@ interface DownloadTaskDao {
         updateSegmentRaw(segment.copy(updateTime = Date()))
     }
 
+    /**
+     * 只改**标题**一列（B2 批量重命名：让记录标题跟着文件名走）。
+     *
+     * ⚠️ 刻意不用 [updateSegmentRaw]（`@Update` 整行覆盖 + 刷新 `updateTime`）：
+     * 1. 整行覆盖会把界面上的**旧快照**写回去，可能盖掉并发写入的 `savePath`/状态等字段；
+     * 2. 刷新 `updateTime` 会让"按时间排序"的列表因为"改了个名字"就把这一条跳到最前面。
+     */
+    @Query("UPDATE download_segment SET title = :title WHERE segment_id = :segmentId")
+    suspend fun updateSegmentTitle(segmentId: Long, title: String)
+
     @Query("DELETE FROM download_segment WHERE segment_id = :segmentId")
     suspend fun deleteSegmentById(segmentId: Long)
 

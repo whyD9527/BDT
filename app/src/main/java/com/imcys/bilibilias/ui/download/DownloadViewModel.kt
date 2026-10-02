@@ -15,6 +15,7 @@ import java.io.FileNotFoundException
 import com.imcys.bilibilias.data.download.record.DownloadRecordDisplayRules
 import com.imcys.bilibilias.download.DownloadDir
 import com.imcys.bilibilias.data.download.output.BatchRenameRules
+import com.imcys.bilibilias.data.download.output.FinalNameVerifyRules
 import com.imcys.bilibilias.data.download.output.DuplicateDownloadRules
 import com.imcys.bilibilias.download.FileOutputManager
 import com.imcys.bilibilias.download.NewDownloadManager
@@ -348,7 +349,8 @@ class DownloadViewModel(
      * 2. 每个文件改完都由 `FileOutputManager.renameDownloadFile` **回读真实显示名**，
      *    结果通过 [DownloadUiEvent.RenameFinished] 原样告诉用户。
      *
-     * 只改文件、不动记录：`savePath` 是 content URI（行的 `_ID` 不变）→ 记录依然有效。
+     * `savePath` 不用动（content URI，行的 `_ID` 不变）；但**记录标题会跟着文件名一起改**
+     * （2026-10-02 用户决定）：只更新 `title` 一列，见 `DownloadTaskDao.updateSegmentTitle`。
      */
     fun renameSelectedTasks(segments: List<DownloadSegment>, newBaseName: String) {
         if (segments.isEmpty()) return
@@ -370,7 +372,18 @@ class DownloadViewModel(
         viewModelScope.launch {
             val results = withContext(Dispatchers.IO) {
                 segments.mapIndexed { index, segment ->
-                    fileOutputManager.renameDownloadFile(segment.savePath, baseNames[index])
+                    val actual = fileOutputManager.renameDownloadFile(segment.savePath, baseNames[index])
+                    if (actual != null) {
+                        // 记录标题跟着**回读到的真实文件名**走（去掉扩展名），
+                        // 这样列表显示的名字与文件管理器里看到的完全一致（含撞名后的 `(N)`）。
+                        val newTitle = FinalNameVerifyRules.splitName(actual).first
+                        if (newTitle.isNotBlank() && newTitle != segment.title) {
+                            runCatching {
+                                downloadTaskRepository.updateSegmentTitle(segment.segmentId, newTitle)
+                            }
+                        }
+                    }
+                    actual
                 }
             }
             _uiEvent.emit(

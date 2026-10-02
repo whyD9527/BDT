@@ -884,6 +884,10 @@ class DownloadTaskRepository(
     suspend fun updateSegment(segment: DownloadSegment) =
         downloadTaskDao.updateSegment(segment)
 
+    /** 只改某条下载记录的标题（B2 批量重命名用；不动 updateTime、不整行覆盖） */
+    suspend fun updateSegmentTitle(segmentId: Long, title: String) =
+        downloadTaskDao.updateSegmentTitle(segmentId, title)
+
     suspend fun deleteSegmentById(segmentId: Long) =
         downloadTaskDao.deleteSegmentById(segmentId)
 

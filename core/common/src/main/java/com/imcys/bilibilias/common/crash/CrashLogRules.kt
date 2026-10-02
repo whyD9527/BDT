@@ -20,8 +20,10 @@ object CrashLogRules {
 
     const val FILE_NAME = "crash.log"
 
-    /** 崩溃日志上限：超了就整体重写（崩溃信息"最新一份"最有价值，不做无限追加） */
-    const val MAX_BYTES = 128 * 1024
+    /** 崩溃日志上限：超了就整体重写（崩溃信息"最新一份"最有价值，不做无限追加）。
+     *  用 `Long` 是因为要和 `File.length()`（Long）比较 —— CI 第一次就是这里报
+     *  `Initializer type mismatch: expected 'Long', actual 'Int'`（`shouldRotate` 的默认值）。 */
+    const val MAX_BYTES = 128L * 1024
 
     /**
      * 放进 Intent 送给崩溃页的**上限**。
