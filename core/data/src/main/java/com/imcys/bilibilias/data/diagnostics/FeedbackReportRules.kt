@@ -56,7 +56,9 @@ object FeedbackReportRules {
         namingSummary: String?,
     ): List<StatusItem> = listOf(
         StatusItem(StatusKey.APP_VERSION, appVersion.ifBlank { "-" }, true),
-        StatusItem(StatusKey.UPDATE, updateResult?.ifBlank { null } ?: "-", updateResult != null),
+        // 更新检查：**没有结果不算"需要处理"**（只是这次没查到 / 还没查过）——
+        // 有新版本时字符串本身就会写「发现新版本 vX.Y.Z」，用户一眼能看到，不必再标红。
+        StatusItem(StatusKey.UPDATE, updateResult?.ifBlank { null } ?: "-", true),
         StatusItem(StatusKey.PRIVACY, if (privacyAgreed) "agreed" else "declined", privacyAgreed),
         StatusItem(StatusKey.ALL_FILES_ACCESS, if (allFilesAccess) "granted" else "denied", allFilesAccess),
         StatusItem(StatusKey.NOTIFICATION, if (notificationEnabled) "enabled" else "disabled", notificationEnabled),
