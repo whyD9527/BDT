@@ -44,6 +44,7 @@ import com.imcys.bilibilias.data.diagnostics.FeedbackReportRules
 import com.imcys.bilibilias.data.repository.AppSettingsRepository
 import com.imcys.bilibilias.download.FileOutputManager
 import kotlinx.coroutines.flow.first
+import kotlinx.coroutines.launch
 
 /**
  * 「问题反馈」页（合并后的诊断中心）。
