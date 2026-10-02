@@ -1,6 +1,6 @@
 package com.imcys.bilibilias.ui.analysis
 
-import com.imcys.bilibilias.ui.download.downloadModeLabel
+import com.imcys.bilibilias.ui.download.downloadModeLabelRes
 import ClipboardAutoHandler
 import android.Manifest.permission
 import android.content.pm.PackageManager
@@ -533,10 +533,13 @@ private fun AdvancedSetting(
             ) {
                 Text(stringResource(R.string.analysis_cache_config))
                 Column {
+                    // F 收尾：`onValue` 是非 @Composable 的映射 lambda，不能在里面调 stringResource
+                    // → 先在 Composable 作用域取 context，再用非 @Composable 的 downloadModeLabelRes 拿资源
+                    val modeLabelContext = androidx.compose.ui.platform.LocalContext.current
                     ASCommonExposedDropdownMenu(
                         modifier = Modifier.fillMaxWidth(),
                         values = downloadModeList,
-                        onValue = { it.title },
+                        onValue = { modeLabelContext.getString(downloadModeLabelRes(it)) },
                         label = stringResource(R.string.analysis_select_cache_mode),
                         text = selectDownloadMode.title,
                         onSelect = {
