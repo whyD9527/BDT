@@ -131,7 +131,7 @@ fun BangumiFollowContent(
         when (val state = itemList.loadState.refresh) {
             is LoadState.Error -> {
                 item {
-                    CommonError(errorMsg = stringResource(R.string.bangumi_load_failed, state.error), onRetry = {
+                    CommonError(errorMsg = stringResource(R.string.common_load_failed, state.error), onRetry = {
                         itemList.refresh()
                     })
                 }
@@ -157,7 +157,7 @@ fun BangumiFollowContent(
             }
 
             is LoadState.Error -> item(span = { GridItemSpan(1) }) {
-                CommonError(stringResource(R.string.bangumi_load_failed, append.error), onRetry = {
+                CommonError(stringResource(R.string.common_load_failed, append.error), onRetry = {
                     itemList.retry()
                 })
             }

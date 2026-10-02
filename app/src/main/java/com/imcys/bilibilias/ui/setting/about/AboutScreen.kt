@@ -62,7 +62,7 @@ fun AboutScreen(aboutRouter: AboutRouter = AboutRouter, onToBack: () -> Unit = {
                 ),
                 scrollBehavior = scrollBehavior,
                 style = BILIBILIASTopAppBarStyle.Large,
-                title = { Text(text = "关于") },
+                title = { Text(text = stringResource(R.string.setting_about_item)) },
                 navigationIcon = {
                     AsBackIconButton { onToBack.invoke() }
                 },
@@ -118,7 +118,7 @@ fun TitleArea(
         )
 
         Text(
-            text = "一款简单的视频缓存工具",
+            text = stringResource(R.string.about_slogan),
             textAlign = TextAlign.Center,
             fontSize = 17.sp
         )
@@ -132,15 +132,7 @@ fun TitleArea(
             ) {
                 Text(
                     modifier = Modifier.padding(top = 12.dp),
-                    text = """
-                        本应用基于开源项目 BILIBILIAS 的源码二次开发，仅供个人自用。
-
-                        请尊重每一位创作者的劳动成果，缓存内容不得二次传播；
-                        请勿将本软件用于任何商业用途，一切后果自负。
-
-                        原项目 BILIBILIAS 由原作者开发，现已停止维护。
-                        本构建所做的改动（换皮、隐私加固、下载修复等）均与原项目及其作者无关。
-                    """.trimIndent(),
+                    text = stringResource(R.string.about_open_source_notice),
                 )
             }
         }

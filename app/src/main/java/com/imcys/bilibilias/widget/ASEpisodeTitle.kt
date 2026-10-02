@@ -1,5 +1,7 @@
 package com.imcys.bilibilias.widget
 
+import androidx.compose.ui.res.stringResource
+import com.imcys.bilibilias.R
 import androidx.compose.animation.AnimatedVisibility
 import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.Spacer
@@ -41,7 +43,7 @@ fun ASEpisodeTitle(
             ) {
                 Icon(
                     Icons.Outlined.SelectAll,
-                    contentDescription = "全选",
+                    contentDescription = stringResource(R.string.cd_select_all),
                 )
             }
         }
@@ -64,14 +66,14 @@ fun ASEpisodeTitle(
                 AppSettings.EpisodeListMode.EpisodeListMode_Grid -> {
                     Icon(
                         Icons.Outlined.Apps,
-                        contentDescription = "表格显示",
+                        contentDescription = stringResource(R.string.cd_view_grid),
                     )
                 }
 
                 AppSettings.EpisodeListMode.EpisodeListMode_List -> {
                     Icon(
                         Icons.AutoMirrored.Outlined.List,
-                        contentDescription = "列表显示",
+                        contentDescription = stringResource(R.string.cd_view_list),
                     )
                 }
             }

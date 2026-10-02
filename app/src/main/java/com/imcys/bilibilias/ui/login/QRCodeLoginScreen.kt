@@ -684,7 +684,7 @@ private fun QRCodeContent(
             Spacer(Modifier.height(15.dp))
             ASWarringTip{
                 Text(
-                    "登录后将自动切换对应的平台解析，也可在设置切换，如果您不熟悉，建议直接Web登录。",
+                    stringResource(R.string.login_platform_switch_hint),
                     fontSize = 14.sp
                 )
             }

@@ -189,7 +189,7 @@ fun UserCard(modifier: Modifier = Modifier, mid: Long, name: String, level: Int,
                 ASAsyncImage(
                     model = face,
                     shape = MaterialShapes.Cookie12Sided.toShape(),
-                    contentDescription = "头像",
+                    contentDescription = stringResource(R.string.cd_avatar),
                     modifier = Modifier
                         .aspectRatio(1f)
                 )

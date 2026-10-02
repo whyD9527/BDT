@@ -1,5 +1,7 @@
 package com.imcys.bilibilias.widget
 
+import androidx.compose.ui.res.stringResource
+import com.imcys.bilibilias.R
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.padding
@@ -41,6 +43,6 @@ fun ASAgreePrivacyPolicy(agreePrivacyPolicy: Boolean, onClick: () -> Unit) {
                 .scale(0.75f)
                 .size(20.dp)
         )
-        Text("我已阅读并同意本应用的隐私说明", fontSize = 14.sp)
+        Text(stringResource(R.string.privacy_agree_checkbox), fontSize = 14.sp)
     }
 }

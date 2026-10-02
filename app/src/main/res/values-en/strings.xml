@@ -538,7 +538,6 @@
     <string name="cd_linked_account_avatar">Linked account avatar</string>
     <string name="user_name_fallback">Username</string>
     <string name="user_sign_fallback">Bio</string>
-    <string name="bangumi_load_failed">Load failed \n%1$s</string>
     <string name="cd_bangumi_cover">Bangumi cover</string>
     <!-- i18n batch E8b: copyright apply / complaints / version info -->
     <string name="copyright_notice_title">Important notice:</string>
@@ -622,4 +621,27 @@
     <string name="storage_available_space">Available</string>
     <string name="storage_used_space">Used</string>
     <string name="storage_app_space">App usage</string>
+    <!-- i18n batch E11b1: long-tail clean-up -->
+    <string name="common_load_failed">Load failed \n%1$s</string>
+    <string name="user_recent_play_title">Recently played</string>
+    <string name="cd_select_all">Select all</string>
+    <string name="cd_view_grid">Grid view</string>
+    <string name="cd_view_list">List view</string>
+    <string name="app_open_link_failed">Cannot open the link</string>
+    <string name="select_model_single">Single</string>
+    <string name="select_model_multi">Multiple</string>
+    <string name="analysis_parse_current_page">Parse this page</string>
+    <string name="like_page_like">Likes</string>
+    <string name="like_page_coin">Coins</string>
+    <string name="work_search_hint">Search uploads</string>
+    <string name="work_list_title">Uploads</string>
+    <string name="privacy_agree_checkbox">I have read and agree to the privacy notice of this app</string>
+    <string name="cd_frame_image">Frame image</string>
+    <string name="list_detail_empty_hint">Choose an option on the right</string>
+    <string name="about_slogan">A simple video caching tool</string>
+    <string name="about_open_source_notice">This app is a secondary development based on the open-source project BILIBILIAS, for personal use only.\n\nPlease respect the work of every creator; cached content must not be redistributed.\nDo not use this software for any commercial purpose; you bear all consequences.\n\nThe original project BILIBILIAS was developed by its original author and is no longer maintained.\nThe changes in this build (rebranding, privacy hardening, download fixes and so on) are unrelated to the original project and its author.</string>
+    <string name="expand_permission_title">Permission expansion</string>
+    <string name="expand_permission_desc">Use Shizuku to provide ADB permissions and unlock more features.</string>
+    <string name="expand_capability_title">Extended capabilities</string>
+    <string name="login_platform_switch_hint">After signing in, the matching parse platform is selected automatically; you can also change it in Settings. If you are not sure, use web login.</string>
 </resources>

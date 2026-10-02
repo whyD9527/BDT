@@ -538,7 +538,6 @@
     <string name="cd_linked_account_avatar">关联账户头像</string>
     <string name="user_name_fallback">用户名</string>
     <string name="user_sign_fallback">个性签名</string>
-    <string name="bangumi_load_failed">加载失败 \n%1$s</string>
     <string name="cd_bangumi_cover">番剧封面</string>
     <!-- i18n 批次 E8b：版权申请 / 投诉 / 版本信息 -->
     <string name="copyright_notice_title">重要通知:</string>
@@ -622,4 +621,27 @@
     <string name="storage_available_space">可用空间</string>
     <string name="storage_used_space">已用空间</string>
     <string name="storage_app_space">APP占用空间</string>
+    <!-- i18n 批次 E11b1：长尾收尾 -->
+    <string name="common_load_failed">加载失败 \n%1$s</string>
+    <string name="user_recent_play_title">最近播放</string>
+    <string name="cd_select_all">全选</string>
+    <string name="cd_view_grid">表格显示</string>
+    <string name="cd_view_list">列表显示</string>
+    <string name="app_open_link_failed">无法打开链接</string>
+    <string name="select_model_single">单选</string>
+    <string name="select_model_multi">多选</string>
+    <string name="analysis_parse_current_page">解析当前页面</string>
+    <string name="like_page_like">点赞</string>
+    <string name="like_page_coin">投币</string>
+    <string name="work_search_hint">搜索投稿</string>
+    <string name="work_list_title">投稿</string>
+    <string name="privacy_agree_checkbox">我已阅读并同意本应用的隐私说明</string>
+    <string name="cd_frame_image">帧图片</string>
+    <string name="list_detail_empty_hint">请选择右侧选项</string>
+    <string name="about_slogan">一款简单的视频缓存工具</string>
+    <string name="about_open_source_notice">本应用基于开源项目 BILIBILIAS 的源码二次开发，仅供个人自用。\n\n请尊重每一位创作者的劳动成果，缓存内容不得二次传播；\n请勿将本软件用于任何商业用途，一切后果自负。\n\n原项目 BILIBILIAS 由原作者开发，现已停止维护。\n本构建所做的改动（换皮、隐私加固、下载修复等）均与原项目及其作者无关。</string>
+    <string name="expand_permission_title">权限扩展</string>
+    <string name="expand_permission_desc">使用Shizuku提供ADB权限，解锁更多功能。</string>
+    <string name="expand_capability_title">扩展能力</string>
+    <string name="login_platform_switch_hint">登录后将自动切换对应的平台解析，也可在设置切换，如果您不熟悉，建议直接Web登录。</string>
 </resources>

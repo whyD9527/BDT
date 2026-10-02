@@ -1,5 +1,7 @@
 package com.imcys.bilibilias.widget
 
+import androidx.compose.ui.res.stringResource
+import com.imcys.bilibilias.R
 import androidx.compose.foundation.Image
 import androidx.compose.foundation.background
 import androidx.compose.foundation.layout.Box
@@ -59,7 +61,7 @@ fun ASFramePlayer(modifier: Modifier, list: List<Bitmap>, fps: Int) {
     Box(modifier = modifier) {
         Image(
             bitmap = list[currentFrame].asImageBitmap(),
-            contentDescription = "帧图片",
+            contentDescription = stringResource(R.string.cd_frame_image),
             modifier = Modifier.fillMaxSize()
         )
         Text(

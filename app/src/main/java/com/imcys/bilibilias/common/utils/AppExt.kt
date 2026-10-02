@@ -1,5 +1,6 @@
 package com.imcys.bilibilias.common.utils
 
+import com.imcys.bilibilias.R
 import android.content.ClipData
 import android.content.ClipboardManager
 import android.content.Context
@@ -21,7 +22,7 @@ fun Context.openLink(url: String) {
        }
        startActivity(intent)
    } catch (e: Exception) {
-         Toast.makeText(this, "无法打开链接", Toast.LENGTH_SHORT).show()
+         Toast.makeText(this, getString(R.string.app_open_link_failed), Toast.LENGTH_SHORT).show()
    }
 }
 
@@ -30,7 +31,7 @@ fun String.copyText(context: Context, title: String) {
         context.getSystemService(Context.CLIPBOARD_SERVICE) as ClipboardManager
     val clip = ClipData.newPlainText(title, this)
     clipboard.setPrimaryClip(clip)
-    sendToastEventOnBlocking("已复制到剪贴板")
+    sendToastEventOnBlocking(getString(R.string.tools_copied_to_clipboard))
 }
 
 suspend fun <T> autoRequestRetry(

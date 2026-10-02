@@ -1,5 +1,7 @@
 package com.imcys.bilibilias.ui.user.history
 
+import androidx.compose.ui.res.stringResource
+import com.imcys.bilibilias.R
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.PaddingValues
@@ -103,7 +105,7 @@ fun UserPlayHistoryContent(vm: UserPlayHistoryViewModel, paddingValues: PaddingV
         when (val state = itemList.loadState.refresh) {
             is LoadState.Error -> {
                 item(span = { GridItemSpan(2) }) {
-                    CommonError(errorMsg = "加载失败 \n ${state.error}", onRetry = {
+                    CommonError(errorMsg = stringResource(R.string.common_load_failed, state.error), onRetry = {
                         itemList.refresh()
                     })
                 }
@@ -129,7 +131,7 @@ fun UserPlayHistoryContent(vm: UserPlayHistoryViewModel, paddingValues: PaddingV
             }
 
             is LoadState.Error -> item(span = { GridItemSpan(2) }) {
-                CommonError("加载失败 \n ${append.error}", onRetry = {
+                CommonError(stringResource(R.string.common_load_failed, append.error), onRetry = {
                     itemList.retry()
                 })
             }
@@ -161,7 +163,7 @@ private fun UserPlayHistoryScaffold(
                 scrollBehavior = scrollBehavior,
                 style = BILIBILIASTopAppBarStyle.Large,
                 title = {
-                    Text(text = "最近播放")
+                    Text(text = stringResource(R.string.user_recent_play_title))
                 },
                 navigationIcon = {
                     AsBackIconButton(onClick = {

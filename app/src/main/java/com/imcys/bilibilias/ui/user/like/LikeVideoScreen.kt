@@ -1,5 +1,7 @@
 package com.imcys.bilibilias.ui.user.like
 
+import androidx.compose.ui.res.stringResource
+import com.imcys.bilibilias.R
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.PaddingValues
@@ -135,8 +137,8 @@ private fun LikeVideoScaffold(
                 style = BILIBILIASTopAppBarStyle.Large,
                 title = {
                     Text(text = when(pageType){
-                        LikePageType.LIKE -> "点赞"
-                        LikePageType.COIN -> "投币"
+                        LikePageType.LIKE -> stringResource(R.string.like_page_like)
+                        LikePageType.COIN -> stringResource(R.string.like_page_coin)
                     })
                 },
                 navigationIcon = {

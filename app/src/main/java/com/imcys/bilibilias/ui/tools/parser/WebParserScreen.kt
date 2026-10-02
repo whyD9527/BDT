@@ -1,5 +1,7 @@
 package com.imcys.bilibilias.ui.tools.parser
 
+import androidx.compose.ui.res.stringResource
+import com.imcys.bilibilias.R
 import android.view.ViewGroup
 import android.webkit.JavascriptInterface
 import android.webkit.WebChromeClient
@@ -210,7 +212,7 @@ private fun WebParserScaffold(
                 ASTopAppBar(
                     style = BILIBILIASTopAppBarStyle.Small,
                     title = {
-                        Text(text = "网页解析")
+                        Text(text = stringResource(R.string.tools_web_parser_title))
                     },
                     colors = TopAppBarDefaults.topAppBarColors(
                         containerColor = MaterialTheme.colorScheme.surfaceContainer,
@@ -224,7 +226,7 @@ private fun WebParserScaffold(
                         ASIconButton(onClick = {
                             onToAs()
                         }) {
-                            Icon(Icons.Outlined.Check, contentDescription = "解析当前页面")
+                            Icon(Icons.Outlined.Check, contentDescription = stringResource(R.string.analysis_parse_current_page))
                         }
                     }
                 )
