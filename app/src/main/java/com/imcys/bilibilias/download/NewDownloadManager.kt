@@ -1,5 +1,6 @@
 package com.imcys.bilibilias.download
 
+import kotlinx.coroutines.flow.first
 import android.net.ConnectivityManager
 import android.net.NetworkCapabilities
 import com.imcys.bilibilias.data.download.policy.DownloadPolicyRules
@@ -523,7 +524,7 @@ class NewDownloadManager(
         val waiting = _downloadTasks.value.filter { it.downloadState == DownloadState.WAITING }
         if (waiting.isEmpty()) return 0
 
-        val completed = downloadTaskRepository.getSegmentAll()
+        val completed = downloadTaskRepository.getSegmentAll().first()
             .filter { it.downloadState == DownloadState.COMPLETED && it.savePath.isNotBlank() }
             .associateBy { it.platformId to it.downloadMode }
 
