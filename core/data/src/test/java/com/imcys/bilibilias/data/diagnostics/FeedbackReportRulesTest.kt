@@ -73,7 +73,7 @@ class FeedbackReportRulesTest {
     }
 
     @Test
-    fun `文件名与 Issue 链接：带时间戳 / 预填版本与状态`() {
+    fun `文件名与 Issue 链接：带时间戳、预填版本与状态`() {
         assertEquals("BDT-反馈包-20261002-235340.txt", FeedbackReportRules.reportFileName("20261002-235340"))
         val url = FeedbackReportRules.issueUrl("3.3.5", status(privacy = false))
         assertTrue(url.startsWith("https://github.com/whyD9527/BDT/issues/new?body="))
