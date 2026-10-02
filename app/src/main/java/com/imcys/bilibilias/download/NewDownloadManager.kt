@@ -515,8 +515,10 @@ class NewDownloadManager(
      * 为什么不按 `download_task.type` 比：那是**任务级**的字段（VIDEO/BANGUMI…），
      * 而"同一集是否已经下过"更精确的键是 `platformId + downloadMode`（同一个内容 + 同一种产物形态）。
      *
-     * ⚠️ 记录指向的文件**必须还能打开**才算"已下载"（见 FileOutputManager.canOpenSavePath）——
-     * 否则用户删了文件之后会永远下不下来。
+     * ⚠️ 记录指向的文件**必须真的还在**才算"已下载"（见
+     * `FileOutputManager.savePathUsableForReuse`：⑥ 统一判据里的**严**语义，
+     * 要求"能打开或在磁盘上"）—— 只凭"媒体库还有行"就复用，可能复用出一条打不开的记录；
+     * 反过来若判定"不在"，用户删了文件之后也会照常重下，不会永远下不下来。
      */
     private suspend fun skipAlreadyDownloadedWaiting(): Int {
         if (!appSettingsRepository.isSkipDownloaded()) return 0
@@ -533,7 +535,7 @@ class NewDownloadManager(
             val segment = task.downloadSegment
             val existing = completed[segment.platformId to segment.downloadMode] ?: return@forEach
             if (existing.segmentId == segment.segmentId) return@forEach
-            if (!fileOutputManager.canOpenSavePath(existing.savePath)) return@forEach
+            if (!fileOutputManager.savePathUsableForReuse(existing.savePath)) return@forEach
 
             val reused = segment.copy(
                 savePath = existing.savePath,

@@ -12,6 +12,7 @@ import android.util.Log
 import androidx.core.net.toUri
 import com.imcys.bilibilias.common.crash.CrashLogRules
 import com.imcys.bilibilias.data.download.record.DownloadRecordReuseRules
+import com.imcys.bilibilias.data.download.record.SavePathProbeRules
 import com.imcys.bilibilias.data.download.naming.FileNameLengthRules
 import com.imcys.bilibilias.data.download.output.BatchRenameRules
 import com.imcys.bilibilias.data.download.output.DuplicateDownloadRules
@@ -998,19 +999,109 @@ class FileOutputManager(
         null
     }
 
+    /** 一次「savePath 还在不在」探测的结果（[reason] 只进轨迹文件，界面不看它） */
+    data class SavePathProbe(val exists: Boolean, val reason: String)
+
     /**
-     * 这个 `savePath` 现在还能打开吗（B4 用它判断"已下载"是否还成立）。
+     * 「这个 `savePath` 现在还在不在」的**宽判据**（⑥）：给「文件已丢失」标签用。
      *
-     * ⚠️ 失败方向是**安全的**：打不开就 return false → 调用方会**重新下载**，
-     * 不会出现"以为下过就不下了，结果文件其实没了"。
+     * 这台 ROM 上唯一可靠的正信号是 **MediaStore 里还有这一行** —— `File.exists()` 对
+     * MediaProvider 拥有的文件恒 false，而 `openFileDescriptor` 在"真没了"与"没权限"时
+     * 抛的是**同一种** `FileNotFoundException`（§14.2 第 3 条）。
+     * 所以采集四个信号（媒体库行 / 能打开 / 磁盘存在 / 未知异常）后按**宽**语义判定：
+     * 任一为正就算还在，未知异常也按"还在"处理。
+     *
+     * ⚠️ 刻意宽：误标「文件已丢失」会让用户以为记录坏了、去反复排查应用（2026-10-02 误报过一次）。
+     * 需要"能不能复用"时用**严**判据 [savePathUsableForReuse]。
      */
-    fun canOpenSavePath(savePath: String): Boolean = runCatching {
-        val uri = if (savePath.startsWith("content://")) {
-            android.net.Uri.parse(savePath)
-        } else {
-            File(savePath).toUri()
+    fun probeSavePath(savePath: String): SavePathProbe {
+        val signals = probeSignals(savePath)
+        return SavePathProbe(signals.existsLenient, signalsReason(savePath, signals))
+    }
+
+    /**
+     * 「跳过已下载」（B4）用的**严判据**：必须**真的能打开 / 真在磁盘上**才算可复用。
+     *
+     * ⚠️ 与 [probeSavePath] 的唯一分歧：**"MediaStore 有行、但打不开也在磁盘上看不见"** 时
+     * 宽判据说"在"、这里说"不在"。理由：复用一条打不开的记录，用户点开只会失败；
+     * 多下一次只是浪费流量 —— **宁可多下一次**（B4 的原始意图）。
+     */
+    fun savePathUsableForReuse(savePath: String): Boolean = probeSignals(savePath).existsStrict
+
+    /** 采集四个信号（判定在 [SavePathProbeRules.Signals] 里，这里只负责"问 Android"） */
+    private fun probeSignals(savePath: String): SavePathProbeRules.Signals {
+        val shape = SavePathProbeRules.shapeOf(savePath)
+        if (shape == SavePathProbeRules.Shape.BLANK) {
+            return SavePathProbeRules.Signals(shape = shape)
         }
-        context.contentResolver.openFileDescriptor(uri, "r")?.use { true } ?: false
+
+        val resolver = context.contentResolver
+        if (shape == SavePathProbeRules.Shape.CONTENT_URI) {
+            val uri = runCatching { android.net.Uri.parse(savePath) }.getOrNull()
+                ?: return SavePathProbeRules.Signals(shape = shape)
+            val rowFound = queryRowExists(uri)
+            return try {
+                val opened = resolver.openFileDescriptor(uri, "r")?.use { true } ?: false
+                SavePathProbeRules.Signals(shape = shape, mediaRowFound = rowFound, opened = opened)
+            } catch (e: java.io.FileNotFoundException) {
+                // 行在、但打不开：宽判据靠 rowFound 放过（媒体库文件的常态），严判据照旧拒绝
+                SavePathProbeRules.Signals(shape = shape, mediaRowFound = rowFound)
+            } catch (e: Exception) {
+                SavePathProbeRules.Signals(shape = shape, mediaRowFound = rowFound, unknownError = true)
+            }
+        }
+
+        // 文件路径（Android 10 以下 / 历史记录）：
+        // ① 按**文件名**问媒体库（新旧下载目录都问）② 按 `_data` 精确查 ③ 试打开 ④ File.exists()
+        val fileName = SavePathProbeRules.fileNameOf(savePath)
+        val rowByName = runCatching {
+            fileName.isNotEmpty() && DownloadDir.ALL_NAMES.any { name ->
+                downloadDirContains("Download/$name", fileName)
+            }
+        }.getOrElse { false }
+        val rowByData = if (rowByName) false else queryRowByData(savePath)
+        val opened = runCatching {
+            resolver.openFileDescriptor(File(savePath).toUri(), "r")?.use { true } ?: false
+        }.getOrElse { false }
+        return SavePathProbeRules.Signals(
+            shape = shape,
+            mediaRowFound = rowByName || rowByData,
+            opened = opened,
+            fileExists = File(savePath).exists(),
+        )
+    }
+
+    /** 把四个信号拼成一行原因（只进轨迹文件：真机上排查"误报/漏报"全靠它） */
+    private fun signalsReason(savePath: String, signals: SavePathProbeRules.Signals): String {
+        val shape = when (SavePathProbeRules.shapeOf(savePath)) {
+            SavePathProbeRules.Shape.BLANK -> "空"
+            SavePathProbeRules.Shape.CONTENT_URI -> "content"
+            SavePathProbeRules.Shape.FILE_PATH -> "file"
+        }
+        return "形态=$shape 媒体库行=${signals.mediaRowFound} 可打开=${signals.opened} " +
+            "磁盘存在=${signals.fileExists} 未知异常=${signals.unknownError}"
+    }
+
+    /** 某条 content uri 对应的行还在不在（只查 `_ID`，不做额外投影） */
+    private fun queryRowExists(uri: android.net.Uri): Boolean = runCatching {
+        context.contentResolver.query(
+            uri,
+            arrayOf(MediaStore.Files.FileColumns._ID),
+            null,
+            null,
+            null,
+        )?.use { it.moveToFirst() } ?: false
+    }.getOrElse { false }
+
+    /** 按磁盘路径精确查媒体库行（`_data` 对得上 = 行还指着这个文件） */
+    private fun queryRowByData(path: String): Boolean = runCatching {
+        context.contentResolver.query(
+            MediaStore.Files.getContentUri("external"),
+            arrayOf(MediaStore.Files.FileColumns._ID),
+            "${MediaStore.Files.FileColumns.DATA}=?",
+            arrayOf(path),
+            null,
+        )?.use { it.moveToFirst() } ?: false
     }.getOrElse { false }
 
     /** 轨迹或崩溃日志是否有内容（界面用它区分"导出失败"和"还没产生日志"） */

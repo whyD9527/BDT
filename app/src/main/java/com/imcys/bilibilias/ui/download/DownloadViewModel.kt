@@ -10,8 +10,6 @@ import com.imcys.bilibilias.data.repository.DownloadTaskRepository
 import com.imcys.bilibilias.database.entity.download.DownloadSegment
 import com.imcys.bilibilias.database.entity.download.DownloadState
 import com.imcys.bilibilias.datastore.AppSettings
-import android.net.Uri
-import java.io.FileNotFoundException
 import com.imcys.bilibilias.data.download.record.DownloadRecordDisplayRules
 import com.imcys.bilibilias.download.DownloadDir
 import com.imcys.bilibilias.data.download.output.BatchRenameRules
@@ -229,9 +227,12 @@ class DownloadViewModel(
     /**
      * 记录里有媒体路径、但**文件已经不在了**的那些 segmentId（用于列表上标「文件已丢失」）。
      *
-     * ⚠️ 判据只有一条：打开文件抛 `FileNotFoundException`。
-     * 权限不足（SecurityException）、URI 形式不支持等**一律当作"还在"** ——
-     * 宁可多显示一条"看起来正常"的记录，也不能把好记录误标成丢失、更不能据此自动删记录。
+     * ⚠️ 判据已统一到 `FileOutputManager.probeSavePath`（⑥）：**问 MediaStore 优先** ——
+     * 这台 ROM 上"文件真没了"与"文件在、但没权限打开"**抛的是同一个 `FileNotFoundException`**，
+     * 只看异常分不出来（2026-10-02 就误报过一次）。宽判据 = 媒体库行 / 能打开 / 磁盘存在 / 未知异常，
+     * 任一为正就算"还在"；其中 `file://` 路径的"有行"算正信号、`content://` 的不算
+     * （理由见 `SavePathProbeRules` 的类注释：content 的行是本 app 自己的，能开就该开得开）。
+     * 并且**绝不据此自动删记录**。
      */
     private val _missingFileIds = MutableStateFlow<Set<Long>>(emptySet())
     val missingFileIds = _missingFileIds.asStateFlow()
@@ -248,7 +249,9 @@ class DownloadViewModel(
             val missing = withContext(Dispatchers.IO) {
                 val result = mutableSetOf<Long>()
                 targets.forEach { segment ->
-                    val verdict = probeMediaFile(segment.savePath)
+                    // ⑥ 统一判据在 FileOutputManager 里（问 MediaStore 优先），
+                    // 这里只负责把结果落轨迹
+                    val verdict = fileOutputManager.probeSavePath(segment.savePath)
                     if (!verdict.exists) result += segment.segmentId
                     fileOutputManager.logDiagnostic(
                         "文件探测",
@@ -262,39 +265,6 @@ class DownloadViewModel(
         }
     }
 
-    private data class ProbeVerdict(val exists: Boolean, val reason: String)
-
-    /**
-     * 判断记录里的媒体文件**是否还在**。
-     *
-     * ⚠️ 关键难点（2026-10-02 真机）：`openFileDescriptor` 在两种情况下**都抛
-     * `FileNotFoundException`** —— ① 文件真的没了；② 文件在、但 app 没有权限打开
-     * （这台 ROM 上媒体库拥有的文件就是这样，EACCES）。只看异常会把 ② 误判成 ①，
-     * 于是好好的记录被标上「文件已丢失」。
-     *
-     * 所以：`content://` 的 FNF 视为"没了"（行是 app 自己的，能打开）；
-     * `file://` 的 FNF 则**再用"按名字问媒体库"确认一次**。
-     */
-    private fun probeMediaFile(savePath: String): ProbeVerdict = try {
-        val isContent = savePath.startsWith("content://")
-        val uri = if (isContent) Uri.parse(savePath) else File(savePath).toUri()
-        val opened = contentResolver.openFileDescriptor(uri, "r")?.use { true } ?: false
-        ProbeVerdict(opened, if (opened) "打开成功" else "打开返回空")
-    } catch (e: FileNotFoundException) {
-        if (savePath.startsWith("content://")) {
-            ProbeVerdict(false, "content 打不开：FileNotFoundException(${e.message})")
-        } else {
-            val match = runCatching {
-                DownloadDir.ALL_NAMES.any { name ->
-                    fileOutputManager.downloadDirContains("Download/$name", File(savePath).name)
-                }
-            }.getOrElse { false }
-            ProbeVerdict(match, "file 打不开（可能 EACCES）→按名字查媒体库=${if (match) "有行" else "无行"}")
-        }
-    } catch (e: Exception) {
-        // 其它异常一律按"还在"处理：宁可多显示一条，也不能误标丢失
-        ProbeVerdict(true, "${e.javaClass.simpleName}（按存在处理）")
-    }
     // endregion
 
     // region 文件操作
@@ -303,16 +273,18 @@ class DownloadViewModel(
      * 发送事件给 UI 层处理
      */
     fun requestOpenFile(segment: DownloadSegment) {
-        val savePath = segment.savePath
-        // 检查文件是否存在
-        if (!savePath.startsWith("content://")) {
-            val file = File(savePath)
-            if (!file.exists()) {
-                sendToast("文件不存在，可能已被删除")
-                return
-            }
-        }
+        // ⑥ 统一判据：MediaStore 行 / 能打开 / 磁盘存在，任一为正就认为还在。
+        // 原来只对非 content:// 的路径做 `File.exists()` —— 那对媒体库拥有的文件**恒 false**，
+        // 会把"文件其实在、只是不让 stat"的记录拦下并提示"文件不存在"。
+        // 探测要查 MediaStore，放到 IO 线程做。
         viewModelScope.launch {
+            val exists = withContext(Dispatchers.IO) {
+                fileOutputManager.probeSavePath(segment.savePath).exists
+            }
+            if (!exists) {
+                sendToast("文件不存在，可能已被删除")
+                return@launch
+            }
             _uiEvent.emit(DownloadUiEvent.OpenFile(segment))
         }
     }
@@ -421,6 +393,14 @@ class DownloadViewModel(
         }
     }
 
+    /**
+     * 删除某条记录指向的文件。
+     *
+     * ⚠️ 这里**刻意不用** [FileOutputManager.probeSavePath] 的宽判据：删除的语义是
+     * "这个文件现在能不能删"，不是"记录还算不算有效"。宽判据会把"行还在、文件已没了"
+     * 说成"在"，于是只能报"删除失败"；而现在的 `File.exists()` 判据会如实报"文件不存在"，
+     * 对用户更准确。**判据统一 ≠ 所有地方都用同一个**，用途不同就该分开（见 SavePathProbeRules 注释）。
+     */
     private fun deleteFileInternal(savePath: String): DeleteResult {
         return runCatching {
             if (savePath.startsWith("content://")) {
