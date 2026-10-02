@@ -68,19 +68,19 @@ fun PlayVoucherErrorPage(onBlack:()-> Unit = {}) {
             ) {
                 item {
                     Text(
-                        text = "账户风险提示",
+                        text = stringResource(R.string.voucher_title),
                         style = MaterialTheme.typography.titleMedium,
                         color = MaterialTheme.colorScheme.primary,
                         fontWeight = FontWeight.Bold
                     )
                 }
                 val points = listOf(
-                    "您的账号可能正处于哔哩哔哩平台风控监测，可能与曾使用违规第三方程序、异常使用行为或其他违规操作有关，因此被要求进行身份验证。",
-                    "检测到您的 TV 端身份验证状态存在异常。BDT 目前可尝试为您移除 TV 端的身份信息，以协助恢复基本使用。",
-                    "该功能为临时辅助能力，可能随时被取消或收回。",
-                    "继续使用具有违规风险的第三方工具，可能加重账号风险（功能受限、封禁等）。",
-                    "我们可能对异常账号进行标记；必要时可冻结其使用 BDT 的权限。",
-                    "请在操作前充分理解上述风险，所有后果由您自行承担。"
+                    stringResource(R.string.voucher_risk_1),
+                    stringResource(R.string.voucher_risk_2),
+                    stringResource(R.string.voucher_risk_3),
+                    stringResource(R.string.voucher_risk_4),
+                    stringResource(R.string.voucher_risk_5),
+                    stringResource(R.string.voucher_risk_6)
                 )
                 items(points.size) { index ->
                     Text(
@@ -90,7 +90,7 @@ fun PlayVoucherErrorPage(onBlack:()-> Unit = {}) {
                 }
                 item {
                     Text(
-                        text = "点击下方按钮即表示您已阅读并知晓以上内容。",
+                        text = stringResource(R.string.voucher_footer),
                         style = MaterialTheme.typography.bodyMedium,
                         color = MaterialTheme.colorScheme.secondary
                     )

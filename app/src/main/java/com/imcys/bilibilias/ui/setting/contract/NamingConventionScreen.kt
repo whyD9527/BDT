@@ -156,7 +156,7 @@ fun LazyItemScope.NamingRuleEditor(
                     modifier = Modifier.fillMaxWidth(),
                     onClick = onRestoreDefault
                 ) {
-                    Text("恢复默认命名规则")
+                    Text(stringResource(R.string.naming_restore_default))
                 }
             }
         }
@@ -202,26 +202,20 @@ fun NamingConventionContent(
         item {
             ASInfoTip {
                 Text(
-                    text = """
-                            命名规则可以帮助你更好地管理下载的文件，你可以使用以下占位符来定义命名规则。
-                            目前支持文件夹路径：也就是你可以做到 “{author}/{p_title}” 这样的命名规则，系统会自动创建对应的文件夹，无需处理文件类型。
-                        """.trimIndent(),
+                    text = stringResource(R.string.naming_info),
                 )
             }
         }
         item {
             ASWarringTip {
                 Text(
-                    text = """
-                            当前命名规则仍在测试阶段，提供的变量较少，正在检验可靠程度，可能存在一些问题，如有任何问题，请前往社区反馈。
-                            目前不支持对弹幕、字幕、封面等附加文件进行命名规则的设置。
-                        """.trimIndent(),
+                    text = stringResource(R.string.naming_warning),
                 )
             }
         }
         item {
             NamingRuleEditor(
-                title = "视频命名规则占位符",
+                title = stringResource(R.string.naming_video_placeholders_title),
                 placeholderList = videoNamingRules,
                 ruleValue = videoNamingRule,
                 defaultRule = AppSettingsSerializer.appSettingsDefault.videoNamingRule,
@@ -235,7 +229,7 @@ fun NamingConventionContent(
         }
         item {
             NamingRuleEditor(
-                title = "番剧命名规则占位符",
+                title = stringResource(R.string.naming_bangumi_placeholders_title),
                 placeholderList = donghuaNamingRules,
                 ruleValue = donghuaNamingRule,
                 defaultRule = AppSettingsSerializer.appSettingsDefault.bangumiNamingRule,
@@ -271,7 +265,7 @@ fun NamingConventionScaffold(
                 scrollBehavior = scrollBehavior,
                 style = BILIBILIASTopAppBarStyle.Large,
                 title = {
-                    Text(text = "命名规则")
+                    Text(text = stringResource(R.string.setting_naming_convention))
                 },
                 navigationIcon = {
                     AsBackIconButton(onClick = {

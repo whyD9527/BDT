@@ -567,4 +567,25 @@
     <string name="version_info_brand">Brand</string>
     <string name="version_info_os_name">OS name</string>
     <string name="version_info_os_version">OS version name</string>
+    <!-- i18n batch E9: risk notice / frame extractor / line config / naming rules -->
+    <string name="voucher_title">Account risk notice</string>
+    <string name="voucher_risk_1">Your account may be under Bilibili risk monitoring, possibly related to using unauthorised third-party apps, abnormal behaviour or other violations, so identity verification is required.</string>
+    <string name="voucher_risk_2">An abnormal TV-side verification state was detected. BDT can try to remove the TV-side identity information to help restore basic usage.</string>
+    <string name="voucher_risk_3">This feature is a temporary workaround and may be withdrawn at any time.</string>
+    <string name="voucher_risk_4">Continuing to use risky third-party tools may increase the risk to your account (restrictions, bans, and so on).</string>
+    <string name="voucher_risk_5">We may flag abnormal accounts and, when necessary, freeze their permission to use BDT.</string>
+    <string name="voucher_risk_6">Please fully understand these risks before proceeding; you bear all consequences.</string>
+    <string name="voucher_footer">Tapping the button below means you have read and understood the above.</string>
+    <string name="frame_extractor_importing">Importing video, please wait... %1$d%%</string>
+    <string name="frame_extractor_exporting">Exporting, please do not exit... %1$d%%</string>
+    <string name="frame_extractor_export">Export frames</string>
+    <string name="line_config_info">Line configuration can, in some cases, redirect where cached resources are fetched from to speed up caching, but it does not always help.</string>
+    <string name="line_config_warning">If videos fail to play after switching to a non-automatic line, switch back to automatic; the built-in line may have been retired.</string>
+    <string name="line_config_cdn_tip">This acceleration is provided by CDNs supported by Bilibili; traffic never goes through a BDT server.</string>
+    <string name="line_config_detect">Test</string>
+    <string name="naming_info">Naming rules help you manage downloaded files. You can use the placeholders below to define a rule.\nFolder paths are supported: you can write a rule like “{author}/{p_title}” and the app creates the folders automatically; you do not need to handle the file type.</string>
+    <string name="naming_warning">Naming rules are still being tested: only a few variables are available and reliability is still being checked, so problems may occur. If you find any, please report them in the community.\nExtra files (danmaku, subtitles, covers) cannot be renamed by rules yet.</string>
+    <string name="naming_restore_default">Restore default naming rules</string>
+    <string name="naming_video_placeholders_title">Video naming rule placeholders</string>
+    <string name="naming_bangumi_placeholders_title">Bangumi naming rule placeholders</string>
 </resources>

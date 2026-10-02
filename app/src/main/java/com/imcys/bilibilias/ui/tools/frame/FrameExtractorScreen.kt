@@ -179,7 +179,7 @@ fun SelectVideoListDialog(
                                     modifier = Modifier
                                         .fillMaxSize(),
                                     shape = CardDefaults.shape,
-                                    contentDescription = "封面图片"
+                                    contentDescription = stringResource(R.string.cd_cover_image)
                                 )
                             }
 
@@ -314,7 +314,7 @@ private fun FrameExtractorContent(
                     )
                     Spacer(Modifier.height(10.dp))
                     Text(
-                        "正在导入视频，请稍候...${(state.progress * 100).toInt()}%",
+                        stringResource(R.string.frame_extractor_importing, (state.progress * 100).toInt()),
                         fontSize = 16.sp
                     )
                 }
@@ -332,7 +332,7 @@ private fun FrameExtractorContent(
                     )
                     Spacer(Modifier.height(10.dp))
                     Text(
-                        "正在导出中，请不要退出...${(state.progress * 100).toInt()}%",
+                        stringResource(R.string.frame_extractor_exporting, (state.progress * 100).toInt()),
                         fontSize = 16.sp
                     )
                 }
@@ -402,7 +402,7 @@ fun ExportFpsButton(onExport: (String) -> Unit = {}) {
             onClick = { showExportDialog = true }
         ) {
             Text(
-                "导出逐帧图片",
+                stringResource(R.string.frame_extractor_export),
                 fontSize = 16.sp
             )
         }
@@ -571,7 +571,7 @@ private fun FrameExtractorScaffold(
                 ASTopAppBar(
                     style = BILIBILIASTopAppBarStyle.Small,
                     title = {
-                        Text(text = "逐帧提取")
+                        Text(text = stringResource(R.string.tools_frame_extractor_title))
                     },
                     colors = TopAppBarDefaults.topAppBarColors(
                         containerColor = MaterialTheme.colorScheme.surfaceContainer,
@@ -587,7 +587,7 @@ private fun FrameExtractorScaffold(
                         }) {
                             Icon(
                                 Icons.Outlined.MoreVert,
-                                contentDescription = "操作"
+                                contentDescription = stringResource(R.string.cd_more_actions)
                             )
                         }
                         DropdownMenu(

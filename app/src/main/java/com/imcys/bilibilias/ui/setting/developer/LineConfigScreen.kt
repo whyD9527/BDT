@@ -95,9 +95,7 @@ fun LineConfigContent(modifier: Modifier) {
         ) {
             ASInfoTip {
                 Text(
-                    """
-                线路配置可在部分情况下重定向缓存资源的地址路径，从而加快缓存，但并不是任何时候都有用。
-            """.trimIndent()
+                    stringResource(R.string.line_config_info)
                 )
             }
         }
@@ -109,9 +107,7 @@ fun LineConfigContent(modifier: Modifier) {
                     modifier = Modifier.animateItem()
                 ) {
                     Text(
-                        """
-                            如果你发现使用非自动线路后出现视频无法播放等问题，请切换回自动线路，这可能是内置的线路已经被废弃。
-                        """.trimIndent()
+                        stringResource(R.string.line_config_warning)
                     )
                 }
             }
@@ -124,7 +120,7 @@ fun LineConfigContent(modifier: Modifier) {
                 ASIconButton(onClick = {
                     vm.startSpeedTest()
                 }) {
-                    Icon(Icons.Outlined.Speed, contentDescription = "图标")
+                    Icon(Icons.Outlined.Speed, contentDescription = stringResource(R.string.cd_icon))
                 }
             }
         }
@@ -139,9 +135,7 @@ fun LineConfigContent(modifier: Modifier) {
             TipSettingsItem(
                 modifier =  Modifier.animateItem(),
                 text =
-                """
-                    这些加速由B站支持的CDN提供，全程不经过BDT服务器代理。
-                """.trimIndent()
+                stringResource(R.string.line_config_cdn_tip)
             )
         }
     }
@@ -185,7 +179,7 @@ private fun LineHostCard(
                 if (item.speed != null) {
                     Text("${item.speed}")
                 } else {
-                    Text("检测")
+                    Text(stringResource(R.string.line_config_detect))
                 }
 
             }
@@ -218,7 +212,7 @@ private fun LineConfigScaffold(
                             }
                         }
                     ) {
-                        Text(text = "线路配置")
+                        Text(text = stringResource(R.string.developer_line_config))
                     }
                 },
                 navigationIcon = {

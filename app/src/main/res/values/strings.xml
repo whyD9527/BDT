@@ -567,4 +567,25 @@
     <string name="version_info_brand">品牌</string>
     <string name="version_info_os_name">厂商系统名称</string>
     <string name="version_info_os_version">厂商系统版本名称</string>
+    <!-- i18n 批次 E9：风控提示页 / 逐帧提取 / 线路配置 / 命名规则 -->
+    <string name="voucher_title">账户风险提示</string>
+    <string name="voucher_risk_1">您的账号可能正处于哔哩哔哩平台风控监测，可能与曾使用违规第三方程序、异常使用行为或其他违规操作有关，因此被要求进行身份验证。</string>
+    <string name="voucher_risk_2">检测到您的 TV 端身份验证状态存在异常。BDT 目前可尝试为您移除 TV 端的身份信息，以协助恢复基本使用。</string>
+    <string name="voucher_risk_3">该功能为临时辅助能力，可能随时被取消或收回。</string>
+    <string name="voucher_risk_4">继续使用具有违规风险的第三方工具，可能加重账号风险（功能受限、封禁等）。</string>
+    <string name="voucher_risk_5">我们可能对异常账号进行标记；必要时可冻结其使用 BDT 的权限。</string>
+    <string name="voucher_risk_6">请在操作前充分理解上述风险，所有后果由您自行承担。</string>
+    <string name="voucher_footer">点击下方按钮即表示您已阅读并知晓以上内容。</string>
+    <string name="frame_extractor_importing">正在导入视频，请稍候...%1$d%%</string>
+    <string name="frame_extractor_exporting">正在导出中，请不要退出...%1$d%%</string>
+    <string name="frame_extractor_export">导出逐帧图片</string>
+    <string name="line_config_info">线路配置可在部分情况下重定向缓存资源的地址路径，从而加快缓存，但并不是任何时候都有用。</string>
+    <string name="line_config_warning">如果你发现使用非自动线路后出现视频无法播放等问题，请切换回自动线路，这可能是内置的线路已经被废弃。</string>
+    <string name="line_config_cdn_tip">这些加速由B站支持的CDN提供，全程不经过BDT服务器代理。</string>
+    <string name="line_config_detect">检测</string>
+    <string name="naming_info">命名规则可以帮助你更好地管理下载的文件，你可以使用以下占位符来定义命名规则。\n目前支持文件夹路径：也就是你可以做到 “{author}/{p_title}” 这样的命名规则，系统会自动创建对应的文件夹，无需处理文件类型。</string>
+    <string name="naming_warning">当前命名规则仍在测试阶段，提供的变量较少，正在检验可靠程度，可能存在一些问题，如有任何问题，请前往社区反馈。\n目前不支持对弹幕、字幕、封面等附加文件进行命名规则的设置。</string>
+    <string name="naming_restore_default">恢复默认命名规则</string>
+    <string name="naming_video_placeholders_title">视频命名规则占位符</string>
+    <string name="naming_bangumi_placeholders_title">番剧命名规则占位符</string>
 </resources>
