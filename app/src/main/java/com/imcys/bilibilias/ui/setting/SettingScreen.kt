@@ -152,6 +152,11 @@ fun SettingScreen(
     var showPrivacyPolicy by remember { mutableStateOf(false) }
     var showPrivacyPolicyRefuseTip by remember { mutableStateOf(false) }
     var showSegmentConcurrencyDialog by remember { mutableStateOf(false) }
+    var showSpeedLimitDialog by remember { mutableStateOf(false) }
+
+    // 下载策略（B5）。proto 里是 optional：没设置过 → 仅Wi-Fi=关、限速=不限
+    val wifiOnlyDownload = if (appSettings.hasWifiOnlyDownload()) appSettings.wifiOnlyDownload else false
+    val speedLimitKbps = if (appSettings.hasDownloadSpeedLimitKbps()) appSettings.downloadSpeedLimitKbps else 0
 
     // 分片下载的两个设置。proto 里是 `optional`，"没设置过"（initial 的 getDefaultInstance
     // 也是这个状态）要按默认走，所以统一交给 resolve* 解析 —— 与下载侧同一套函数。
@@ -297,6 +302,27 @@ fun SettingScreen(
                     haptics.switchHapticFeedback(check)
                     vm.updateSegmentedDownloadEnabled(check)
                 }
+            }
+
+            item {
+                SwitchSettingsItem(
+                    imageVector = Icons.Outlined.Cloud,
+                    text = "仅 Wi-Fi 下载",
+                    description = "移动数据下不开始下载（避免偷跑流量）；Wi-Fi 下不受影响",
+                    checked = wifiOnlyDownload,
+                ) { check ->
+                    haptics.switchHapticFeedback(check)
+                    backupScope.launch { appSettingsRepository.updateWifiOnlyDownload(check) }
+                }
+            }
+
+            item {
+                BaseSettingsItem(
+                    painter = rememberVectorPainter(Icons.Outlined.Speed),
+                    text = "下载限速",
+                    descriptionText = if (speedLimitKbps <= 0) "不限速" else "$speedLimitKbps KB/s",
+                    onClick = { showSpeedLimitDialog = true }
+                )
             }
 
             if (segmentedEnabled) {
@@ -539,6 +565,36 @@ fun SettingScreen(
                 showPrivacyPolicyRefuseTip = false
             }
         )
+
+        // 下载限速选择（B5）：用标准 AlertDialog，别去凑旁边那个自定义组件的参数
+        if (showSpeedLimitDialog) {
+            androidx.compose.material3.AlertDialog(
+                onDismissRequest = { showSpeedLimitDialog = false },
+                title = { Text("下载限速") },
+                text = {
+                    Column {
+                        Text("限的是平均速率；网络本来就比它慢时不会有任何额外等待。")
+                        listOf(0, 512, 1024, 2048, 4096).forEach { kbps ->
+                            TextButton(onClick = {
+                                showSpeedLimitDialog = false
+                                backupScope.launch { appSettingsRepository.updateDownloadSpeedLimitKbps(kbps) }
+                            }) {
+                                Text(
+                                    text = when {
+                                        kbps <= 0 -> "不限速"
+                                        kbps >= 1024 -> "${kbps / 1024} MB/s"
+                                        else -> "$kbps KB/s"
+                                    } + if (kbps == speedLimitKbps) "　✓" else "",
+                                )
+                            }
+                        }
+                    }
+                },
+                confirmButton = {
+                    TextButton(onClick = { showSpeedLimitDialog = false }) { Text("关闭") }
+                },
+            )
+        }
 
         // 分片并发数选择
         ASAlertDialog(

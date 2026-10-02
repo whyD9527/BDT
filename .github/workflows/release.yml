@@ -127,6 +127,13 @@ jobs:
           } > "$RUNNER_TEMP/notes.md"
           echo "说明行数: $(wc -l < "$RUNNER_TEMP/notes.md")"
 
+      # A5：附一份 SHA256SUMS，用户能自己核对完整性
+      - name: Generate SHA256SUMS
+        run: |
+          cd app/build/outputs/apk/alpha/release
+          sha256sum *.apk > SHA256SUMS
+          cat SHA256SUMS
+
       - name: Create release and upload APKs
         env:
           GH_TOKEN: ${{ github.token }}
@@ -144,11 +151,12 @@ jobs:
           fi
           if gh release view "$GITHUB_REF_NAME" >/dev/null 2>&1; then
             echo "Release 已存在，补传/覆盖资产"
-            gh release upload "$GITHUB_REF_NAME" app/build/outputs/apk/alpha/release/*.apk --clobber
+            gh release upload "$GITHUB_REF_NAME" app/build/outputs/apk/alpha/release/*.apk app/build/outputs/apk/alpha/release/SHA256SUMS --clobber
           else
             gh release create "$GITHUB_REF_NAME" \
               --title "$GITHUB_REF_NAME" \
               "${NOTES[@]}" \
-              app/build/outputs/apk/alpha/release/*.apk
+              app/build/outputs/apk/alpha/release/*.apk \
+              app/build/outputs/apk/alpha/release/SHA256SUMS
           fi
           echo "Release: ${{ github.server_url }}/${{ github.repository }}/releases/tag/$GITHUB_REF_NAME"

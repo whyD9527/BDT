@@ -1,5 +1,8 @@
 package com.imcys.bilibilias.download
 
+import android.net.ConnectivityManager
+import android.net.NetworkCapabilities
+import com.imcys.bilibilias.data.download.policy.DownloadPolicyRules
 import android.Manifest
 import android.app.ActivityManager
 import android.app.Application
@@ -168,6 +171,18 @@ class NewDownloadManager(
         }
     }
 
+    /**
+     * 当前是否在 Wi-Fi 上。
+     *
+     * ⚠️ 查不到（权限/服务异常）时**当作 Wi-Fi**：宁可少拦一次，也不要在 Wi-Fi 上误拦
+     * （误拦的表现是"点了下载没反应"，比多跑一次流量更难排查）。
+     */
+    private fun isOnWifiNetwork(): Boolean = runCatching {
+        val cm = context.getSystemService(Context.CONNECTIVITY_SERVICE) as ConnectivityManager
+        val caps = cm.activeNetwork?.let { cm.getNetworkCapabilities(it) }
+        caps?.hasTransport(NetworkCapabilities.TRANSPORT_WIFI) == true
+    }.getOrElse { true }
+
     private var downloadService: DownloadService? = null
     private val downloadConn = object : ServiceConnection {
         @RequiresPermission(Manifest.permission.POST_NOTIFICATIONS)
@@ -316,6 +331,16 @@ class NewDownloadManager(
         asLinkResultType: ASLinkResultType,
         downloadViewInfo: DownloadViewInfo
     ) {
+        // 「仅 Wi-Fi 下载」（B5）：移动数据下直接拦下，别偷偷跑流量
+        if (DownloadPolicyRules.shouldBlockForWifiOnly(
+                wifiOnly = appSettingsRepository.isWifiOnlyDownload(),
+                isWifi = isOnWifiNetwork(),
+            )
+        ) {
+            sendToastEvent("已开启「仅 Wi-Fi 下载」，当前不是 Wi-Fi，先不开始")
+            return
+        }
+
         val taskResult =
             downloadTaskRepository.createDownloadTask(asLinkResultType, downloadViewInfo)
 

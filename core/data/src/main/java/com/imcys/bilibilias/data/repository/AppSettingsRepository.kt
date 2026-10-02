@@ -55,6 +55,31 @@ class AppSettingsRepository(
         )
     }
 
+    /** 「仅 Wi-Fi 下载」（没设置过 = 关） */
+    val wifiOnlyDownloadFlow: Flow<Boolean> = appSettingsFlow.map { settings ->
+        if (settings.hasWifiOnlyDownload()) settings.wifiOnlyDownload else false
+    }
+
+    /** 下载限速 KB/s（没设置过 = 0 = 不限速） */
+    val downloadSpeedLimitFlow: Flow<Int> = appSettingsFlow.map { settings ->
+        if (settings.hasDownloadSpeedLimitKbps()) settings.downloadSpeedLimitKbps else 0
+    }
+
+    suspend fun isWifiOnlyDownload(): Boolean = wifiOnlyDownloadFlow.first()
+
+    suspend fun getDownloadSpeedLimitKbps(): Int = downloadSpeedLimitFlow.first()
+
+    suspend fun updateWifiOnlyDownload(enabled: Boolean) {
+        dataStore.updateData { it.toBuilder().setWifiOnlyDownload(enabled).build() }
+    }
+
+    suspend fun updateDownloadSpeedLimitKbps(kbps: Int) {
+        // 下限 0（不限速），上限 100 MB/s（防止手滑输个天文数字）
+        dataStore.updateData {
+            it.toBuilder().setDownloadSpeedLimitKbps(kbps.coerceIn(0, 100 * 1024)).build()
+        }
+    }
+
     suspend fun isSegmentedDownloadEnabled(): Boolean = segmentedDownloadEnabledFlow.first()
 
     suspend fun getSegmentedDownloadConcurrency(): Int = segmentedDownloadConcurrencyFlow.first()

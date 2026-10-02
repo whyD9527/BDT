@@ -36,6 +36,8 @@ data class AppSettingsBackup(
     val enabledRoam: Boolean? = null,
     val segmentedDownloadEnabled: Boolean? = null,
     val segmentedDownloadConcurrency: Int? = null,
+    val wifiOnlyDownload: Boolean? = null,
+    val downloadSpeedLimitKbps: Int? = null,
 ) {
 
     fun toJson(): String {
@@ -56,6 +58,8 @@ data class AppSettingsBackup(
         enabledRoam?.let { o.put("enabledRoam", it) }
         segmentedDownloadEnabled?.let { o.put("segmentedDownloadEnabled", it) }
         segmentedDownloadConcurrency?.let { o.put("segmentedDownloadConcurrency", it) }
+        wifiOnlyDownload?.let { o.put("wifiOnlyDownload", it) }
+        downloadSpeedLimitKbps?.let { o.put("downloadSpeedLimitKbps", it) }
         return o.toString(2)
     }
 
@@ -82,6 +86,8 @@ data class AppSettingsBackup(
                 enabledRoam = o.optBooleanOrNull("enabledRoam"),
                 segmentedDownloadEnabled = o.optBooleanOrNull("segmentedDownloadEnabled"),
                 segmentedDownloadConcurrency = o.optIntOrNull("segmentedDownloadConcurrency"),
+                wifiOnlyDownload = o.optBooleanOrNull("wifiOnlyDownload"),
+                downloadSpeedLimitKbps = o.optIntOrNull("downloadSpeedLimitKbps"),
             )
         }
 
@@ -132,6 +138,16 @@ object AppSettingsBackupRules {
             } else {
                 null
             },
+            wifiOnlyDownload = if (settings.hasWifiOnlyDownload()) {
+                settings.wifiOnlyDownload
+            } else {
+                null
+            },
+            downloadSpeedLimitKbps = if (settings.hasDownloadSpeedLimitKbps()) {
+                settings.downloadSpeedLimitKbps
+            } else {
+                null
+            },
         )
 
     /**
@@ -153,6 +169,8 @@ object AppSettingsBackupRules {
         backup.enabledClipboardAutoHandling?.let { b.setEnabledClipboardAutoHandling(it) }
         backup.segmentedDownloadEnabled?.let { b.setSegmentedDownloadEnabled(it) }
         backup.segmentedDownloadConcurrency?.let { b.setSegmentedDownloadConcurrency(it) }
+        backup.wifiOnlyDownload?.let { b.setWifiOnlyDownload(it) }
+        backup.downloadSpeedLimitKbps?.let { b.setDownloadSpeedLimitKbps(it) }
 
         // 枚举按**名字**读回来；名字不认识（旧版/手改过）就保持原值，不猜
         backup.videoParsePlatform

@@ -256,7 +256,15 @@ class DownloadExecutor(
                 val buffer = ByteArray(DOWNLOAD_BUFFER_SIZE.toInt())
                 var downloadedBytes = startBytes
 
-                FileOutputStream(tempFile, append).use { output ->
+                // 限速（B5）：设置里配了 KB/s 才包一层；不限速时行为与以前完全一致
+                val speedLimitKbps = appSettingsRepository.getDownloadSpeedLimitKbps()
+                val fileOutput: java.io.OutputStream = if (speedLimitKbps > 0) {
+                    ThrottledOutputStream(FileOutputStream(tempFile, append), speedLimitKbps)
+                } else {
+                    FileOutputStream(tempFile, append)
+                }
+
+                fileOutput.use { output ->
                     while (!channel.exhausted()) {
                         val bytesRead = channel.readAvailable(buffer)
                         if (bytesRead == -1) break

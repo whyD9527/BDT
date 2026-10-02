@@ -108,4 +108,14 @@ message AppSettings {
   optional bool segmented_download_enabled = 20;
   optional int32 segmented_download_concurrency = 21;
 
+  // 下载策略（2026-10-02 B 组）。
+  //
+  // `optional` 的理由同上：必须区分"用户没设置过"和"用户关掉了"，
+  // 否则加设置项就会把已有行为悄悄改掉。
+  //
+  // 仅 Wi-Fi：开了之后在移动数据下拒绝开始下载（默认关，不影响老用户）；
+  // 限速：KB/s，0 或没设置 = 不限速。
+  optional bool wifi_only_download = 22;
+  optional int32 download_speed_limit_kbps = 23;
+
 }
