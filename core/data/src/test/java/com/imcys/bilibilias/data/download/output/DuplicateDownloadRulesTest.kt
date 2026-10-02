@@ -76,4 +76,16 @@ class DuplicateDownloadRulesTest {
         assertTrue(DuplicateDownloadRules.groupDuplicates(emptyList()).isEmpty())
         assertTrue(DuplicateDownloadRules.groupDuplicates(listOf("", "   ")).isEmpty())
     }
+
+    @Test
+    fun `记录引用的那份必须保留，不能被当成副本删掉（B 的回归测试）`() {
+        // 真机实例：记录引用的是 `… (2).m4a`，而"正式名"那份反而是孤儿
+        val names = listOf("爱.mp4", "爱 (2).mp4")
+        // 不传引用集合时（老行为）：保留无后缀的 `爱.mp4`
+        assertEquals("爱.mp4", DuplicateDownloadRules.groupDuplicates(names).single().keepName)
+        // 传了"记录引用 `爱 (2).mp4`"后：必须保留它
+        val g = DuplicateDownloadRules.groupDuplicates(names, setOf("爱 (2).mp4")).single()
+        assertEquals("爱 (2).mp4", g.keepName)
+        assertEquals(listOf("爱.mp4"), g.removableNames)
+    }
 }

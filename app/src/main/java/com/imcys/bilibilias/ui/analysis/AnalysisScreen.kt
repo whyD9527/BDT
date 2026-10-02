@@ -1,5 +1,6 @@
 package com.imcys.bilibilias.ui.analysis
 
+import com.imcys.bilibilias.ui.download.downloadModeLabel
 import ClipboardAutoHandler
 import android.Manifest.permission
 import android.content.pm.PackageManager
@@ -535,7 +536,7 @@ private fun AdvancedSetting(
                     ASCommonExposedDropdownMenu(
                         modifier = Modifier.fillMaxWidth(),
                         values = downloadModeList,
-                        onValue = { it.title },
+                        onValue = { downloadModeLabel(it) },
                         label = stringResource(R.string.analysis_select_cache_mode),
                         text = selectDownloadMode.title,
                         onSelect = {

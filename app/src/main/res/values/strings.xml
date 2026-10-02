@@ -653,4 +653,26 @@
     <string name="storage_unknown_error">未知错误</string>
     <string name="storage_task_active">有下载任务正在进行或已暂停，请先让它结束或取消，再清缓存</string>
     <string name="card_text_field_hint">BV / AV / EP / SS 号...</string>
+    <!-- i18n 批次 F：通知/枚举展示名 -->
+    <string name="notification_stage_download">下载阶段</string>
+    <string name="download_mode_audio_video">音视频</string>
+    <string name="download_mode_video_only">仅视频</string>
+    <string name="download_mode_audio_only">仅音频</string>
+    <string name="home_layout_banner">轮播图</string>
+    <string name="home_layout_announcement">公告信息</string>
+    <string name="home_layout_update_info">更新信息</string>
+    <string name="home_layout_tools">工具列表</string>
+    <string name="home_layout_download_list">下载列表</string>
+    <!-- i18n 批次 F：命名规则占位符标签 -->
+    <string name="naming_ph_title">视频标题</string>
+    <string name="naming_ph_p_title">分P标题</string>
+    <string name="naming_ph_author">视频作者</string>
+    <string name="naming_ph_p">分P序号</string>
+    <string name="naming_ph_aid">AV号</string>
+    <string name="naming_ph_bvid">BV号</string>
+    <string name="naming_ph_cid">CID号</string>
+    <string name="naming_ph_collection_title">合集标题</string>
+    <string name="naming_ph_season_title">番剧标题</string>
+    <string name="naming_ph_episode_number">集序号</string>
+    <string name="naming_ph_episode_title">集标题</string>
 </resources>

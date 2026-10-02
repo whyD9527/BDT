@@ -1,5 +1,7 @@
 package com.imcys.bilibilias.download
 
+import com.imcys.bilibilias.R
+import androidx.core.app.NotificationManagerCompat
 import com.imcys.bilibilias.data.download.record.SegmentIdentityRules
 import kotlinx.coroutines.flow.first
 import android.net.ConnectivityManager
@@ -225,8 +227,18 @@ class NewDownloadManager(
         var cleanedFiles = 0
 
         segments.forEach { segment ->
-            when (DownloadStartupRules.actionFor(segment.downloadState)) {
+            // D：`savePath` 非空 = 这条记录**已经指向一个交付过的文件**（可能只是被"重下"重置了状态），
+            // 重启清理必须把它恢复成已完成，而不是丢掉 —— 否则用户会觉得"我下好的视频没了"。
+            when (DownloadStartupRules.actionFor(segment.downloadState, hasDeliveredFile = segment.savePath.isNotBlank())) {
                 DownloadStartupRules.StartupAction.KEEP -> Unit
+
+                DownloadStartupRules.StartupAction.RESTORE_COMPLETED -> {
+                    // 只把状态改回来，**不动 savePath/文件**
+                    runCatching {
+                        downloadTaskRepository.updateSegment(segment.copy(downloadState = DownloadState.COMPLETED))
+                    }
+                    trace("启动清理: 恢复已完成（记录已指向交付过的文件）segmentId=${segment.segmentId}")
+                }
 
                 DownloadStartupRules.StartupAction.DISCARD_KEEP_FILES -> {
                     discarded++
@@ -333,6 +345,21 @@ class NewDownloadManager(
         asLinkResultType: ASLinkResultType,
         downloadViewInfo: DownloadViewInfo
     ) {
+        // 「所有文件访问」（A，2026-10-02 真机复验的总根源）：**覆盖安装后这个权限会掉**。
+        // 掉了以后的症状极具迷惑性：新交付的文件"磁盘上有、媒体库里查不到"→ 记录显示「文件已丢失」、
+        // 同名检测失效（挪不开旧文件）→ ROM 自动改名攒出 `(2)/(3)` 副本。所以入队时**主动提醒**，
+        // 而不是等用户对着"文件已丢失"发懵。
+        if (!hasAllFilesAccessForDelivery()) {
+            sendToastEvent("未授予「所有文件访问」：下载可能无法入库/覆盖同名文件，请到「设置 → 存储管理」授权")
+        }
+
+        // 「通知权限」（E，2026-10-02 真机复验）：没给 POST_NOTIFICATIONS 时**一条通知都没有** ——
+        // 下载进度、`全部暂停/全部取消` 两个按钮、以及"点通知直达下载列表"全都用不了，
+        // 而界面上只有设置里一行小字（用户会以为这功能不存在）。入队时主动提醒。
+        if (!NotificationManagerCompat.from(context).areNotificationsEnabled()) {
+            sendToastEvent("未开启通知权限：下载进度通知与「全部暂停/取消」都用不了，请在系统设置里允许 BDT 发通知")
+        }
+
         // 「仅 Wi-Fi 下载」（B5）：移动数据下直接拦下，别偷偷跑流量
         if (DownloadPolicyRules.shouldBlockForWifiOnly(
                 wifiOnly = appSettingsRepository.isWifiOnlyDownload(),
@@ -765,7 +792,8 @@ class NewDownloadManager(
             return SubTaskResult(false, failureReason = "下载子任务为空（解析结果异常）")
         }
 
-        val progressCallback = createProgressCallback(task, downloadService, "下载阶段")
+        val progressCallback = // F（2026-10-02 真机复验）：通知正文这句原来是硬编码中文 —— 英文界面下就显示「下载阶段」。
+        createProgressCallback(task, downloadService, context.getString(R.string.notification_stage_download))
 
         return if (task.downloadSubTasks.size >= 2) {
             downloadMultipleSubTasks(task, progressCallback)
@@ -1387,3 +1415,17 @@ class NewDownloadManager(
 
 
 }
+
+/**
+ * 是否有「所有文件访问」（MANAGE_EXTERNAL_STORAGE）。
+ *
+ * ⚠️ **覆盖安装会丢这个权限**（2026-10-02 真机复验实测）：掉了以后 MediaStore 的行查不回来、
+ * 同名旧文件也挪不动 → 记录显示「文件已丢失」+ 副本堆积。所以入队前要提醒用户去开。
+ */
+private fun hasAllFilesAccessForDelivery(): Boolean = runCatching {
+    if (android.os.Build.VERSION.SDK_INT >= android.os.Build.VERSION_CODES.R) {
+        android.os.Environment.isExternalStorageManager()
+    } else {
+        true
+    }
+}.getOrDefault(true)

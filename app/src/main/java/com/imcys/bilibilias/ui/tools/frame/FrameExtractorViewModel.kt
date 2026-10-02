@@ -1,5 +1,6 @@
 package com.imcys.bilibilias.ui.tools.frame
 
+import com.imcys.bilibilias.download.FileOutputManager
 import android.content.ContentResolver
 import android.content.Context
 import android.graphics.Bitmap
@@ -31,7 +32,9 @@ import java.io.File
 class FrameExtractorViewModel(
     private val downloadManager: NewDownloadManager,
     private val downloadTaskRepository: DownloadTaskRepository,
-    private val contentResolver: ContentResolver
+    private val contentResolver: ContentResolver,
+    /** 只用来统一"文件到底还在不在"的判据（I，与全应用同一套） */
+    private val fileOutputManager: FileOutputManager,
 ) : ViewModel() {
 
     sealed interface UIState {
@@ -321,8 +324,11 @@ class FrameExtractorViewModel(
                             null
                         } else if (savePath.startsWith("content://")) {
                             val fileUri = savePath.toUri()
-                            val docFile = DocumentFile.fromSingleUri(context, fileUri)
-                            if (docFile == null || !docFile.exists()) {
+                            // ⚠️ I（2026-10-02 真机复现）：原先用 `DocumentFile.fromSingleUri(uri).exists()`
+                            // 判存在 —— 真机上"**被移动到子目录**的那条记录"在这里判 false（而下载卡片、⑥ 的
+                            // 探测都说存在），于是抽帧的「从已下载导入」列表**整个空掉**（用户以为抽帧坏了）。
+                            // 改成与全应用统一的判据：⑥ 的 `probeSavePath`（宽判据：媒体库行/可打开）。
+                            if (!fileOutputManager.probeSavePath(savePath).exists) {
                                 null
                             } else {
                                 val retriever = MediaMetadataRetriever()

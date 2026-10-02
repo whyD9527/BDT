@@ -653,4 +653,26 @@
     <string name="storage_unknown_error">Unknown error</string>
     <string name="storage_task_active">A download task is running or paused; finish or cancel it before clearing the cache</string>
     <string name="card_text_field_hint">BV / AV / EP / SS number...</string>
+    <!-- i18n batch F: notification / enum labels -->
+    <string name="notification_stage_download">Downloading</string>
+    <string name="download_mode_audio_video">Audio + Video</string>
+    <string name="download_mode_video_only">Video only</string>
+    <string name="download_mode_audio_only">Audio only</string>
+    <string name="home_layout_banner">Banner</string>
+    <string name="home_layout_announcement">Announcements</string>
+    <string name="home_layout_update_info">Update info</string>
+    <string name="home_layout_tools">Tools</string>
+    <string name="home_layout_download_list">Download list</string>
+    <!-- i18n batch F: naming placeholder labels -->
+    <string name="naming_ph_title">Video title</string>
+    <string name="naming_ph_p_title">Part title</string>
+    <string name="naming_ph_author">Uploader</string>
+    <string name="naming_ph_p">Part number</string>
+    <string name="naming_ph_aid">AV id</string>
+    <string name="naming_ph_bvid">BV id</string>
+    <string name="naming_ph_cid">CID</string>
+    <string name="naming_ph_collection_title">Collection title</string>
+    <string name="naming_ph_season_title">Season title</string>
+    <string name="naming_ph_episode_number">Episode number</string>
+    <string name="naming_ph_episode_title">Episode title</string>
 </resources>

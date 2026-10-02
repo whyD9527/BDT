@@ -1,5 +1,6 @@
 package com.imcys.bilibilias.ui.analysis.components
 
+import com.imcys.bilibilias.ui.download.downloadModeLabel
 import androidx.compose.animation.AnimatedVisibility
 import androidx.compose.animation.animateContentSize
 import androidx.compose.foundation.background
@@ -433,7 +434,7 @@ fun UgcSeasonPageScreen(
                 ?: "",
             label = stringResource(R.string.analysis_select_part_video),
             values = episodes,
-            onValue = { it.title },
+            onValue = { downloadModeLabel(it) },
             onSelect = {
                 onSelectEpisodeId.invoke(it.id)
             },

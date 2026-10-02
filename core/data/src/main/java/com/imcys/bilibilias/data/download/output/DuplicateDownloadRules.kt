@@ -50,14 +50,27 @@ object DuplicateDownloadRules {
      * 保留哪一份：优先**没有 `(N)` 后缀**的那个（那才是"正式名"）；
      * 若全都有后缀，保留序号最小的（最早生成的那份，通常最完整）。
      */
-    fun groupDuplicates(names: Collection<String>): List<DuplicateGroup> =
+    fun groupDuplicates(
+        names: Collection<String>,
+        /**
+         * **App 的记录（`savePath`）当前引用的那些显示名** —— 它们绝不能被当成"可删副本"。
+         *
+         * ⚠️ 为什么（2026-10-02 真机复现）：真机上出现过"记录引用的是 `… (2).m4a`，
+         * 而正式名那份反而是孤儿"（因为交付时 `insert` 先落了 `(2)`、后续改名没生效）。
+         * 只按名字挑"正式名"保留 → 照它清理会把那条记录删成「文件已丢失」。
+         * 所以排序键第一位改成"记录引用的优先保留"。
+         */
+        referencedNames: Set<String> = emptySet(),
+    ): List<DuplicateGroup> =
         names.filter { it.isNotBlank() }
             .groupBy { familyKey(it) }
             .filter { (_, members) -> members.size >= 2 }
             .map { (_, members) ->
                 val keep = members.minWithOrNull(
                     compareBy(
-                        // 没有后缀的排最前
+                        // ① 记录实际引用的那份最优先保留（这是 B 的修法）
+                        { if (it in referencedNames) 0 else 1 },
+                        // ② 没有后缀的排最前
                         { if (copyIndex(it) == null) 0 else 1 },
                         { copyIndex(it) ?: 0 },
                         { it },

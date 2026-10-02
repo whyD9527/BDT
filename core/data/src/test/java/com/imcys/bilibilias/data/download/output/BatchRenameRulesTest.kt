@@ -78,4 +78,23 @@ class BatchRenameRulesTest {
         assertEquals(2, names.size)
         assertTrue(names[1].endsWith(" (1)"))
     }
+
+    @Test
+    fun `MediaStore 归一化：竖线等非法字符替换成下划线（副本堆积的根因）`() {
+        // 真机实例：App 想写带 `|` 的名字，MediaStore 存成 `_`，导致"同名检测"永远匹配不上
+        assertEquals(
+            "鸣潮 _ 先约电台EP.mp4",
+            BatchRenameRules.sanitizeForMediaStore("鸣潮 | 先约电台EP.mp4"),
+        )
+        for (c in listOf('\\', '/', ':', '*', '?', '"', '<', '>', '|')) {
+            assertEquals("_", BatchRenameRules.sanitizeForMediaStore(c.toString()))
+        }
+    }
+
+    @Test
+    fun `MediaStore 归一化：合法名字原样返回（幂等）`() {
+        val ok = "【官方 MV】Never Gonna Give You Up - Rick Astley (1).mp4"
+        assertEquals(ok, BatchRenameRules.sanitizeForMediaStore(ok))
+        assertEquals(ok, BatchRenameRules.sanitizeForMediaStore(BatchRenameRules.sanitizeForMediaStore(ok)))
+    }
 }

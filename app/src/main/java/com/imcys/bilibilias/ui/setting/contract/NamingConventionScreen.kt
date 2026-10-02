@@ -123,9 +123,12 @@ fun LazyItemScope.NamingRuleEditor(
                         textFieldValue = TextFieldValue(newText, selection = TextRange(newText.length))
                     }, label = {
                         Text(
+                            // F（2026-10-02 真机复验）：`item.description` 是 core:database 里的**硬编码中文**
+                            // （`视频标题/分P标题/…`），英文界面下这排占位符标签就漏中文。改成按**占位符 token**
+                            // （`{title}` 这类，稳定标识）做 UI 层本地化映射；token 本身不变。
                             "${
                                 item.placeholder.replace("{", "").replace("}", "")
-                            }：${item.description}"
+                            }：${namingPlaceholderLabel(item.placeholder)}"
                         )
                     })
                 }
@@ -280,3 +283,22 @@ fun NamingConventionScaffold(
     }
 
 }
+
+/** F：命名规则占位符的本地化标签（按 token 映射；未知 token 原样回退，不硬编码中文）。 */
+@Composable
+private fun namingPlaceholderLabel(placeholder: String): String = stringResource(
+    when (placeholder) {
+        "{title}" -> R.string.naming_ph_title
+        "{p_title}" -> R.string.naming_ph_p_title
+        "{author}" -> R.string.naming_ph_author
+        "{p}" -> R.string.naming_ph_p
+        "{aid}" -> R.string.naming_ph_aid
+        "{bvid}" -> R.string.naming_ph_bvid
+        "{cid}" -> R.string.naming_ph_cid
+        "{collection_title}" -> R.string.naming_ph_collection_title
+        "{season_title}" -> R.string.naming_ph_season_title
+        "{episode_number}" -> R.string.naming_ph_episode_number
+        "{episode_title}" -> R.string.naming_ph_episode_title
+        else -> R.string.naming_ph_title
+    }
+)

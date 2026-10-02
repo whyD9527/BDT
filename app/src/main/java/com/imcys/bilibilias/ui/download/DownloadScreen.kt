@@ -16,6 +16,8 @@ import androidx.activity.compose.BackHandler
 import androidx.compose.animation.AnimatedContent
 import androidx.compose.foundation.combinedClickable
 import androidx.compose.foundation.horizontalScroll
+import androidx.compose.foundation.layout.FlowRow
+import androidx.compose.foundation.layout.ExperimentalLayoutApi
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.material3.Card
 import androidx.compose.ui.text.font.FontWeight
@@ -712,6 +714,7 @@ private fun getSortTypeDisplayName(sortType: AppSettings.DownloadSortType): Stri
 }
 
 @Composable
+@OptIn(ExperimentalLayoutApi::class)
 private fun EditTopTools(
     completedSegments: List<DownloadSegment>,
     selectDeleteList: SnapshotStateList<DownloadSegment>,
@@ -721,11 +724,17 @@ private fun EditTopTools(
     onShowRenameDialog: () -> Unit,
     onShareSelected: () -> Unit,
 ) {
-    Row(
+    // ⚠️ 原来是 `Row(horizontalScroll(...))`：中文文案刚好放得下，但英文/日文等长文案下
+    // 后面的按钮（`移动到`/`分享`）会被挤出屏幕，只能横向滑动才点得到 —— 真机上"滑一下"还可能
+    // 被当成退出编辑态，用户和自动化都够不着（2026-10-02 真机复现：英文下 Move/Share 出屏、
+    // 中文下 `分享` 也出屏，文本点按直接报"找不到可点击的分享"）。
+    // 改成 FlowRow：放不下就换行，保证每一个按钮都可见可点。
+    FlowRow(
         Modifier
             .padding(10.dp)
-            .horizontalScroll(rememberScrollState()),
-        horizontalArrangement = Arrangement.spacedBy(10.dp)
+            .fillMaxWidth(),
+        horizontalArrangement = Arrangement.spacedBy(10.dp),
+        verticalArrangement = Arrangement.spacedBy(10.dp),
     ) {
         OutlinedButton(
             shape = CardDefaults.shape,

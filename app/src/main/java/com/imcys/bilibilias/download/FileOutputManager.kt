@@ -235,11 +235,17 @@ class FileOutputManager(
 
     private fun moveToDownloadMediaStore(
         file: File,
-        fileName: String,
+        rawFileName: String,
         relativePath: String,
         mimeType: String
     ): String? {
         val resolver = context.contentResolver
+        // ⚠️ K（2026-10-02 真机定位）：**必须先把名字归一化成 MediaStore 真正会存下来的那个**。
+        // 否则"插入用的名字"带 `|`、"库里存的名字"是 `_` → 下面"挪开同名旧文件"永远匹配不上
+        // （轨迹里连一条 `交付前挪开同名旧文件` 都没有）→ 系统撞名自动改名 → 攒出 `(2)/(3)` 副本。
+        // 归一化放在函数最前面，`insert` / `moveAsideSameContentFiles` / `renameStaging` /
+        // `deleteSameContentRows` 四处就都用同一个名字了。
+        val fileName = BatchRenameRules.sanitizeForMediaStore(rawFileName)
 
         // ⚠️ 顺序（**2026-10-01 真机复现后第三次改写，这次是"挪开-写入-删除"三段式**）：
         //
@@ -1200,6 +1206,8 @@ class FileOutputManager(
      */
     fun findDuplicateGroups(
         relativePath: String,
+        /** App 记录当前引用的显示名；**这些必须保留**（见 DuplicateDownloadRules.groupDuplicates 的注释，B） */
+        referencedNames: Set<String> = emptySet(),
     ): List<DuplicateDownloadRules.DuplicateGroup> {
         // ⚠️ 这里原来是 File(dir).listFiles()，在这台 ROM 上恒为 null（见 queryDownloadDirNames）
         val dir = resolveDownloadDir(relativePath)
@@ -1214,7 +1222,7 @@ class FileOutputManager(
             names = queryDownloadDirNames(relativePath)
             trace("重复检查: $relativePath 扫描后拿到 ${names.size} 条")
         }
-        return DuplicateDownloadRules.groupDuplicates(names)
+        return DuplicateDownloadRules.groupDuplicates(names, referencedNames)
     }
 
     /**
@@ -1490,4 +1498,20 @@ class FileOutputManager(
     companion object {
         private const val TAG = "ASFileOutput"
     }
+
+    /**
+     * 记录里存的 `content://media/external/downloads/<id>` → 媒体库里的 `DISPLAY_NAME`。
+     * 拿不到（没有行/无权查询）就返回 null。用于"清理重复文件时保留记录引用的那一份"（B）。
+     */
+    fun displayNameOf(savePath: String): String? = runCatching {
+        val uri = android.net.Uri.parse(savePath)
+        if (uri.scheme != "content") return@runCatching null
+        context.contentResolver.query(
+            uri,
+            arrayOf(MediaStore.Files.FileColumns.DISPLAY_NAME),
+            null,
+            null,
+            null,
+        )?.use { if (it.moveToFirst()) it.getString(0) else null }
+    }.getOrNull()
 }

@@ -35,6 +35,14 @@ object DownloadStartupRules {
 
         /** 丢弃记录，并**删掉**临时文件：这次下载已经终结，残留没有意义 */
         DISCARD_AND_CLEAN,
+
+        /**
+         * **恢复成已完成**（D，2026-10-02 真机实测）：这条记录**已经指向一个交付过的文件**
+         * （`savePath` 非空），只是状态被"重下同一产物"重置过（`createSegment` 复用时会把它
+         * 重置成 WAITING/PAUSE）。这种记录**绝不能丢** —— 丢了用户就会觉得"我下好的视频没了"
+         * （真机现象：对已完成项目重下 → 点「全部暂停/取消」→ 重启后那条记录消失）。
+         */
+        RESTORE_COMPLETED,
     }
 
     /**
@@ -44,7 +52,21 @@ object DownloadStartupRules {
      * - **还没下完、被中断**的（暂停 / 排队 / 下载中 / 合并中 / 前置阶段）→ 丢记录、留文件；
      * - **已经终结**的（失败 / 取消）→ 丢记录、连文件一起清掉（这就是"失败任务的临时文件永不清理"那条）。
      */
-    fun actionFor(state: DownloadState): StartupAction = when (state) {
+    /**
+     * 状态 → 处理方式。
+     *
+     * ⚠️ [hasDeliveredFile]（D）：该记录**是否已经交付过文件**（`segment.savePath` 非空）。
+     * 传 true 时**无条件恢复成 COMPLETED**：那是"已经下好的那一份"，重下只是把它重置了状态，
+     * 重启清理绝不能把它当"没下完"丢掉（真机实测的"下好的视频没了"）。
+     */
+    fun actionFor(state: DownloadState, hasDeliveredFile: Boolean = false): StartupAction =
+        if (hasDeliveredFile && state != DownloadState.COMPLETED) {
+            StartupAction.RESTORE_COMPLETED
+        } else {
+            actionForStateOnly(state)
+        }
+
+    private fun actionForStateOnly(state: DownloadState): StartupAction = when (state) {
         DownloadState.COMPLETED -> StartupAction.KEEP
 
         DownloadState.PAUSE,

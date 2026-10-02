@@ -134,7 +134,7 @@ fun LayoutTypesetContent(
                         verticalAlignment = Alignment.CenterVertically
                     ) {
                         Text(
-                            item.type.getDescription(), modifier = Modifier,
+                            homeLayoutLabel(item.type), modifier = Modifier,
                         )
                         Spacer(Modifier.weight(1f))
                         ASIconButton(onClick = {
@@ -189,3 +189,20 @@ fun LayoutTypesetScaffold(
     }
 
 }
+
+/**
+ * F（2026-10-02 真机复验）：`AppSettings.HomeLayoutType.getDescription()` 是 core:data 里的
+ * **硬编码中文**（`轮播图/公告信息/…`），英文界面下首页排版页就漏中文。这里做 UI 层映射，
+ * 文案统一进 `strings.xml`（中英双套）。**枚举名（持久化用）一个都没动。**
+ */
+@Composable
+private fun homeLayoutLabel(type: AppSettings.HomeLayoutType): String = stringResource(
+    when (type) {
+        AppSettings.HomeLayoutType.Banner -> R.string.home_layout_banner
+        AppSettings.HomeLayoutType.Announcement -> R.string.home_layout_announcement
+        AppSettings.HomeLayoutType.UpdateInfo -> R.string.home_layout_update_info
+        AppSettings.HomeLayoutType.Tools -> R.string.home_layout_tools
+        AppSettings.HomeLayoutType.DownloadList -> R.string.home_layout_download_list
+        else -> R.string.home_layout_download_list
+    }
+)

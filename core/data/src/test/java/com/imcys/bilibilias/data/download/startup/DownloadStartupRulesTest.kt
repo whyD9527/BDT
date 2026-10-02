@@ -93,4 +93,29 @@ class DownloadStartupRulesTest {
         assertFalse(DownloadStartupRules.isTempFileOf("173286_VIDEO.m4s", ""))
         assertFalse(DownloadStartupRules.isTempFileOf("173286_VIDEO.m4s", "   "))
     }
+
+    @Test
+    fun `已交付过文件的记录：重启时恢复成已完成，绝不丢弃（D 的回归测试）`() {
+        // 真机场景：对已完成项目重下 → createSegment 复用把状态重置成 WAITING/PAUSE →
+        // 重启清理若按状态丢弃，用户就会觉得"我下好的视频没了"
+        for (state in listOf(
+            DownloadState.WAITING, DownloadState.PAUSE, DownloadState.CANCELLED, DownloadState.ERROR,
+        )) {
+            assertEquals(
+                "state=$state 且已有交付文件时必须恢复成已完成",
+                DownloadStartupRules.StartupAction.RESTORE_COMPLETED,
+                DownloadStartupRules.actionFor(state, hasDeliveredFile = true),
+            )
+        }
+        // 已完成的就是 KEEP，不用"恢复"
+        assertEquals(
+            DownloadStartupRules.StartupAction.KEEP,
+            DownloadStartupRules.actionFor(DownloadState.COMPLETED, hasDeliveredFile = true),
+        )
+        // 没交付过文件的，行为与以前完全一致（默认参数不改变老逻辑）
+        assertEquals(
+            DownloadStartupRules.StartupAction.DISCARD_KEEP_FILES,
+            DownloadStartupRules.actionFor(DownloadState.PAUSE),
+        )
+    }
 }

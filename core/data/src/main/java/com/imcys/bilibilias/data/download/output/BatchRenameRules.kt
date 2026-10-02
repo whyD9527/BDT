@@ -32,6 +32,28 @@ object BatchRenameRules {
      *
      * 只做"纯字符串"层面的清理，不判断重名（重名由 MediaStore 回读负责）。
      */
+    /**
+     * FAT 非法字符 —— **MediaStore 会把它们自动替换成 `_`**（Android 已知行为，
+     * 见 MediaProvider 的 `FileUtils.buildUniqueFile`/`sanitizeName`）。
+     */
+    private val MEDIA_STORE_ILLEGAL_CHARS = charArrayOf('\\', '/', ':', '*', '?', '"', '<', '>', '|')
+
+    /**
+     * 把文件名归一化成 **MediaStore 实际会存下来的那个名字**。
+     *
+     * ⚠️ 为什么必须有它（2026-10-02 真机定位的副本堆积根因）：
+     * 交付时 App 想写 `鸣潮 | 先约电台EP….mp4`（轨迹 `[交付入库]` 里就是带 `|` 的），
+     * 但 MediaStore 存下来的是 `鸣潮 _ 先约电台EP….mp4`；
+     * 下一次交付时 App **拿带 `|` 的名字**去匹配"有没有同名旧文件" → 永远匹配不上 →
+     * 于是不做"挪开同名旧文件" → 系统看到撞名 → 自动改名成 `… (2).mp4` → **副本越攒越多**。
+     * （同一逻辑也解释了一个反例：名字里没有非法字符的 MV，匹配成功 → 正常替换。）
+     *
+     * 所以"插入用的名字 / 匹配同名用的名字 / 按名删旧行用的名字"**必须是同一个**，
+     * 都先过这个方法。
+     */
+    fun sanitizeForMediaStore(name: String): String =
+        name.map { if (it in MEDIA_STORE_ILLEGAL_CHARS) '_' else it }.joinToString("")
+
     fun sanitizeBaseName(raw: String): String =
         raw.trim()
             .replace('/', '_')

@@ -75,9 +75,16 @@ class DownloadViewModel(
             val (groups, nameDirs) = withContext(Dispatchers.IO) {
                 val collected = mutableListOf<DuplicateDownloadRules.DuplicateGroup>()
                 val dirOf = mutableMapOf<String, String>()
+                // ⚠️ B（2026-10-02 真机复现）：清理时必须保留"**记录实际引用的那一份**"。
+                // 真机上出现过"记录引用 `… (2).m4a`、而正式名那份反而是孤儿"，
+                // 原来只按名字挑正式名保留 → 照它清理会把记录删成「文件已丢失」。
+                val referencedNames = _allDownloadSegment.value
+                    .mapNotNull { runCatching { fileOutputManager.displayNameOf(it.savePath) }.getOrNull() }
+                    .toSet()
                 duplicateScanRelativePaths.forEach { relativePath ->
-                    val found = runCatching { fileOutputManager.findDuplicateGroups(relativePath) }
-                        .getOrElse { emptyList() }
+                    val found = runCatching {
+                        fileOutputManager.findDuplicateGroups(relativePath, referencedNames)
+                    }.getOrElse { emptyList() }
                     found.forEach { group ->
                         collected += group
                         dirOf[group.keepName] = relativePath

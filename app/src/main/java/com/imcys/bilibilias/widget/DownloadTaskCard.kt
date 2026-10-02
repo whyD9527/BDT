@@ -1,5 +1,6 @@
 package com.imcys.bilibilias.widget
 
+import com.imcys.bilibilias.ui.download.downloadModeLabel
 import androidx.compose.animation.AnimatedContent
 import androidx.compose.animation.core.animateFloatAsState
 import androidx.compose.foundation.clickable
@@ -187,7 +188,7 @@ fun DownloadTaskCard(
                         color = MaterialTheme.colorScheme.primary,
                     ) {
                         Text(
-                            text = task.downloadSegment.downloadMode.title,
+                            text = downloadModeLabel(task.downloadSegment.downloadMode),
                             fontSize = 12.sp,
                             modifier = Modifier.padding(vertical = 4.dp, horizontal = 8.dp),
                             style = TextStyle(
@@ -316,7 +317,7 @@ fun DownloadFinishTaskCard(
                     // ⚠️ 规则在纯模块（`:core:data`，没有 Android 资源）里只返回**码**，
                     // 文案在这里映射到 strings.xml（2026-10-02 本地化改造）。
                     DownloadRecordDisplayRules.tags(
-                        modeTitle = downloadSegment.downloadMode.title,
+                        modeTitle = downloadModeLabel(downloadSegment.downloadMode),
                         qualityTitle = downloadSegment.qualityDescription,
                         extension = downloadSegment.mediaContainer.extension,
                         savePath = downloadSegment.savePath,
