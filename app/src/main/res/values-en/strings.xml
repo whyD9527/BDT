@@ -718,7 +718,7 @@
     <string name="feedback_export_failed">Export failed: %1$s</string>
     <string name="feedback_export_share_title">Share report</string>
     <string name="feedback_copy_done">Copied to clipboard</string>
-    <string name="feedback_open_issue_failed">Couldn't open the browser</string>
+    <string name="feedback_open_issue_failed">Couldn\'t open the browser</string>
     <string name="feedback_need_attention">Needs attention</string>
     <string name="feedback_issue_body">Please export the report from the in-app Feedback page and attach it.</string>
     <string name="crash_export_report">Export report &amp; share</string>
