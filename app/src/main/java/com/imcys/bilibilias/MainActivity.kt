@@ -217,7 +217,10 @@ class MainActivity : ComponentActivity() {
 
     private fun initNotificationChannel() {
         // 创建文件下载进度渠道
-        createDownloadNotificationChannel()
+        createDownloadNotificationChannel(
+            getString(R.string.notification_channel_name),
+            getString(R.string.notification_channel_desc),
+        )
     }
 
 
