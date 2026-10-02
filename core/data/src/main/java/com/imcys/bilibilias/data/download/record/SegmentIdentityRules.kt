@@ -5,9 +5,13 @@ import java.util.Locale
 /**
  * `download_segment` 的**产物身份语义**（④）：什么是"同一条下载"、什么情况**允许并存两条**。
  *
- * ## 这一版是"规格"，不是"接线"（2026-10-02 用户决定：先只出方案、先不动 DB）
- * 所以本对象**目前没有任何生产调用方** —— 它是给后面两个阶段定的判据，
- * 配了单测把语义钉死（`SegmentIdentityRulesTest`），免得将来拍脑袋改。
+ * ## 现状：**阶段 1 已接线，音的"音质"部分仍是规格**（2026-10-02）
+ * - **已接线**：[`ProductForm`]（产物形态键）被 `NewDownloadManager.skipAlreadyDownloadedWaiting`（B4）
+ *   用着；`DownloadTaskRepository.createSegment` 的复用查询是**同一条键的 SQL 版**（写在 DAO 里，
+ *   两边的字段必须一起改）；
+ * - **仍是规格**：[`ProductKey`] 的 `qualityKey` 与 [`PROPOSED_UNIQUE_COLUMNS`] —— 音质**暂时不进键**
+ *   （理由见 `ProductForm` 的注释：文件名不含音质，会造出「文件已丢失」的僵尸记录），
+ *   唯一索引也还没建。**要先收音质，就得先把音质写进文件名。**
  *
  * ## 现状（读代码 ＋ DB 结构得到的，2026-10-02）
  * `DownloadSegment` 表**没有任何唯一索引**（只有 `node_id` / `task_id` 两个普通索引），
@@ -77,6 +81,38 @@ object SegmentIdentityRules {
     /** 现在实际使用的键 */
     fun legacyKeyOf(platformId: String, nodeId: Long): LegacyKey =
         LegacyKey(platformId = platformId.trim(), nodeId = nodeId)
+
+    // ------------------------------------------------------------------ 阶段 1 的「产物形态」
+
+    /**
+     * **阶段 1 落地时真正用的键**：`(platformId, downloadMode, container)` —— **不含音质**。
+     *
+     * 为什么键长这样（2026-10-02 取证）：
+     * 1. 旧键 `(platformId, nodeId)` 不含产物形态 → "同一集先下音频、再下视频"会命中同一条记录并
+     *    **覆盖**它的 `download_mode`/`media_container`，先下那份文件留在磁盘上却没有记录（孤儿）；
+     * 2. **音质暂时不进键**：默认命名规则（视频 `{title}_{p_title}`、番剧 `{season_title}/{episode_number}_{episode_title}`）
+     *    **都不含音质** —— 同一集换音质重下时，交付链路是"挪开同名旧文件 → 写新文件"，落盘名字一样
+     *    （2026-10-01 真机实测：换音质后目录仍只有一份，大小从 72,557,630 变成 75,234,160）。
+     *    若把音质写进键，就会出现**两条记录指向同一个文件**：后下的那份把文件换掉，
+     *    旧记录的 `save_path` 指向的行已被删 → 列表里多一条「文件已丢失」的僵尸记录。
+     *    **要收音质，必须先把音质写进文件名**（那是命名规则的改动，另立批次）。
+     *
+     * ⚠️ `container` 传的是**存进 DB 的那个值**：`MediaContainerConverter` 存的是
+     * `extension`（`mp4`/`m4a`/`mp3`/`mkv`）而**不是**枚举名，所以这里统一用扩展名。
+     */
+    data class ProductForm(
+        val platformId: String,
+        val downloadMode: String,
+        val container: String,
+    )
+
+    /** 构造阶段 1 的产物键（归一化：平台 id 去空白、模式转大写、容器转小写） */
+    fun productFormOf(platformId: String, downloadMode: String, container: String): ProductForm =
+        ProductForm(
+            platformId = platformId.trim(),
+            downloadMode = downloadMode.trim().uppercase(Locale.ROOT),
+            container = container.trim().lowercase(Locale.ROOT),
+        )
 
     /**
      * 构造 [ProductKey]（顺手归一化：trim、模式转大写、封装转小写、空音质 → [UNKNOWN_QUALITY]）。

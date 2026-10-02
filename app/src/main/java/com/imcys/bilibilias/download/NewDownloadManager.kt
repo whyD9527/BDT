@@ -1,5 +1,6 @@
 package com.imcys.bilibilias.download
 
+import com.imcys.bilibilias.data.download.record.SegmentIdentityRules
 import kotlinx.coroutines.flow.first
 import android.net.ConnectivityManager
 import android.net.NetworkCapabilities
@@ -528,12 +529,25 @@ class NewDownloadManager(
 
         val completed = downloadTaskRepository.getSegmentAll().first()
             .filter { it.downloadState == DownloadState.COMPLETED && it.savePath.isNotBlank() }
-            .associateBy { it.platformId to it.downloadMode }
+            // ④ 阶段 1：键与 `createSegment` 的复用键对齐（产物形态 = 平台项 + 模式 + 封装），
+            // 不再只看 platformId+模式 —— 否则"仅视频 mp4"与"音视频 mp4"会互相当成"已下载"。
+            .associateBy {
+                SegmentIdentityRules.productFormOf(
+                    it.platformId,
+                    it.downloadMode.name,
+                    it.mediaContainer.extension,
+                )
+            }
 
         var skipped = 0
         waiting.forEach { task ->
             val segment = task.downloadSegment
-            val existing = completed[segment.platformId to segment.downloadMode] ?: return@forEach
+            val productForm = SegmentIdentityRules.productFormOf(
+                segment.platformId,
+                segment.downloadMode.name,
+                segment.mediaContainer.extension,
+            )
+            val existing = completed[productForm] ?: return@forEach
             if (existing.segmentId == segment.segmentId) return@forEach
             if (!fileOutputManager.savePathUsableForReuse(existing.savePath)) return@forEach
 
@@ -548,7 +562,8 @@ class NewDownloadManager(
             skipped++
             fileOutputManager.logDiagnostic(
                 "跳过已下载",
-                "「${segment.title}」已存在（platformId=${segment.platformId} 模式=${segment.downloadMode}）",
+                "「${segment.title}」已存在（platformId=${segment.platformId} 模式=${segment.downloadMode} " +
+                    "封装=${segment.mediaContainer.extension}）",
             )
         }
         return skipped

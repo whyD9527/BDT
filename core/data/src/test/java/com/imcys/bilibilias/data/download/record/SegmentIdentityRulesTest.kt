@@ -119,6 +119,33 @@ class SegmentIdentityRulesTest {
         assertNull(SegmentIdentityRules.keepSegmentIdOnConflict(emptyList()))
     }
 
+    // ------------------------------------------- 阶段 1 的「产物形态」键
+
+    @Test
+    fun `产物形态键：平台 id 去空白、模式大写、容器小写`() {
+        val form = SegmentIdentityRules.productFormOf(" BV1xx ", "audio_only", "M4A")
+        assertEquals("BV1xx", form.platformId)
+        assertEquals("AUDIO_ONLY", form.downloadMode)
+        assertEquals("m4a", form.container)
+    }
+
+    @Test
+    fun `产物形态键：同一集的不同产物不相等（音频 vs 视频）`() {
+        val audio = SegmentIdentityRules.productFormOf("BV1", "AUDIO_ONLY", "m4a")
+        val video = SegmentIdentityRules.productFormOf("BV1", "VIDEO_ONLY", "mp4")
+        val both = SegmentIdentityRules.productFormOf("BV1", "AUDIO_VIDEO", "mp4")
+        assertEquals(3, setOf(audio, video, both).size)
+        // 同一产物（大小写/空白不同）要相等 —— 否则又会出现"同一份产物两条记录"
+        assertEquals(audio, SegmentIdentityRules.productFormOf("BV1", "audio_only", "M4A"))
+    }
+
+    @Test
+    fun `产物形态键里刻意没有音质 —— 因为文件名里也没有`() {
+        // 这条断言是"规格"：等哪天命名规则把音质写进文件名了，再把音质加进键
+        val form = SegmentIdentityRules.productFormOf("BV1", "VIDEO_ONLY", "mp4")
+        assertFalse(form.toString().contains("quality"))
+    }
+
     @Test
     fun `建议的唯一索引列写进了代码（评审用），且明确它包含现在还不存在的 quality_key`() {
         assertEquals(

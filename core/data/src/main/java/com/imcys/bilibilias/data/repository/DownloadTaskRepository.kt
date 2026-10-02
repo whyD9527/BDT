@@ -770,14 +770,30 @@ class DownloadTaskRepository(
         mNamingConventionInfo: NamingConventionInfo,
         mediaContainerConfig: MediaContainerConfig,
     ): DownloadSegment {
-        // 一个 (nodeId, platformId) 只允许一条记录。
+        // 一条记录 = 一份「产物」：键 = (nodeId, platformId, downloadMode, mediaContainer)。
         //
-        // 原先"已完成"的分支会返回 null → 再插一条新的，于是出现两条同 (nodeId, platformId)
-        // 的记录；而落盘文件名由命名规则决定（同一集必然同名），后一次下载会覆盖前一次的文件
-        // —— 第二条记录永远指向一个不存在的文件（第二十四轮真机时 DB 里积了 3 条）。
-        // 现在改成**有就复用**，并把已完成的那条重置为「待下载」（否则它带着 COMPLETED
-        // 进内存列表，而队列只挑 WAITING，用户点了下载会什么都不发生）。
-        val existing = downloadTaskDao.getSegmentByNodeIdAndPlatformId(nodeId, platformId)
+        // 历史（第二十四轮）：原先"已完成"的分支会返回 null → 再插一条新的，于是出现两条
+        // 同 (nodeId, platformId) 的记录；而落盘文件名由命名规则决定（同一集必然同名），
+        // 后一次下载会覆盖前一次的文件 —— 第二条记录永远指向一个不存在的文件（真机时 DB 里积了 3 条）。
+        // 修法是**有就复用**，并把已完成的那条重置为「待下载」（否则它带着 COMPLETED 进内存列表，
+        // 而队列只挑 WAITING，用户点了下载会什么都不发生）。
+        //
+        // ④ 阶段 1（2026-10-02）：键里**再加上产物形态**。旧键只看 (nodeId, platformId)，
+        // 于是"同一集先下音频、再下视频"会命中同一条记录并覆盖它的 download_mode/media_container
+        // —— 先下那份文件留在磁盘上却没有记录（在「存储管理 → 下载目录文件」里显示成孤儿）。
+        // ⚠️ **音质不进键**：默认命名规则（`{title}_{p_title}`）不含音质，交付时是同名替换，
+        // 两条记录会指向同一个文件 → 旧记录变成「文件已丢失」的僵尸记录。理由与取证见
+        // `SegmentIdentityRules.ProductForm` 的注释。
+        val productContainer = when (downloadMode) {
+            DownloadMode.AUDIO_ONLY -> mediaContainerConfig.audioContainer
+            else -> mediaContainerConfig.videoContainer
+        }
+        val existing = downloadTaskDao.getSegmentByProduct(
+            nodeId = nodeId,
+            platformId = platformId,
+            downloadMode = downloadMode,
+            mediaContainer = productContainer,
+        )
 
         return when (DownloadRecordReuseRules.persistAction(existing != null)) {
             DownloadRecordReuseRules.PersistAction.UPDATE_EXISTING -> {
@@ -791,10 +807,7 @@ class DownloadTaskRepository(
                     downloadMode = downloadMode,
                     taskId = childTaskId,
                     namingConventionInfo = mNamingConventionInfo,
-                    mediaContainer = when (downloadMode) {
-                        DownloadMode.AUDIO_ONLY -> mediaContainerConfig.audioContainer
-                        else -> mediaContainerConfig.videoContainer
-                    },
+                    mediaContainer = productContainer,
                     qualityDescription = qualityDescription,
                     downloadState = DownloadRecordReuseRules.stateWhenReused(existing.downloadState),
                 )
@@ -817,10 +830,7 @@ class DownloadTaskRepository(
             fileSize = 0,
             namingConventionInfo = mNamingConventionInfo,
             qualityDescription = qualityDescription,
-            mediaContainer = when (downloadMode) {
-                DownloadMode.AUDIO_ONLY -> mediaContainerConfig.audioContainer
-                else -> mediaContainerConfig.videoContainer
-            }
+            mediaContainer = productContainer,
         ).let {
             val segmentId = downloadTaskDao.insertSegment(it)
             it.copy(segmentId = segmentId)

@@ -7,6 +7,8 @@ import androidx.room.OnConflictStrategy
 import androidx.room.Query
 import androidx.room.Update
 import com.imcys.bilibilias.database.entity.download.DownloadSegment
+import com.imcys.bilibilias.database.entity.download.DownloadMode
+import com.imcys.bilibilias.database.entity.download.MediaContainer
 import com.imcys.bilibilias.database.entity.download.DownloadTask
 import com.imcys.bilibilias.database.entity.download.DownloadTaskNode
 import kotlinx.coroutines.flow.Flow
@@ -59,6 +61,32 @@ interface DownloadTaskDao {
 
     @Query("SELECT * FROM download_segment WHERE segment_id = :segmentId")
     suspend fun getSegmentBySegmentId(segmentId: Long): DownloadSegment?
+
+    /**
+     * 按**产物身份**查一条 segment（④ 阶段 1，2026-10-02）。
+     *
+     * 与 [getSegmentByNodeIdAndPlatformId] 的区别：那个只看"哪个节点 + 哪个平台"，
+     * 于是"同一集先下音频、再下视频"会命中同一条记录并**覆盖**它的 `download_mode`/`media_container`
+     * —— 先下那份文件留在磁盘上却没有记录（「存储管理 → 下载目录文件」里会显示成孤儿）。
+     * 这里把**产物形态**（下载模式 + 封装格式）也纳入键：同一集的不同产物 = 不同记录。
+     *
+     * ⚠️ **音质刻意不进键**（本表也还没有 `quality_key` 列）：默认命名规则不含音质，
+     * 两条记录会指向同一个文件 → 旧记录变成「文件已丢失」的僵尸记录。取证与理由见
+     * `SegmentIdentityRules.ProductForm` 的注释。
+     *
+     * ⚠️ `mediaContainer` 由 Room 按 `MediaContainerConverter` 绑成 **`extension`**
+     * （`mp4`/`m4a`/`mp3`/`mkv`），与 `createSegment` 里存进去的值一致。
+     */
+    @Query(
+        "SELECT * FROM download_segment WHERE node_id = :nodeId AND platform_id = :platformId " +
+            "AND download_mode = :downloadMode AND media_container = :mediaContainer"
+    )
+    suspend fun getSegmentByProduct(
+        nodeId: Long,
+        platformId: String,
+        downloadMode: DownloadMode,
+        mediaContainer: MediaContainer,
+    ): DownloadSegment?
 
 
     @Query("SELECT * FROM download_segment ORDER BY segment_id DESC")
