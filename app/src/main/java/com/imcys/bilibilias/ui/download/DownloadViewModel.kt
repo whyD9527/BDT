@@ -13,6 +13,7 @@ import com.imcys.bilibilias.datastore.AppSettings
 import android.net.Uri
 import java.io.FileNotFoundException
 import com.imcys.bilibilias.data.download.record.DownloadRecordDisplayRules
+import com.imcys.bilibilias.download.DownloadDir
 import com.imcys.bilibilias.data.download.output.DuplicateDownloadRules
 import com.imcys.bilibilias.download.FileOutputManager
 import com.imcys.bilibilias.download.NewDownloadManager
@@ -54,12 +55,37 @@ class DownloadViewModel(
     private val _pendingDeleteUris = MutableStateFlow<List<android.net.Uri>>(emptyList())
     val pendingDeleteUris = _pendingDeleteUris.asStateFlow()
 
+    /**
+     * 重复检测要扫的目录：**新目录 + 旧目录**。
+     *
+     * 2026-10-01 目录由 `BiliDownloader` 改名为 `BDT` 后**不做搬移**（老文件留在原地），
+     * 只扫新目录的话，用户旧目录里的历史副本**永远发现不了**。
+     */
+    private val duplicateScanRelativePaths: List<String>
+        get() = DownloadDir.ALL_NAMES.map { "Download/$it" }
+
+    /** 名字 → 它所在的相对路径（清理时必须知道从哪个目录删，否则删错目录 = 静默 no-op） */
+    private val duplicateNameDir = mutableMapOf<String, String>()
+
     /** 刷新重复文件分组（进入页面时 / 清理后调用） */
     fun refreshDuplicateGroups() {
         viewModelScope.launch {
-            val groups = withContext(Dispatchers.IO) {
-                fileOutputManager.findDuplicateGroups(DOWNLOAD_RELATIVE_PATH)
+            val (groups, nameDirs) = withContext(Dispatchers.IO) {
+                val collected = mutableListOf<DuplicateDownloadRules.DuplicateGroup>()
+                val dirOf = mutableMapOf<String, String>()
+                duplicateScanRelativePaths.forEach { relativePath ->
+                    val found = runCatching { fileOutputManager.findDuplicateGroups(relativePath) }
+                        .getOrElse { emptyList() }
+                    found.forEach { group ->
+                        collected += group
+                        dirOf[group.keepName] = relativePath
+                        group.removableNames.forEach { dirOf[it] = relativePath }
+                    }
+                }
+                collected to dirOf
             }
+            duplicateNameDir.clear()
+            duplicateNameDir.putAll(nameDirs)
             _duplicateGroups.value = groups
         }
     }
@@ -75,15 +101,21 @@ class DownloadViewModel(
     fun cleanDuplicateFiles(names: List<String>) {
         if (names.isEmpty()) return
         viewModelScope.launch {
-            val result = withContext(Dispatchers.IO) {
-                fileOutputManager.deleteFilesByName(DOWNLOAD_RELATIVE_PATH, names)
+            // 名字可能来自新目录、也可能来自旧目录：**按所在目录分组**分别清理
+            val byDir = names.groupBy { duplicateNameDir[it] ?: DOWNLOAD_RELATIVE_PATH }
+            val results = withContext(Dispatchers.IO) {
+                byDir.map { (relativePath, namesInDir) ->
+                    fileOutputManager.deleteFilesByName(relativePath, namesInDir)
+                }
             }
-            if (result.deleted > 0) {
-                sendToast("已清理 ${result.deleted} 个重复文件")
+            val deleted = results.sumOf { it.deleted }
+            val consent = results.flatMap { it.needsUserConsent }
+            if (deleted > 0) {
+                sendToast("已清理 $deleted 个重复文件")
             }
-            if (result.needsUserConsent.isNotEmpty()) {
-                _pendingDeleteUris.value = result.needsUserConsent
-            } else if (result.deleted == 0) {
+            if (consent.isNotEmpty()) {
+                _pendingDeleteUris.value = consent
+            } else if (deleted == 0) {
                 sendToast("没有文件被删除（可能已被移动，或需要「所有文件访问」权限）")
             }
             refreshDuplicateGroups()

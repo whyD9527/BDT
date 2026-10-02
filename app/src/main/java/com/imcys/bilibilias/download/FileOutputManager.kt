@@ -745,14 +745,71 @@ class FileOutputManager(
     private fun trace(message: String) {
         Log.d(TAG, message)
         runCatching {
-            val dir = File(context.getExternalFilesDir(null), "logs").apply { mkdirs() }
-            val file = File(dir, "download-trace.log")
+            val file = traceFile()
             if (file.length() > MAX_TRACE_BYTES) file.delete()
             val stamp = java.text.SimpleDateFormat("MM-dd HH:mm:ss", java.util.Locale.ROOT)
                 .format(java.util.Date())
             file.appendText("$stamp $message\n")
         }
     }
+
+    /** 轨迹文件（顺带建目录） */
+    private fun traceFile(): File =
+        File(File(context.getExternalFilesDir(null), "logs").apply { mkdirs() }, "download-trace.log")
+
+    /**
+     * 让下载链路的**其它环节**（下载/合并失败…）也写进同一条时间线。
+     *
+     * 为什么需要：这台 ROM 会过滤 app 自己的 logcat，"失败原因"以前只出现在 logcat 里 =
+     * 用户报障时基本拿不到。现在失败原因和交付/清理记在同一个文件里，导出一份就能复盘。
+     */
+    fun logDiagnostic(tag: String, message: String) {
+        trace("[$tag] $message")
+    }
+
+    /** 轨迹文件是否有内容（界面用它区分"导出失败"和"还没产生日志"） */
+    fun hasTraceLog(): Boolean = traceFile().let { it.exists() && it.length() > 0L }
+
+    /**
+     * 把轨迹日志导出到下载目录（`Download/BDT/`），返回导出后的文件名；没有日志时返回 null。
+     *
+     * 为什么走 MediaStore 插入而不是直接 `File` 写：Android 10+ 在**没有「所有文件访问」**时，
+     * app 不能直接用 File 写公共下载目录（会被 scoped storage 拒），而往 `MediaStore.Downloads`
+     * 插一条**本 app 拥有**的记录是允许的 —— 交付链路一直就是这么写的。
+     * Android 9 及以下没有 `MediaStore.Downloads`，退回直接写文件（尽力而为）。
+     */
+    fun exportTraceLog(): String? = runCatching {
+        val src = traceFile()
+        if (!src.exists() || src.length() == 0L) return@runCatching null
+        val name = "BDT-诊断日志-" +
+            java.text.SimpleDateFormat("yyyyMMdd-HHmmss", java.util.Locale.ROOT).format(java.util.Date()) +
+            ".log"
+
+        if (Build.VERSION.SDK_INT < Build.VERSION_CODES.Q) {
+            val dir = DownloadDir.dir().apply { mkdirs() }
+            src.copyTo(File(dir, name), overwrite = true)
+            trace("导出诊断日志(legacy): $name")
+            return@runCatching name
+        }
+
+        val values = ContentValues().apply {
+            put(MediaStore.Downloads.DISPLAY_NAME, name)
+            put(MediaStore.Downloads.MIME_TYPE, "text/plain")
+            put(MediaStore.Downloads.RELATIVE_PATH, DownloadDir.RELATIVE_PATH)
+            put(MediaStore.Downloads.IS_PENDING, 1)
+        }
+        val resolver = context.contentResolver
+        val uri = resolver.insert(MediaStore.Downloads.EXTERNAL_CONTENT_URI, values)
+            ?: return@runCatching null
+        resolver.openOutputStream(uri)?.use { out ->
+            src.inputStream().use { input -> input.copyTo(out) }
+        }
+        values.clear()
+        values.put(MediaStore.Downloads.IS_PENDING, 0)
+        resolver.update(uri, values, null, null)
+        trace("导出诊断日志: $name")
+        name
+    }.getOrNull()
 
     /** 把某个显示名对应的媒体库行删掉（文件已经不在原路径时用它清残留行） */
     private fun deleteRowsByDisplayName(

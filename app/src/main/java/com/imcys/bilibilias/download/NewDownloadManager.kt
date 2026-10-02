@@ -148,6 +148,11 @@ class NewDownloadManager(
                 "mode=${task.downloadSegment.downloadMode} 原因=$reason",
             error
         )
+        // 失败原因也写进轨迹文件（这台 ROM 会过滤 logcat，只写 Log.e 等于没写）
+        fileOutputManager.logDiagnostic(
+            "下载失败",
+            "platformId=${task.downloadSegment.platformId} mode=${task.downloadSegment.downloadMode} 原因=$reason"
+        )
         updateTaskState(task, DownloadState.ERROR)
         downloadScope.launch {
             // ⚠️ 失败态**也要落盘**。原先只改内存态，于是 DB 里那行永远停在 WAITING：

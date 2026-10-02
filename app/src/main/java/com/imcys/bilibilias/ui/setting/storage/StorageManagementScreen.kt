@@ -1,5 +1,11 @@
 package com.imcys.bilibilias.ui.setting.storage
 
+import androidx.compose.runtime.rememberCoroutineScope
+import kotlinx.coroutines.Dispatchers
+import kotlinx.coroutines.launch
+import kotlinx.coroutines.withContext
+import org.koin.compose.koinInject
+import com.imcys.bilibilias.download.FileOutputManager
 import android.content.ActivityNotFoundException
 import android.content.Intent
 import android.util.Log
@@ -140,6 +146,10 @@ fun StorageManagementSuccessScreen(
     onToDownloadList: () -> Unit,
     onSaveDownloadUri: (uri: Uri) -> Unit,
 ) {
+    // 诊断日志导出：这台 ROM 会过滤 app 自己的 logcat，出问题时需要能把完整轨迹带走
+    val fileOutputManager: FileOutputManager = koinInject()
+    val diagnosticScope = rememberCoroutineScope()
+
     // 「所有文件访问」状态：进页面 + 从系统设置返回（ON_RESUME）都刷新一次
     var hasAllFilesAccess by remember { mutableStateOf(false) }
     val lifecycleOwner = LocalLifecycleOwner.current
@@ -225,6 +235,28 @@ fun StorageManagementSuccessScreen(
                 }
             }
         }
+
+        StorageContent(
+            title = "导出诊断日志",
+            dataNumStr = "",
+            description = "把下载/清理的轨迹日志导出到 Download/BDT，排查问题时发给开发者",
+            buttonText = "导出",
+            buttonColor = MaterialTheme.colorScheme.primary,
+            onClick = {
+                diagnosticScope.launch {
+                    val name = withContext(Dispatchers.IO) { fileOutputManager.exportTraceLog() }
+                    Toast.makeText(
+                        context,
+                        if (name != null) {
+                            "已导出：$name（在 Download/BDT 目录里）"
+                        } else {
+                            "还没有日志可导出（先下载或清理一次再来）"
+                        },
+                        Toast.LENGTH_LONG,
+                    ).show()
+                }
+            },
+        )
 
         StorageContent(
             title = "音视频文件",
