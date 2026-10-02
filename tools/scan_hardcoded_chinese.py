@@ -91,16 +91,20 @@ def classify(line: str) -> str:
 
 def scan_file(path: str):
     src = strip_comments(open(path, encoding="utf-8").read())
+    lines = src.split("\n")
     hits = []
     for m in LITERAL.finditer(src):
         text = m.group(1) if m.group(1) is not None else m.group(2)
         if not text or not CJK.search(text):
             continue
         line = src.count("\n", 0, m.start()) + 1
-        line_text = src.split("\n")[line - 1].strip()
+        line_text = lines[line - 1].strip()
+        # ⚠️ 跨行调用要回溯：`trace(\n "中文…"\n)` 这种，字面量所在行里看不到 `trace(`，
+        # 按单行判定会误落进 ui 桶（E7 之后统计大部分"剩余 ui"就是这种假阳性）。
+        context = " ".join(x.strip() for x in lines[max(0, line - 6):line])
         hits.append({
             "line": line,
-            "kind": classify(line_text),
+            "kind": classify(context),
             "text": text.strip()[:120],
             "code": line_text[:160],
         })
