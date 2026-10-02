@@ -232,6 +232,10 @@
     <string name="error_message_format">Error：%s</string>
     <string name="error_exit_app">退出软件</string>
     <string name="error_copy_error">复制异常</string>
+    <!-- 崩溃页（2026-10-02 重开 AppCrashHandler 时新增） -->
+    <string name="crash_error_title">发生错误：%1$s</string>
+    <string name="crash_unknown_error">未知错误</string>
+    <string name="crash_log_saved_hint">完整堆栈已写入应用私有目录的 logs/crash.log；可用「存储管理 → 导出诊断日志」一起导出。</string>
     
     <!-- Download info related strings -->
     <string name="download_info_title">下载信息</string>

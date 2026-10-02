@@ -35,14 +35,18 @@ import kotlinx.coroutines.launch
 import kotlin.system.exitProcess
 
 /**
- * APP未捕获异常崩溃页面
- * 未启用
+ * APP 未捕获异常崩溃页。
+ *
+ * 2026-10-02 随 `AppCrashHandler` 一起重新启用：页面由 handler 拉起，显示**截断后的堆栈**
+ * （完整报告在 `logs/crash.log`，可用「存储管理 → 导出诊断日志」导出），并提供复制/退出。
  */
 class AppCrashActivity : ComponentActivity() {
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
         enableEdgeToEdge()
-        val appErrorMsg = intent.getStringExtra("appErrorMsg") ?: "未知错误"
+        // extra 名与 AppCrashHandler 共用一个常量（写/读两头不会走偏）
+        val appErrorMsg = intent.getStringExtra(AppCrashHandler.EXTRA_ERROR_MSG)
+            ?: getString(R.string.crash_unknown_error)
         setContent {
             BILIBILIASTheme {
                 Scaffold {
@@ -72,10 +76,15 @@ class AppCrashActivity : ComponentActivity() {
             horizontalAlignment = Alignment.CenterHorizontally
         ) {
             Text(
-                text = "发生错误：${appErrorMsg}",
+                text = stringResource(R.string.crash_error_title, appErrorMsg),
                 style = MaterialTheme.typography.bodyLarge,
                 color = MaterialTheme.colorScheme.error,
                 modifier = Modifier.weight(1f)
+            )
+            Text(
+                text = stringResource(R.string.crash_log_saved_hint),
+                style = MaterialTheme.typography.bodySmall,
+                color = MaterialTheme.colorScheme.onSurfaceVariant
             )
             Spacer(Modifier.height(10.dp))
             Row(

@@ -10,6 +10,7 @@ import android.os.Environment
 import android.provider.MediaStore
 import android.util.Log
 import androidx.core.net.toUri
+import com.imcys.bilibilias.common.crash.CrashLogRules
 import com.imcys.bilibilias.data.download.record.DownloadRecordReuseRules
 import com.imcys.bilibilias.data.download.naming.FileNameLengthRules
 import com.imcys.bilibilias.data.download.output.BatchRenameRules
@@ -755,9 +756,21 @@ class FileOutputManager(
         }
     }
 
+    /** 日志目录（轨迹 + 崩溃日志都放这里，顺带建目录） */
+    private fun logDir(): File =
+        File(context.getExternalFilesDir(null), CrashLogRules.LOG_DIR).apply { mkdirs() }
+
     /** 轨迹文件（顺带建目录） */
-    private fun traceFile(): File =
-        File(File(context.getExternalFilesDir(null), "logs").apply { mkdirs() }, "download-trace.log")
+    private fun traceFile(): File = File(logDir(), "download-trace.log")
+
+    /**
+     * 崩溃日志文件（`AppCrashHandler` 写、这里读）。
+     *
+     * 为什么不直接让 handler 调 [logDiagnostic]：崩溃可能发生在 Koin 初始化**之前**
+     * （`BILIBILIASApplication.onCreate` 里 crash handler 必须先于 `startKoin` 装好），
+     * 那会儿拿不到任何注入对象。所以 handler 只用 Android API 写文件，这里再读出来一起导出。
+     */
+    private fun crashLogFile(): File = File(logDir(), CrashLogRules.FILE_NAME)
 
     /**
      * 让下载链路的**其它环节**（下载/合并失败…）也写进同一条时间线。
@@ -800,10 +813,33 @@ class FileOutputManager(
             displayName
         }.getOrNull()
 
-    /** 读轨迹日志（默认取末尾 500 行），用于应用内「诊断日志」 */
+    /**
+     * 拼出「诊断日志」的正文：**崩溃日志在前、下载轨迹在后**。
+     *
+     * 崩溃可能发生在 Koin 初始化之前（那时 [logDiagnostic] 还拿不到注入对象），所以崩溃日志是
+     * `AppCrashHandler` 单独写的文件；用户只要点一次「导出诊断日志」就能把两份一起带走 ——
+     * 这台 ROM 上 MIUI 会过滤 logcat，这是唯一可靠的报障材料。
+     */
+    private fun buildDiagnosticText(maxLines: Int): String {
+        val traceText = traceFile().let { file ->
+            if (!file.exists()) "" else file.readLines().takeLast(maxLines).joinToString("\n")
+        }
+        val crashText = crashLogFile().let { file ->
+            if (!file.exists()) "" else file.readText().trimEnd()
+        }
+        if (crashText.isBlank()) return traceText
+        return buildString {
+            appendLine("===== 崩溃日志（crash.log）=====")
+            appendLine(crashText)
+            appendLine()
+            appendLine("===== 下载/交付轨迹（download-trace.log 末尾 $maxLines 行）=====")
+            append(traceText)
+        }
+    }
+
+    /** 读轨迹日志（默认取末尾 500 行 + 崩溃日志），用于应用内「诊断日志」 */
     fun readTraceText(maxLines: Int = 500): String = runCatching {
-        val file = traceFile()
-        if (!file.exists()) "" else file.readLines().takeLast(maxLines).joinToString("\n")
+        buildDiagnosticText(maxLines)
     }.getOrElse { "" }
 
     /** 清空轨迹日志 */
@@ -977,8 +1013,10 @@ class FileOutputManager(
         context.contentResolver.openFileDescriptor(uri, "r")?.use { true } ?: false
     }.getOrElse { false }
 
-    /** 轨迹文件是否有内容（界面用它区分"导出失败"和"还没产生日志"） */
-    fun hasTraceLog(): Boolean = traceFile().let { it.exists() && it.length() > 0L }
+    /** 轨迹或崩溃日志是否有内容（界面用它区分"导出失败"和"还没产生日志"） */
+    fun hasTraceLog(): Boolean =
+        traceFile().let { it.exists() && it.length() > 0L } ||
+            crashLogFile().let { it.exists() && it.length() > 0L }
 
     /**
      * 把轨迹日志导出到下载目录（`Download/BDT/`），返回导出后的文件名；没有日志时返回 null。
@@ -989,8 +1027,9 @@ class FileOutputManager(
      * Android 9 及以下没有 `MediaStore.Downloads`，退回直接写文件（尽力而为）。
      */
     fun exportTraceLog(): String? = runCatching {
-        val src = traceFile()
-        if (!src.exists() || src.length() == 0L) return@runCatching null
+        // 正文 = 崩溃日志（若有）+ 轨迹末尾 500 行；两份都没有才算"没日志"
+        val content = buildDiagnosticText(maxLines = 500)
+        if (content.isBlank()) return@runCatching null
         // ⚠️ 后缀必须与 MIME(text/plain) 一致：以前写成 `.log`，MediaProvider 会补成
         // `.log.txt`（2026-10-02 真机看到的就是双后缀）。
         val name = "BDT-诊断日志-" +
@@ -999,7 +1038,7 @@ class FileOutputManager(
 
         if (Build.VERSION.SDK_INT < Build.VERSION_CODES.Q) {
             val dir = DownloadDir.dir().apply { mkdirs() }
-            src.copyTo(File(dir, name), overwrite = true)
+            File(dir, name).writeText(content)
             trace("导出诊断日志(legacy): $name")
             return@runCatching name
         }
@@ -1014,7 +1053,7 @@ class FileOutputManager(
         val uri = resolver.insert(MediaStore.Downloads.EXTERNAL_CONTENT_URI, values)
             ?: return@runCatching null
         resolver.openOutputStream(uri)?.use { out ->
-            src.inputStream().use { input -> input.copyTo(out) }
+            out.write(content.toByteArray(Charsets.UTF_8))
         }
         values.clear()
         values.put(MediaStore.Downloads.IS_PENDING, 0)

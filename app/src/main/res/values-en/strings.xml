@@ -232,6 +232,10 @@
     <string name="error_message_format">Error: %s</string>
     <string name="error_exit_app">Exit App</string>
     <string name="error_copy_error">Copy Error</string>
+    <!-- Crash page (added when AppCrashHandler was re-enabled) -->
+    <string name="crash_error_title">Error: %1$s</string>
+    <string name="crash_unknown_error">Unknown error</string>
+    <string name="crash_log_saved_hint">The full stack trace was saved to logs/crash.log; export it together from Storage → Export diagnostic log.</string>
 
     <!-- Download info related strings -->
     <string name="download_info_title">Download Information</string>
