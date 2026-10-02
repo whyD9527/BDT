@@ -178,7 +178,7 @@ class AppSettingsRepository(
     }
 
     /** 用户上次"跳过此版本"的版本编码（GitHub 更新检查用；0 = 没跳过） */
-    suspend fun getLastSkipUpdateVersionCode(): Int = currentSettings.lastSkipUpdateVersionCode
+    suspend fun getLastSkipUpdateVersionCode(): Int = appSettingsFlow.first().lastSkipUpdateVersionCode
 
     suspend fun updateLastSkipUpdateVersionCode(versionCode: Int) {
         dataStore.updateData { currentSettings ->
