@@ -1,5 +1,8 @@
 package com.imcys.bilibilias.widget.dialog
 
+import androidx.compose.ui.res.stringResource
+import com.imcys.bilibilias.R
+import androidx.annotation.StringRes
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.outlined.WarningAmber
 import androidx.compose.material3.AlertDialog
@@ -14,13 +17,13 @@ fun PermissionRequestTipDialog(
     icon: @Composable (() -> Unit)? = {
         Icon(
             Icons.Outlined.WarningAmber,
-            contentDescription = "警告"
+            contentDescription = stringResource(R.string.cd_warning)
         )
     },
-    title: String = "权限请求",
+    @StringRes titleRes: Int = R.string.permission_dialog_title,
     message: String,
-    confirmText: String = "继续",
-    dismissText: String = "取消",
+    @StringRes confirmTextRes: Int = R.string.permission_dialog_continue,
+    @StringRes dismissTextRes: Int = R.string.common_cancel,
     onConfirm: () -> Unit,
     onDismiss: () -> Unit
 ) {
@@ -28,16 +31,16 @@ fun PermissionRequestTipDialog(
         AlertDialog(
             onDismissRequest = onDismiss,
             icon = icon,
-            title = { Text(title) },
+            title = { Text(stringResource(titleRes)) },
             text = { Text(message) },
             confirmButton = {
                 ASTextButton(onClick = onConfirm) {
-                    Text(confirmText)
+                    Text(stringResource(confirmTextRes))
                 }
             },
             dismissButton = {
                 ASTextButton(onClick = onDismiss) {
-                    Text(dismissText)
+                    Text(stringResource(dismissTextRes))
                 }
             }
         )

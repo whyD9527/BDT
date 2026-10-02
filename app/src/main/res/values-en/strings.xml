@@ -599,4 +599,27 @@
     <string name="common_click_retry">Tap to retry</string>
     <string name="clip_error_label">BDT error</string>
     <string name="cd_copy_error">Copy error</string>
+    <!-- i18n batch E11a: analysis download widgets / platform switch / layout / storage ring / permission dialog -->
+    <string name="cd_warning">Warning</string>
+    <string name="cd_explanation">Info</string>
+    <string name="permission_dialog_title">Permission request</string>
+    <string name="permission_dialog_continue">Continue</string>
+    <string name="copyright_no_repost">Do not repost without permission from the author</string>
+    <string name="analysis_select_collection">Select a collection to cache</string>
+    <string name="analysis_select_part">Select parts to cache</string>
+    <string name="analysis_preview_mode_warning">This is preview mode: only members can watch the full video, and the download may not play in full.</string>
+    <string name="analysis_select_episode">Select episodes to cache</string>
+    <string name="analysis_select_preview">Select previews to cache</string>
+    <string name="parse_switching_account">Switching account; please stay on this screen to avoid losing your login.</string>
+    <string name="parse_checking_account">Checking the account; please stay on this screen to avoid losing your login.</string>
+    <string name="parse_multi_account_hint">Multiple accounts detected; choose one to switch to.</string>
+    <string name="parse_platform_description">Different platforms give different content and benefits — for example, some TV-platform content and resolutions need a super premium membership rather than a regular one.\n\nNote: the TV platform and the roaming feature cannot be used at the same time; roaming will not take effect while TV mode is selected.</string>
+    <string name="layout_show">Show</string>
+    <string name="layout_hide">Hide</string>
+    <string name="cd_drag">Long-press to drag</string>
+    <string name="layout_home_typeset_title">Home layout</string>
+    <string name="storage_ring_memory">Uses %1$s%% of device memory</string>
+    <string name="storage_available_space">Available</string>
+    <string name="storage_used_space">Used</string>
+    <string name="storage_app_space">App usage</string>
 </resources>

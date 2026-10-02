@@ -1,5 +1,7 @@
 package com.imcys.bilibilias.ui.setting.platform
 
+import androidx.compose.ui.res.stringResource
+import com.imcys.bilibilias.R
 import androidx.compose.animation.AnimatedContent
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Column
@@ -79,7 +81,7 @@ private fun ParsePlatformContent(modifier: Modifier = Modifier) {
             }
 
             ParsePlatformViewModel.ParsePlatformUIState.ChangeLoading -> {
-                ASCommonLoadingScreen("正在切换账户中，请不要离开，避免登录失效。")
+                ASCommonLoadingScreen(stringResource(R.string.parse_switching_account))
             }
 
             is ParsePlatformViewModel.ParsePlatformUIState.Default -> {
@@ -90,7 +92,7 @@ private fun ParsePlatformContent(modifier: Modifier = Modifier) {
             }
 
             ParsePlatformViewModel.ParsePlatformUIState.EffectiveCheckLoading -> {
-                ASCommonLoadingScreen("正在检查账户中，请不要离开，避免登录失效。")
+                ASCommonLoadingScreen(stringResource(R.string.parse_checking_account))
             }
         }
     }
@@ -113,9 +115,7 @@ private fun ParsePlatformAccountSelect(
     ) {
         ASInfoTip(Modifier.padding(horizontal = 10.dp)) {
             Text(
-                """
-                检测到你当前存在多个账户，请选择一个账户进行切换。
-            """.trimIndent()
+                stringResource(R.string.parse_multi_account_hint)
             )
         }
         uiState.accountList.forEach { user ->
@@ -229,11 +229,7 @@ private fun ParsePlatformDefaultContent(
 @Composable
 private fun ParsePlatformDescription() {
     TipSettingsItem(
-        """
-        不同平台解析到的内容和权益并不相同，比如TV平台部分内容和清晰度需要超级大会员，而非普通大会员。
-        
-        注意：TV平台和漫游功能不可同时使用，如果切换TV模式下漫游不会生效。
-    """.trimIndent()
+        stringResource(R.string.parse_platform_description)
     )
 }
 
@@ -251,7 +247,7 @@ private fun ParsePlatformScreenScaffold(
                 ASTopAppBar(
                     style = BILIBILIASTopAppBarStyle.Small,
                     title = {
-                        Text(text = "解析平台")
+                        Text(text = stringResource(R.string.setting_parse_platform))
                     },
                     colors = TopAppBarDefaults.topAppBarColors(
                         containerColor = MaterialTheme.colorScheme.surfaceContainer,

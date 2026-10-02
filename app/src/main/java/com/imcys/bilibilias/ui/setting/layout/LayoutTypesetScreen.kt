@@ -1,5 +1,7 @@
 package com.imcys.bilibilias.ui.setting.layout
 
+import androidx.compose.ui.res.stringResource
+import com.imcys.bilibilias.R
 import androidx.compose.animation.core.animateDpAsState
 import androidx.compose.foundation.background
 import androidx.compose.foundation.layout.Arrangement
@@ -140,11 +142,11 @@ fun LayoutTypesetContent(
                         }) {
                             Icon(
                                 if (item.isHidden) Icons.Outlined.VisibilityOff else Icons.Outlined.Visibility,
-                                contentDescription = if (item.isHidden) "显示" else "隐藏",
+                                contentDescription = if (item.isHidden) stringResource(R.string.layout_show) else stringResource(R.string.layout_hide),
                             )
                         }
                         ASIconButton(onClick = {}) {
-                            Icon(Icons.Outlined.Menu, contentDescription = "长按拖拽")
+                            Icon(Icons.Outlined.Menu, contentDescription = stringResource(R.string.cd_drag))
                         }
                     }
 
@@ -173,7 +175,7 @@ fun LayoutTypesetScaffold(
                 ),
                 scrollBehavior = scrollBehavior,
                 style = BILIBILIASTopAppBarStyle.Large,
-                title = { Text(text = "首页布局排版") },
+                title = { Text(text = stringResource(R.string.layout_home_typeset_title)) },
                 navigationIcon = {
                     AsBackIconButton(onClick = {
                         onToBack.invoke()

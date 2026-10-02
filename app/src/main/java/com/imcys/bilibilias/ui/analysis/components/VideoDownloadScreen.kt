@@ -145,11 +145,11 @@ fun VideoDownloadScreen(
                 ) {
                     Icon(
                         Icons.Outlined.Info,
-                        contentDescription = "警告",
+                        contentDescription = stringResource(R.string.cd_warning),
                     )
                     Spacer(Modifier.width(2.dp))
                     Text(
-                        "未经作者允许禁止转载",
+                        stringResource(R.string.copyright_no_repost),
                         fontSize = 14.sp,
                     )
                 }
@@ -159,7 +159,7 @@ fun VideoDownloadScreen(
                 Spacer(Modifier.width(4.dp))
                 Icon(
                     Icons.Outlined.Info,
-                    contentDescription = "说明",
+                    contentDescription = stringResource(R.string.cd_explanation),
                     modifier = Modifier
                         .size(18.dp)
                         .clickable {
@@ -204,7 +204,7 @@ fun VideoDownloadScreen(
                     ) {
 
                         ASEpisodeTitle(
-                            "选择缓存合集",
+                            stringResource(R.string.analysis_select_collection),
                             isSelectSingleModel = isSelectSingleModel,
                             episodeListMode = episodeListMode,
                             onUpdateEpisodeListMode = onUpdateEpisodeListMode,
@@ -253,7 +253,7 @@ fun VideoDownloadScreen(
                             .shimmer(viewInfo.status != ApiStatus.SUCCESS)
                     ) {
                         ASEpisodeTitle(
-                            "选择缓存子集",
+                            stringResource(R.string.analysis_select_part),
                             isSelectSingleModel = isSelectSingleModel,
                             episodeListMode = episodeListMode, onSelectAllClick = {
                                 onUpdateSelectCidList(viewInfo.data?.pages?.map { it.cid }

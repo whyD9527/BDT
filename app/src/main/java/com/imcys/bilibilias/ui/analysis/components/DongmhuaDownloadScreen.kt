@@ -128,11 +128,11 @@ fun DongmhuaDownloadScreen(
                     ) {
                         Icon(
                             Icons.Outlined.Warning,
-                            contentDescription = "警告",
+                            contentDescription = stringResource(R.string.cd_warning),
                         )
                         Spacer(Modifier.width(8.dp))
                         Text(
-                            "当前为预览模式，仅限会员观看完整视频，下载后可能无法播放完整视频。",
+                            stringResource(R.string.analysis_preview_mode_warning),
                             fontSize = 14.sp,
                         )
                     }
@@ -144,7 +144,7 @@ fun DongmhuaDownloadScreen(
                 Spacer(Modifier.width(4.dp))
                 Icon(
                     Icons.Outlined.Info,
-                    contentDescription = "说明",
+                    contentDescription = stringResource(R.string.cd_explanation),
                     modifier = Modifier
                         .size(18.dp)
                         .clickable {
@@ -198,7 +198,7 @@ fun DongmhuaDownloadScreen(
                         ) {
                             Column {
                                 ASEpisodeTitle(
-                                    "选择缓存剧集",
+                                    stringResource(R.string.analysis_select_episode),
                                     isSelectSingleModel = isSelectSingleModel,
                                     episodeListMode = episodeListMode,
                                     onUpdateEpisodeListMode = onUpdateEpisodeListMode,
@@ -272,7 +272,7 @@ fun DongmhuaDownloadScreen(
                                     .shimmer(donghuaViewInfo.status != ApiStatus.SUCCESS)
                             ) {
                                 ASEpisodeTitle(
-                                    "选择缓存预告",
+                                    stringResource(R.string.analysis_select_preview),
                                     isSelectSingleModel = isSelectSingleModel,
                                     episodeListMode = episodeListMode,
                                     onUpdateEpisodeListMode = onUpdateEpisodeListMode,

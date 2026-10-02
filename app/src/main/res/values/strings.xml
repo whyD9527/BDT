@@ -599,4 +599,27 @@
     <string name="common_click_retry">点击重试</string>
     <string name="clip_error_label">BDT异常</string>
     <string name="cd_copy_error">复制报错</string>
+    <!-- i18n 批次 E11a：解析下载组件 / 平台切换 / 布局排版 / 存储环 / 权限对话框 -->
+    <string name="cd_warning">警告</string>
+    <string name="cd_explanation">说明</string>
+    <string name="permission_dialog_title">权限请求</string>
+    <string name="permission_dialog_continue">继续</string>
+    <string name="copyright_no_repost">未经作者允许禁止转载</string>
+    <string name="analysis_select_collection">选择缓存合集</string>
+    <string name="analysis_select_part">选择缓存子集</string>
+    <string name="analysis_preview_mode_warning">当前为预览模式，仅限会员观看完整视频，下载后可能无法播放完整视频。</string>
+    <string name="analysis_select_episode">选择缓存剧集</string>
+    <string name="analysis_select_preview">选择缓存预告</string>
+    <string name="parse_switching_account">正在切换账户中，请不要离开，避免登录失效。</string>
+    <string name="parse_checking_account">正在检查账户中，请不要离开，避免登录失效。</string>
+    <string name="parse_multi_account_hint">检测到你当前存在多个账户，请选择一个账户进行切换。</string>
+    <string name="parse_platform_description">不同平台解析到的内容和权益并不相同，比如TV平台部分内容和清晰度需要超级大会员，而非普通大会员。\n\n注意：TV平台和漫游功能不可同时使用，如果切换TV模式下漫游不会生效。</string>
+    <string name="layout_show">显示</string>
+    <string name="layout_hide">隐藏</string>
+    <string name="cd_drag">长按拖拽</string>
+    <string name="layout_home_typeset_title">首页布局排版</string>
+    <string name="storage_ring_memory">占用设备内存%1$s%%</string>
+    <string name="storage_available_space">可用空间</string>
+    <string name="storage_used_space">已用空间</string>
+    <string name="storage_app_space">APP占用空间</string>
 </resources>
