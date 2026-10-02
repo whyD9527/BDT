@@ -767,6 +767,19 @@ class FileOutputManager(
         trace("[$tag] $message")
     }
 
+    /**
+     * 某个下载目录里**是否存在这个显示名对应的媒体库行**。
+     *
+     * 用途（2026-10-02 真机）：`savePath` 可能是 `file://` 形式，而这台 ROM 上 app
+     * 打开媒体库拥有的文件会拿到 **EACCES**，而它和"文件真的没了"一样都抛
+     * `FileNotFoundException` —— 光看异常分不出来。所以这种情况下再用"按名字问媒体库"
+     * 确认一次，避免把好好的记录误标成「文件已丢失」。
+     */
+    fun downloadDirContains(relativePath: String, displayName: String): Boolean =
+        runCatching { queryDownloadDirNames(relativePath) }
+            .getOrElse { emptyList() }
+            .any { it == displayName }
+
     /** 轨迹文件是否有内容（界面用它区分"导出失败"和"还没产生日志"） */
     fun hasTraceLog(): Boolean = traceFile().let { it.exists() && it.length() > 0L }
 

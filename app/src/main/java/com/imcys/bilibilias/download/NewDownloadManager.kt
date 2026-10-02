@@ -885,6 +885,9 @@ class NewDownloadManager(
         )
         downloadTaskRepository.updateSegment(newTask.downloadSegment)
         updateTaskState(newTask, DownloadState.COMPLETED)
+        // 把"最终存进记录的路径"也落轨迹：以后出现「文件已丢失」误报/漏报时，
+        // 一眼就能对比"记录里存的是什么"与"文件实际在哪"（2026-10-02 就是因为缺这一条只能猜）
+        fileOutputManager.logDiagnostic("交付入库", "文件=$lastFileName savePath=$uriStr")
 
         // 落盘与入库都成功了，源文件才可以删（移动本身已删掉临时产物，这里的 deleteIfExists 是幂等的兜底）
         DownloadSuccessorRules.filesToDeleteAfterMove(

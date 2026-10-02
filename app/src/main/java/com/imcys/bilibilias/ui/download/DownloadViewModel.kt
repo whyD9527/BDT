@@ -219,30 +219,64 @@ class DownloadViewModel(
     private val _missingFileIds = MutableStateFlow<Set<Long>>(emptySet())
     val missingFileIds = _missingFileIds.asStateFlow()
 
-    /** 刷新"文件已丢失"清单（进列表时调用；条数很少，直接每条探一次） */
+    /**
+     * 刷新"文件已丢失"清单（进列表时调用；条数很少，直接每条探一次）。
+     *
+     * 每次探测结果都写进轨迹文件（`[文件探测] … 结果=存在/缺失 原因=… 路径=…`）：
+     * 这类"误报/漏报"只可能在真机上出现，没有轨迹就只能靠猜（2026-10-02 就踩过一次）。
+     */
     fun refreshMissingFiles(segments: List<DownloadSegment>) {
         val targets = segments.filter { DownloadRecordDisplayRules.hasMediaFile(it.savePath) }
         viewModelScope.launch {
             val missing = withContext(Dispatchers.IO) {
-                targets.filterNot { mediaFileExists(it.savePath) }.map { it.segmentId }.toSet()
+                val result = mutableSetOf<Long>()
+                targets.forEach { segment ->
+                    val verdict = probeMediaFile(segment.savePath)
+                    if (!verdict.exists) result += segment.segmentId
+                    fileOutputManager.logDiagnostic(
+                        "文件探测",
+                        "「${segment.title}」结果=${if (verdict.exists) "存在" else "缺失"} " +
+                            "原因=${verdict.reason} 路径=${segment.savePath}"
+                    )
+                }
+                result
             }
             _missingFileIds.value = missing
         }
     }
 
-    private fun mediaFileExists(savePath: String): Boolean = try {
-        val uri = if (savePath.startsWith("content://")) {
-            Uri.parse(savePath)
-        } else {
-            File(savePath).toUri()
-        }
-        contentResolver.openFileDescriptor(uri, "r")?.use { true } ?: false
+    private data class ProbeVerdict(val exists: Boolean, val reason: String)
+
+    /**
+     * 判断记录里的媒体文件**是否还在**。
+     *
+     * ⚠️ 关键难点（2026-10-02 真机）：`openFileDescriptor` 在两种情况下**都抛
+     * `FileNotFoundException`** —— ① 文件真的没了；② 文件在、但 app 没有权限打开
+     * （这台 ROM 上媒体库拥有的文件就是这样，EACCES）。只看异常会把 ② 误判成 ①，
+     * 于是好好的记录被标上「文件已丢失」。
+     *
+     * 所以：`content://` 的 FNF 视为"没了"（行是 app 自己的，能打开）；
+     * `file://` 的 FNF 则**再用"按名字问媒体库"确认一次**。
+     */
+    private fun probeMediaFile(savePath: String): ProbeVerdict = try {
+        val isContent = savePath.startsWith("content://")
+        val uri = if (isContent) Uri.parse(savePath) else File(savePath).toUri()
+        val opened = contentResolver.openFileDescriptor(uri, "r")?.use { true } ?: false
+        ProbeVerdict(opened, if (opened) "打开成功" else "打开返回空")
     } catch (e: FileNotFoundException) {
-        // 行/文件确实不在了
-        false
+        if (savePath.startsWith("content://")) {
+            ProbeVerdict(false, "content 打不开：FileNotFoundException(${e.message})")
+        } else {
+            val match = runCatching {
+                DownloadDir.ALL_NAMES.any { name ->
+                    fileOutputManager.downloadDirContains("Download/$name", File(savePath).name)
+                }
+            }.getOrElse { false }
+            ProbeVerdict(match, "file 打不开（可能 EACCES）→按名字查媒体库=${if (match) "有行" else "无行"}")
+        }
     } catch (e: Exception) {
-        // 权限、不支持的形式……一律按"还在"处理，避免误报
-        true
+        // 其它异常一律按"还在"处理：宁可多显示一条，也不能误标丢失
+        ProbeVerdict(true, "${e.javaClass.simpleName}（按存在处理）")
     }
     // endregion
 
