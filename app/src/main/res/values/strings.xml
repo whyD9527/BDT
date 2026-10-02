@@ -540,4 +540,31 @@
     <string name="user_sign_fallback">个性签名</string>
     <string name="bangumi_load_failed">加载失败 \n%1$s</string>
     <string name="cd_bangumi_cover">番剧封面</string>
+    <!-- i18n 批次 E8b：版权申请 / 投诉 / 版本信息 -->
+    <string name="copyright_notice_title">重要通知:</string>
+    <string name="copyright_notice_desc">我们可能会在APP内通知您删除部分或全部已缓存的视频。这可能出于保护内容创作者权益或应用服务调整的考虑，会在APP内向您阐述原因。</string>
+    <string name="copyright_cooperate_title">配合删除:</string>
+    <string name="copyright_cooperate_desc">收到删除通知后，请您在 24 小时内删除指定的缓存视频及其所有副本（不包括已获授权的转载和符合规定的二次创作视频）。</string>
+    <string name="copyright_confirm_title">操作确认:</string>
+    <string name="copyright_confirm_desc">删除操作完成后，您需要在应用内进行确认。所有指定操作确认完毕后，方可继续使用本应用。</string>
+    <string name="copyright_freeze_title">账户冻结:</string>
+    <string name="copyright_freeze_desc">若您在 15 天内未能完成确认操作，您的账户将被冻结，届时将无法继续使用本应用。</string>
+    <string name="copyright_agree_button">我已阅读并同意相关条款</string>
+    <string name="complaint_intro">UP主权益保护计划将继续实行，UP主或者其他主体可以按照类型投诉。</string>
+    <string name="complaint_plan1_title">方案一：禁止缓存</string>
+    <string name="complaint_plan1_desc">不能让其他用户在BDT内缓存该视频。\n限制：只能是自己的视频。</string>
+    <string name="complaint_plan2_title">方案二：追回已缓存视频</string>
+    <string name="complaint_plan2_desc">追回已缓存视频，向已缓存的用户发布邮件，要求在24小时内删除缓存的视频和副本。\n限制：只能是自己的视频或需要主体的身份认证。</string>
+    <string name="complaint_plan3_title">方案三：紧急下架与全网追回</string>
+    <string name="complaint_plan3_desc">立即停止BDT的一切活动，有必要时向所有用户发送追回邮件，要求42小时内删除缓存的视频和副本。\n限制：只能主体且需要可以代表主体的必要资料，BDT所有渠道下架（Github和APP官网），APP所有版本阻止用户继续使用，并发布公告表明问题。</string>
+    <string name="complaint_view_detail">查看详情</string>
+    <string name="complaint_title">投诉</string>
+    <string name="version_info_app">APP版本</string>
+    <string name="version_info_system">系统版本</string>
+    <string name="version_info_device">设备型号</string>
+    <string name="version_info_market_model">市场型号</string>
+    <string name="version_info_manufacturer">厂商</string>
+    <string name="version_info_brand">品牌</string>
+    <string name="version_info_os_name">厂商系统名称</string>
+    <string name="version_info_os_version">厂商系统版本名称</string>
 </resources>

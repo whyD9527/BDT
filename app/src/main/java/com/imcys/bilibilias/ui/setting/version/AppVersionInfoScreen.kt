@@ -91,23 +91,23 @@ fun VersionInfoContent(modifier: Modifier = Modifier) {
             .verticalScroll(rememberScrollState()),
         verticalArrangement = Arrangement.spacedBy(5.dp)
     ) {
-        InfoRow(label = "APP版本", value = deviceInfo.appVersion)
-        InfoRow(label = "系统版本", value = deviceInfo.systemVersion)
-        InfoRow(label = "设备型号", value = deviceInfo.model)
-        InfoRow(label = "市场型号", value = deviceInfo.marketModel)
-        InfoRow(label = "厂商", value = deviceInfo.manufacturer)
-        InfoRow(label = "品牌", value = deviceInfo.brandName)
-        InfoRow(label = "厂商系统名称", value = deviceInfo.osName)
-        InfoRow(label = "厂商系统版本名称", value = deviceInfo.osVersionName)
+        InfoRow(label = stringResource(R.string.version_info_app), value = deviceInfo.appVersion)
+        InfoRow(label = stringResource(R.string.version_info_system), value = deviceInfo.systemVersion)
+        InfoRow(label = stringResource(R.string.version_info_device), value = deviceInfo.model)
+        InfoRow(label = stringResource(R.string.version_info_market_model), value = deviceInfo.marketModel)
+        InfoRow(label = stringResource(R.string.version_info_manufacturer), value = deviceInfo.manufacturer)
+        InfoRow(label = stringResource(R.string.version_info_brand), value = deviceInfo.brandName)
+        InfoRow(label = stringResource(R.string.version_info_os_name), value = deviceInfo.osName)
+        InfoRow(label = stringResource(R.string.version_info_os_version), value = deviceInfo.osVersionName)
         Spacer(modifier = Modifier.height(24.dp))
         Button(
             onClick = {
                 haptics.performHapticFeedback(HapticFeedbackType.Confirm)
                 val clipboard =
                     context.getSystemService(Context.CLIPBOARD_SERVICE) as ClipboardManager
-                val clip = ClipData.newPlainText("版本信息", copyText)
+                val clip = ClipData.newPlainText(context.getString(R.string.tools_version_info_clip_label), copyText)
                 clipboard.setPrimaryClip(clip)
-                sendToastEventOnBlocking("已复制到剪贴板")
+                sendToastEventOnBlocking(context.getString(R.string.tools_copied_to_clipboard))
             },
             modifier = Modifier.fillMaxWidth()
         ) {
@@ -154,7 +154,7 @@ private fun VersionInfoScaffold(
                 ),
                 scrollBehavior = scrollBehavior,
                 style = BILIBILIASTopAppBarStyle.Large,
-                title = { Text(text = "版本信息") },
+                title = { Text(text = stringResource(R.string.tools_version_info_clip_label)) },
                 navigationIcon = {
                     AsBackIconButton(onClick = {
                         onToBack.invoke()

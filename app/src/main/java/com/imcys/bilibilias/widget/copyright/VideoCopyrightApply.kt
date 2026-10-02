@@ -1,5 +1,7 @@
 package com.imcys.bilibilias.widget.copyright
 
+import androidx.compose.ui.res.stringResource
+import com.imcys.bilibilias.R
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.fillMaxWidth
@@ -42,12 +44,12 @@ fun VideoCopyrightApplyScreen(
     Scaffold(
         topBar = {
             TopAppBar(
-                title = { Text("视频缓存使用申请") },
+                title = { Text(stringResource(R.string.copyright_video_cache_apply)) },
                 navigationIcon = {
                     ASIconButton(onClick = onNavigateBack) {
                         Icon(
                             imageVector = Icons.AutoMirrored.Filled.ArrowBack,
-                            contentDescription = "返回"
+                            contentDescription = stringResource(R.string.cd_back)
                         )
                     }
                 }
@@ -74,20 +76,20 @@ fun VideoCopyrightApplyScreen(
 //                        description = "您需要提供有效的邮箱地址以接收重要通知。为确保您能持续收到通知，我们将每隔一个月对您的邮箱进行验证，一个月后缓存将提示您重新验证邮箱。"
 //                    )
                     InfoItem(
-                        title = "重要通知:",
-                        description = "我们可能会在APP内通知您删除部分或全部已缓存的视频。这可能出于保护内容创作者权益或应用服务调整的考虑，会在APP内向您阐述原因。"
+                        title = stringResource(R.string.copyright_notice_title),
+                        description = stringResource(R.string.copyright_notice_desc)
                     )
                     InfoItem(
-                        title = "配合删除:",
-                        description = "收到删除通知后，请您在 24 小时内删除指定的缓存视频及其所有副本（不包括已获授权的转载和符合规定的二次创作视频）。"
+                        title = stringResource(R.string.copyright_cooperate_title),
+                        description = stringResource(R.string.copyright_cooperate_desc)
                     )
                     InfoItem(
-                        title = "操作确认:",
-                        description = "删除操作完成后，您需要在应用内进行确认。所有指定操作确认完毕后，方可继续使用本应用。"
+                        title = stringResource(R.string.copyright_confirm_title),
+                        description = stringResource(R.string.copyright_confirm_desc)
                     )
                     InfoItem(
-                        title = "账户冻结:",
-                        description = "若您在 15 天内未能完成确认操作，您的账户将被冻结，届时将无法继续使用本应用。"
+                        title = stringResource(R.string.copyright_freeze_title),
+                        description = stringResource(R.string.copyright_freeze_desc)
                     )
                 }
             }
@@ -97,7 +99,7 @@ fun VideoCopyrightApplyScreen(
                 modifier = Modifier.fillMaxWidth(),
                 onClick = {}
             ) {
-                Text("我已阅读并同意相关条款")
+                Text(stringResource(R.string.copyright_agree_button))
             }
         }
     }

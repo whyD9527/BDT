@@ -540,4 +540,31 @@
     <string name="user_sign_fallback">Bio</string>
     <string name="bangumi_load_failed">Load failed \n%1$s</string>
     <string name="cd_bangumi_cover">Bangumi cover</string>
+    <!-- i18n batch E8b: copyright apply / complaints / version info -->
+    <string name="copyright_notice_title">Important notice:</string>
+    <string name="copyright_notice_desc">We may notify you in the app to delete some or all cached videos. This can be to protect content creators and their rights or because of service adjustments, and the reason will be explained in the app.</string>
+    <string name="copyright_cooperate_title">Cooperate with deletion:</string>
+    <string name="copyright_cooperate_desc">After receiving a deletion notice, delete the specified cached video and all its copies within 24 hours (authorized reposts and compliant derivative works are excluded).</string>
+    <string name="copyright_confirm_title">Confirm the action:</string>
+    <string name="copyright_confirm_desc">After deleting, you need to confirm in the app. You can keep using the app only after all required confirmations are done.</string>
+    <string name="copyright_freeze_title">Account freeze:</string>
+    <string name="copyright_freeze_desc">If you do not complete the confirmation within 15 days, your account will be frozen and you will no longer be able to use this app.</string>
+    <string name="copyright_agree_button">I have read and agree to the terms</string>
+    <string name="complaint_intro">The creator rights protection program continues; creators and other parties can file a complaint by type.</string>
+    <string name="complaint_plan1_title">Option 1: Block caching</string>
+    <string name="complaint_plan1_desc">Other users cannot cache this video in BDT.\nLimitation: your own videos only.</string>
+    <string name="complaint_plan2_title">Option 2: Reclaim cached videos</string>
+    <string name="complaint_plan2_desc">Reclaim cached videos by emailing the users who cached them, asking them to delete the video and copies within 24 hours.\nLimitation: your own videos only, or identity verification is required.</string>
+    <string name="complaint_plan3_title">Option 3: Emergency takedown and site-wide reclaim</string>
+    <string name="complaint_plan3_desc">Immediately stop all BDT activity; when necessary, email all users to reclaim the video and copies within 42 hours.\nLimitation: rights holders only, with documents proving representation; BDT must be taken down from all channels (GitHub and the app site), all app versions must block further use, and an announcement must explain the issue.</string>
+    <string name="complaint_view_detail">View details</string>
+    <string name="complaint_title">Complaints</string>
+    <string name="version_info_app">App version</string>
+    <string name="version_info_system">System version</string>
+    <string name="version_info_device">Device model</string>
+    <string name="version_info_market_model">Market model</string>
+    <string name="version_info_manufacturer">Manufacturer</string>
+    <string name="version_info_brand">Brand</string>
+    <string name="version_info_os_name">OS name</string>
+    <string name="version_info_os_version">OS version name</string>
 </resources>
