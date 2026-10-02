@@ -1,5 +1,6 @@
 package com.imcys.bilibilias.ui.setting.storage
 
+import com.imcys.bilibilias.R
 import androidx.compose.ui.res.stringResource
 import androidx.compose.foundation.layout.Spacer
 import androidx.compose.foundation.layout.height
