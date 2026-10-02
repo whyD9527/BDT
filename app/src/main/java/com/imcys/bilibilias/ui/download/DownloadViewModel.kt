@@ -2,6 +2,8 @@ package com.imcys.bilibilias.ui.download
 
 import android.annotation.SuppressLint
 import android.content.ContentResolver
+import androidx.annotation.StringRes
+import com.imcys.bilibilias.R
 import androidx.core.net.toUri
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
@@ -111,12 +113,12 @@ class DownloadViewModel(
             val deleted = results.sumOf { it.deleted }
             val consent = results.flatMap { it.needsUserConsent }
             if (deleted > 0) {
-                sendToast("已清理 $deleted 个重复文件")
+                sendToast(R.string.duplicate_cleaned, deleted)
             }
             if (consent.isNotEmpty()) {
                 _pendingDeleteUris.value = consent
             } else if (deleted == 0) {
-                sendToast("没有文件被删除（可能已被移动，或需要「所有文件访问」权限）")
+                sendToast(R.string.duplicate_none_deleted)
             }
             refreshDuplicateGroups()
         }
@@ -204,7 +206,7 @@ class DownloadViewModel(
         if (failed.isEmpty()) return
         viewModelScope.launch {
             failed.forEach { downloadManager.resumeTask(it.segmentId) }
-            sendToast("已重试 ${failed.size} 个失败任务")
+            sendToast(R.string.retry_failed_done, failed.size)
         }
     }
 
@@ -282,7 +284,7 @@ class DownloadViewModel(
                 fileOutputManager.probeSavePath(segment.savePath).exists
             }
             if (!exists) {
-                sendToast("文件不存在，可能已被删除")
+                sendToast(R.string.file_not_exist_may_deleted)
                 return@launch
             }
             _uiEvent.emit(DownloadUiEvent.OpenFile(segment))
@@ -303,10 +305,11 @@ class DownloadViewModel(
             val moved = withContext(Dispatchers.IO) {
                 segments.count { fileOutputManager.moveDownloadFileToSubDir(it.savePath, subDirName) }
             }
-            sendToast(
-                if (moved > 0) "已移动 $moved 个文件到 $subDirName/"
-                else "没有文件被移动（可能不是本应用的文件，需要「所有文件访问」或系统确认）"
-            )
+            if (moved > 0) {
+                sendToast(R.string.batch_move_done, moved, subDirName)
+            } else {
+                sendToast(R.string.batch_move_none)
+            }
         }
     }
 
@@ -384,12 +387,12 @@ class DownloadViewModel(
             val result = deleteFileInternal(segment.savePath)
             downloadTaskRepository.deleteSegment(segment.segmentId)
 
-            val message = when (result) {
-                DeleteResult.SUCCESS -> "删除成功"
-                DeleteResult.FILE_NOT_EXIST -> "文件不存在"
-                DeleteResult.FAILED -> "删除失败，文件可能已经被删除或不存在"
+            val messageRes = when (result) {
+                DeleteResult.SUCCESS -> R.string.delete_done
+                DeleteResult.FILE_NOT_EXIST -> R.string.delete_file_not_exist
+                DeleteResult.FAILED -> R.string.delete_failed
             }
-            sendToast(message)
+            sendToast(messageRes)
         }
     }
 
@@ -418,9 +421,10 @@ class DownloadViewModel(
         }.getOrElse { DeleteResult.FAILED }
     }
 
-    private fun sendToast(message: String) {
+    /** 弹 toast：只传**资源 id + 参数**，文案在 `strings.xml`（VM 里不再写死中文） */
+    private fun sendToast(@StringRes resId: Int, vararg formatArgs: Any) {
         viewModelScope.launch {
-            _uiEvent.emit(DownloadUiEvent.ShowToast(message))
+            _uiEvent.emit(DownloadUiEvent.ShowToast(resId, formatArgs.toList()))
         }
     }
     // endregion

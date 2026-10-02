@@ -1,12 +1,23 @@
 package com.imcys.bilibilias.ui.download
 
+import androidx.annotation.StringRes
 import com.imcys.bilibilias.database.entity.download.DownloadSegment
 
 /**
  * 下载页面 UI 事件
  */
 sealed interface DownloadUiEvent {
-    data class ShowToast(val message: String) : DownloadUiEvent
+    /**
+     * 弹一条 toast。
+     *
+     * ⚠️ 2026-10-02（i18n 批次 E3）从 `message: String` 改成 **resId + 参数**：
+     * VM 里原先写死中文（"已清理 N 个重复文件"…），那样英文环境下永远是中文。
+     * 现在文案统一在 `strings.xml`，UI 用 `context.getString(resId, *args)` 取。
+     */
+    data class ShowToast(
+        @StringRes val resId: Int,
+        val formatArgs: List<Any> = emptyList(),
+    ) : DownloadUiEvent
     data class OpenFile(val segment: DownloadSegment) : DownloadUiEvent
 
     /**

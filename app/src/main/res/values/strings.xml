@@ -353,4 +353,14 @@
     <string name="sort_size_desc">大小↓</string>
     <string name="sort_size_asc">大小↑</string>
     <string name="download_manage_title">下载管理</string>
+    <!-- i18n 批次 E3：下载 ViewModel 的 toast（改成 resId + 参数） -->
+    <string name="duplicate_cleaned">已清理 %1$d 个重复文件</string>
+    <string name="duplicate_none_deleted">没有文件被删除（可能已被移动，或需要「所有文件访问」权限）</string>
+    <string name="retry_failed_done">已重试 %1$d 个失败任务</string>
+    <string name="file_not_exist_may_deleted">文件不存在，可能已被删除</string>
+    <string name="batch_move_done">已移动 %1$d 个文件到 %2$s/</string>
+    <string name="batch_move_none">没有文件被移动（可能不是本应用的文件，需要「所有文件访问」或系统确认）</string>
+    <string name="delete_done">删除成功</string>
+    <string name="delete_file_not_exist">文件不存在</string>
+    <string name="delete_failed">删除失败，文件可能已经被删除或不存在</string>
 </resources>

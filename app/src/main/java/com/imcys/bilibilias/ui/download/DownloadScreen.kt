@@ -111,7 +111,8 @@ fun DownloadScreen(route: DownloadRoute, onToBack: () -> Unit) {
         vm.uiEvent.collect { event ->
             when (event) {
                 is DownloadUiEvent.ShowToast -> {
-                    sendToastEvent(event.message)
+                    // 文案在 strings.xml：VM 只给 resId + 参数
+                    sendToastEvent(context.getString(event.resId, *event.formatArgs.toTypedArray()))
                 }
 
                 is DownloadUiEvent.OpenFile -> {

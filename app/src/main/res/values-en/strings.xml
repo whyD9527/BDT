@@ -353,4 +353,14 @@
     <string name="sort_size_desc">Size ↓</string>
     <string name="sort_size_asc">Size ↑</string>
     <string name="download_manage_title">Downloads</string>
+    <!-- i18n batch E3: download ViewModel toasts (resource id + args) -->
+    <string name="duplicate_cleaned">Cleaned %1$d duplicate file(s)</string>
+    <string name="duplicate_none_deleted">Nothing was deleted (it may have moved, or "All files access" is required)</string>
+    <string name="retry_failed_done">Retried %1$d failed task(s)</string>
+    <string name="file_not_exist_may_deleted">File not found; it may have been deleted</string>
+    <string name="batch_move_done">Moved %1$d file(s) to %2$s/</string>
+    <string name="batch_move_none">Nothing was moved (the files may not belong to this app; "All files access" or system confirmation is required)</string>
+    <string name="delete_done">Deleted</string>
+    <string name="delete_file_not_exist">File not found</string>
+    <string name="delete_failed">Delete failed; the file may already be gone</string>
 </resources>
