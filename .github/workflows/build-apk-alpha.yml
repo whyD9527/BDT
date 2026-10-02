@@ -104,6 +104,17 @@ jobs:
       - name: Run unit tests
         run: ./gradlew testDebugUnitTest --stacktrace
 
+      # ⑤ Room schema（`core/database/schemas/`）本该随 DB 版本一起提交，但**本地没有 JDK 生成不了**；
+      # 这里把构建期生成的那份（主要是缺的 5.json）当 artifact 传出来，由维护者下载后入库。
+      # `if: always()`：即使单测/打包失败也要能拿到 —— 它只依赖编译期 KSP 产物，与出包成功与否无关。
+      - name: Archive Room schema
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: room-schema
+          path: core/database/schemas/**
+          if-no-files-found: warn
+
       - name: Assemble alphaRelease
         id: release_build
         continue-on-error: true
