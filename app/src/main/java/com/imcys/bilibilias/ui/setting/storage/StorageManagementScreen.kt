@@ -1,6 +1,7 @@
 package com.imcys.bilibilias.ui.setting.storage
 
 import com.imcys.bilibilias.R
+import androidx.annotation.StringRes
 import androidx.compose.ui.res.stringResource
 import androidx.compose.foundation.layout.Spacer
 import androidx.compose.foundation.layout.height
@@ -235,7 +236,7 @@ fun StorageManagementSuccessScreen(
             ASWarringTip {
                 Row {
                     Text(
-                        "应用存储权限未完全获取，可能导致存储数据不准确，点击授权后重新计算。",
+                        stringResource(R.string.storage_permission_incomplete),
                         Modifier.weight(1f)
                     )
                     ASIconButton(onClick = {
@@ -253,7 +254,7 @@ fun StorageManagementSuccessScreen(
                         )
                         downloadLauncher.launch(downloadUri)
                     }) {
-                        Icon(Icons.Outlined.NorthEast, contentDescription = "去授权")
+                        Icon(Icons.Outlined.NorthEast, contentDescription = stringResource(R.string.cd_grant_permission))
                     }
                 }
             }
@@ -263,7 +264,7 @@ fun StorageManagementSuccessScreen(
             title = stringResource(R.string.export_diagnostic_log),
             dataNumStr = "",
             description = stringResource(R.string.export_diagnostic_log_desc),
-            buttonText = stringResource(R.string.export_button),
+            buttonTextRes = R.string.export_button,
             buttonColor = MaterialTheme.colorScheme.primary,
             onClick = {
                 diagnosticScope.launch {
@@ -271,9 +272,9 @@ fun StorageManagementSuccessScreen(
                     Toast.makeText(
                         context,
                         if (name != null) {
-                            "已导出：$name（在 Download/BDT 目录里）"
+                            context.getString(R.string.storage_exported_in_download_dir, name)
                         } else {
-                            "还没有日志可导出（先下载或清理一次再来）"
+                            context.getString(R.string.storage_no_log_to_export)
                         },
                         Toast.LENGTH_LONG,
                     ).show()
@@ -285,7 +286,7 @@ fun StorageManagementSuccessScreen(
             title = stringResource(R.string.diagnostic_log),
             dataNumStr = "",
             description = stringResource(R.string.diagnostic_log_desc),
-            buttonText = stringResource(R.string.view_button),
+            buttonTextRes = R.string.view_button,
             buttonColor = MaterialTheme.colorScheme.primary,
             onClick = {
                 diagnosticScope.launch {
@@ -300,7 +301,7 @@ fun StorageManagementSuccessScreen(
             title = stringResource(R.string.download_dir_files),
             dataNumStr = "",
             description = stringResource(R.string.download_dir_files_desc),
-            buttonText = stringResource(R.string.view_button),
+            buttonTextRes = R.string.view_button,
             buttonColor = MaterialTheme.colorScheme.primary,
             onClick = {
                 diagnosticScope.launch {
@@ -320,7 +321,11 @@ fun StorageManagementSuccessScreen(
                         val name = withContext(Dispatchers.IO) { fileOutputManager.exportTraceLog() }
                         Toast.makeText(
                             context,
-                            if (name != null) "已导出：$name（在 Download/BDT 里）" else "还没有日志可导出",
+                            if (name != null) {
+                                context.getString(R.string.storage_exported, name)
+                            } else {
+                                context.getString(R.string.storage_no_log_to_export_short)
+                            },
                             Toast.LENGTH_LONG,
                         ).show()
                     }
@@ -329,7 +334,7 @@ fun StorageManagementSuccessScreen(
                     diagnosticScope.launch {
                         withContext(Dispatchers.IO) { fileOutputManager.clearTrace() }
                         traceLines = emptyList()
-                        Toast.makeText(context, "日志已清空", Toast.LENGTH_SHORT).show()
+                        Toast.makeText(context, context.getString(R.string.storage_log_cleared), Toast.LENGTH_SHORT).show()
                     }
                 },
                 onDismiss = { showDiagnosticLogDialog = false },
@@ -349,7 +354,7 @@ fun StorageManagementSuccessScreen(
                             }
                         )
                     }.onFailure {
-                        Toast.makeText(context, "没有能打开它的应用", Toast.LENGTH_SHORT).show()
+                        Toast.makeText(context, context.getString(R.string.storage_no_app_to_open), Toast.LENGTH_SHORT).show()
                     }
                 },
                 onDelete = { file ->
@@ -361,11 +366,11 @@ fun StorageManagementSuccessScreen(
                         }
                         if (ok) {
                             localFiles.remove(file)
-                            Toast.makeText(context, "已删除", Toast.LENGTH_SHORT).show()
+                            Toast.makeText(context, context.getString(R.string.storage_deleted), Toast.LENGTH_SHORT).show()
                         } else {
                             Toast.makeText(
                                 context,
-                                "删除失败：不是本应用的文件，需系统确认或「所有文件访问」",
+                                context.getString(R.string.storage_delete_failed_not_owned),
                                 Toast.LENGTH_LONG,
                             ).show()
                         }
@@ -376,9 +381,9 @@ fun StorageManagementSuccessScreen(
         }
 
         StorageContent(
-            title = "音视频文件",
+            title = stringResource(R.string.storage_av_files),
             dataNumStr = StorageUtil.formatSize(data.downloadBytes),
-            description = "已下载的音视频文件大小",
+            description = stringResource(R.string.storage_av_files_desc),
             onClick = {
                 val intent = Intent(Intent.ACTION_VIEW).apply {
                     val targetDir = com.imcys.bilibilias.download.DownloadDir.dir()
@@ -400,7 +405,7 @@ fun StorageManagementSuccessScreen(
                 try {
                     context.startActivity(intent)
                 } catch (e: ActivityNotFoundException) {
-                    sendToastEventOnBlocking("未找到文件管理器")
+                    sendToastEventOnBlocking(context.getString(R.string.storage_no_file_manager))
                 }
             },
         )
@@ -409,10 +414,10 @@ fun StorageManagementSuccessScreen(
         // 「所有文件访问」：授权后交付阶段可以直接改名/删除，彻底绕开这台 ROM 上
         // MediaStore 的 `(N)` 改名与 `_data` 不一致问题（2026-10-01 真机复现）。
         StorageContent(
-            title = "所有文件访问",
-            dataNumStr = if (hasAllFilesAccess) "已授权" else "未授权",
-            description = "授权后下载完成可自动清理同名重复文件（未授权则由「下载管理 → 重复文件」手动清理）",
-            buttonText = "去设置",
+            title = stringResource(R.string.storage_all_files_access),
+            dataNumStr = if (hasAllFilesAccess) stringResource(R.string.storage_granted) else stringResource(R.string.storage_not_granted),
+            description = stringResource(R.string.storage_all_files_access_desc),
+            buttonTextRes = R.string.storage_go_settings,
             buttonColor = MaterialTheme.colorScheme.primary,
             onClick = {
                 if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.R) {
@@ -432,24 +437,24 @@ fun StorageManagementSuccessScreen(
                         }
                     }
                 } else {
-                    sendToastEventOnBlocking("系统版本低于 Android 11，无需此授权")
+                    sendToastEventOnBlocking(context.getString(R.string.storage_below_android11))
                 }
             },
         )
 
         StorageContent(
-            title = "临时文件",
+            title = stringResource(R.string.storage_temp_files),
             dataNumStr = "${StorageUtil.formatSize(data.cacheTotalBytes)}",
-            description = "临时文件，可放心清理",
-            buttonText = "清理",
+            description = stringResource(R.string.storage_temp_files_desc),
+            buttonTextRes = R.string.storage_clean,
             buttonColor = MaterialTheme.colorScheme.primary,
             onClick = onCleanCache
         )
 
         StorageContent(
-            title = "核心文件",
+            title = stringResource(R.string.storage_core_files),
             dataNumStr = "${StorageUtil.formatSize(data.appBytes - data.cacheTotalBytes)}",
-            description = "运行时必要文件，不可清除。",
+            description = stringResource(R.string.storage_core_files_desc),
             showButton = false,
             buttonColor = MaterialTheme.colorScheme.primary,
         )
@@ -465,7 +470,7 @@ fun StorageContent(
     dataNumStr: String = "",
     description: String = "",
     showButton: Boolean = true,
-    buttonText: String = "管理",
+    @StringRes buttonTextRes: Int = R.string.storage_manage,
     buttonColor: Color = MaterialTheme.colorScheme.surface,
     onClick: () -> Unit = {}
 ) {
@@ -506,7 +511,7 @@ fun StorageContent(
                     color = buttonColor
                 ) {
                     Text(
-                        buttonText,
+                        stringResource(buttonTextRes),
                         fontSize = 13.sp,
                         modifier = Modifier.padding(horizontal = 10.dp)
                     )
@@ -532,7 +537,7 @@ private fun StorageManagementScaffold(
                 ASTopAppBar(
                     style = BILIBILIASTopAppBarStyle.Small,
                     title = {
-                        Text(text = "存储管理")
+                        Text(text = stringResource(R.string.setting_storage_management))
                     },
                     colors = TopAppBarDefaults.topAppBarColors(
                         containerColor = MaterialTheme.colorScheme.surfaceContainer,
@@ -570,10 +575,10 @@ private fun DiagnosticLogDialog(
     androidx.compose.ui.window.Dialog(onDismissRequest = onDismiss) {
         Surface(shape = CardDefaults.shape) {
             Column(Modifier.padding(12.dp)) {
-                Text("诊断日志（最近 ${lines.size} 行）", style = MaterialTheme.typography.titleMedium)
+                Text(stringResource(R.string.storage_diagnostic_log_title, lines.size), style = MaterialTheme.typography.titleMedium)
                 Spacer(Modifier.height(8.dp))
                 if (lines.isEmpty()) {
-                    Text("还没有日志（先下载或清理一次）")
+                    Text(stringResource(R.string.storage_no_log))
                 } else {
                     LazyColumn(Modifier.heightIn(max = 420.dp)) {
                         items(lines) { line ->
@@ -588,9 +593,9 @@ private fun DiagnosticLogDialog(
                 }
                 Spacer(Modifier.height(8.dp))
                 Row(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
-                    TextButton(onClick = onExport) { Text("导出") }
-                    TextButton(onClick = onClear) { Text("清空") }
-                    TextButton(onClick = onDismiss) { Text("关闭") }
+                    TextButton(onClick = onExport) { Text(stringResource(R.string.export_button)) }
+                    TextButton(onClick = onClear) { Text(stringResource(R.string.storage_clear)) }
+                    TextButton(onClick = onDismiss) { Text(stringResource(R.string.cd_close)) }
                 }
             }
         }
@@ -614,11 +619,11 @@ private fun LocalFilesDialog(
         Surface(shape = CardDefaults.shape) {
             Column(Modifier.padding(12.dp)) {
                 val orphanCount = files.count { it.uriString !in knownUris }
-                Text("下载目录文件（共 ${files.size} 个，其中 $orphanCount 个没有记录）",
+                Text(stringResource(R.string.storage_download_files_title, files.size, orphanCount),
                     style = MaterialTheme.typography.titleMedium)
                 Spacer(Modifier.height(8.dp))
                 if (files.isEmpty()) {
-                    Text("目录里还没有文件")
+                    Text(stringResource(R.string.storage_dir_empty))
                 } else {
                     LazyColumn(Modifier.heightIn(max = 420.dp)) {
                         items(files) { file ->
@@ -629,20 +634,24 @@ private fun LocalFilesDialog(
                                 Column(Modifier.weight(1f)) {
                                     Text(file.displayName, fontSize = 12.sp, maxLines = 2)
                                     Text(
-                                        text = "${StorageUtil.formatSize(file.sizeBytes)}" +
-                                            if (file.uriString in knownUris) " · 有记录" else " · 无记录（孤儿）",
+                                        text = StorageUtil.formatSize(file.sizeBytes) +
+                                            if (file.uriString in knownUris) {
+                                                " " + stringResource(R.string.storage_has_record)
+                                            } else {
+                                                " " + stringResource(R.string.storage_orphan)
+                                            },
                                         fontSize = 10.sp,
                                     )
                                 }
-                                TextButton(onClick = { onOpen(file) }) { Text("打开") }
-                                TextButton(onClick = { onDelete(file) }) { Text("删除") }
+                                TextButton(onClick = { onOpen(file) }) { Text(stringResource(R.string.storage_open)) }
+                                TextButton(onClick = { onDelete(file) }) { Text(stringResource(R.string.common_delete)) }
                             }
                         }
                     }
                 }
                 Spacer(Modifier.height(8.dp))
                 Row(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
-                    TextButton(onClick = onDismiss) { Text("关闭") }
+                    TextButton(onClick = onDismiss) { Text(stringResource(R.string.cd_close)) }
                 }
             }
         }
