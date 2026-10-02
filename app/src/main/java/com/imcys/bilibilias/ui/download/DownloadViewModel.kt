@@ -51,21 +51,6 @@ class DownloadViewModel(
     private val _duplicateGroups = MutableStateFlow<List<DuplicateDownloadRules.DuplicateGroup>>(emptyList())
     val duplicateGroups = _duplicateGroups.asStateFlow()
 
-    /** 失败（ERROR）的任务：给「全部重试」用 */
-    val errorSegments = _allDownloadSegment
-        .map { list -> list.filter { it.downloadState == DownloadState.ERROR } }
-        .stateIn(viewModelScope, SharingStarted.WhileSubscribed(5000), emptyList())
-
-    /** 一键重试所有失败任务 */
-    fun retryAllFailed() {
-        val failed = errorSegments.value
-        if (failed.isEmpty()) return
-        viewModelScope.launch {
-            failed.forEach { downloadManager.resumeTask(it.segmentId) }
-            sendToast("已重试 ${failed.size} 个失败任务")
-        }
-    }
-
     /** 需要用户确认才能删除的那些行（不是本 app 拥有的副本）→ 界面去发起系统确认框 */
     private val _pendingDeleteUris = MutableStateFlow<List<android.net.Uri>>(emptyList())
     val pendingDeleteUris = _pendingDeleteUris.asStateFlow()
@@ -207,6 +192,21 @@ class DownloadViewModel(
         }
     }
     // endregion
+
+    /** 失败（ERROR）的任务：给「全部重试」用 */
+    val errorSegments = _allDownloadSegment
+        .map { list -> list.filter { it.downloadState == DownloadState.ERROR } }
+        .stateIn(viewModelScope, SharingStarted.WhileSubscribed(5000), emptyList())
+
+    /** 一键重试所有失败任务 */
+    fun retryAllFailed() {
+        val failed = errorSegments.value
+        if (failed.isEmpty()) return
+        viewModelScope.launch {
+            failed.forEach { downloadManager.resumeTask(it.segmentId) }
+            sendToast("已重试 ${failed.size} 个失败任务")
+        }
+    }
 
     // region 下载任务控制
     fun pauseDownloadTask(segmentId: Long) {
