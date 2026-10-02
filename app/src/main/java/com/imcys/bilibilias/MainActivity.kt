@@ -325,6 +325,9 @@ fun GreetingPreview() {
         BILIBILIASAppScreen()
     }
 
+
+}
+
 /** GitHub 更新提示：版本号 + 更新要点 + 下载 / 跳过此版本 / 稍后 */
 @androidx.compose.runtime.Composable
 private fun GithubUpdateDialog(
@@ -374,5 +377,4 @@ private fun GithubUpdateDialog(
             }
         },
     )
-}
 }
