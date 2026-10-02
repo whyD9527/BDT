@@ -7,8 +7,6 @@ import androidx.room.OnConflictStrategy
 import androidx.room.Query
 import androidx.room.Update
 import com.imcys.bilibilias.database.entity.download.DownloadSegment
-import com.imcys.bilibilias.database.entity.download.DownloadMode
-import com.imcys.bilibilias.database.entity.download.MediaContainer
 import com.imcys.bilibilias.database.entity.download.DownloadTask
 import com.imcys.bilibilias.database.entity.download.DownloadTaskNode
 import kotlinx.coroutines.flow.Flow
@@ -74,8 +72,11 @@ interface DownloadTaskDao {
      * 两条记录会指向同一个文件 → 旧记录变成「文件已丢失」的僵尸记录。取证与理由见
      * `SegmentIdentityRules.ProductForm` 的注释。
      *
-     * ⚠️ `mediaContainer` 由 Room 按 `MediaContainerConverter` 绑成 **`extension`**
-     * （`mp4`/`m4a`/`mp3`/`mkv`），与 `createSegment` 里存进去的值一致。
+     * ⚠️ 两个参数都刻意用 **String**（传"存进 DB 的那个值"）：
+     * `MediaContainer` 是 **sealed interface**，Room 不把它当成"能转成列的类型"用 ——
+     * 写成 `mediaContainer: MediaContainer` 会直接被 KSP 拒掉
+     * （`Query function parameters should either be a type that can be converted into a database column...`，
+     * 2026-10-02 CI 报过）。所以调用方传 `downloadMode.name` 与 `container.extension`。
      */
     @Query(
         "SELECT * FROM download_segment WHERE node_id = :nodeId AND platform_id = :platformId " +
@@ -84,8 +85,10 @@ interface DownloadTaskDao {
     suspend fun getSegmentByProduct(
         nodeId: Long,
         platformId: String,
-        downloadMode: DownloadMode,
-        mediaContainer: MediaContainer,
+        /** 存进 DB 的值 = 枚举名（`AUDIO_VIDEO`/`VIDEO_ONLY`/`AUDIO_ONLY`） */
+        downloadMode: String,
+        /** 存进 DB 的值 = **扩展名**（`mp4`/`m4a`/`mp3`/`mkv`）—— `MediaContainerConverter` 存的是它 */
+        mediaContainer: String,
     ): DownloadSegment?
 
 

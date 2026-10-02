@@ -791,8 +791,9 @@ class DownloadTaskRepository(
         val existing = downloadTaskDao.getSegmentByProduct(
             nodeId = nodeId,
             platformId = platformId,
-            downloadMode = downloadMode,
-            mediaContainer = productContainer,
+            // 传"存进 DB 的那个值"：模式 = 枚举名；容器 = 扩展名（见 DAO 上的说明）
+            downloadMode = downloadMode.name,
+            mediaContainer = productContainer.extension,
         )
 
         return when (DownloadRecordReuseRules.persistAction(existing != null)) {
