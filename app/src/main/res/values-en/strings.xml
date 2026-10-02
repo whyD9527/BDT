@@ -588,4 +588,15 @@
     <string name="naming_restore_default">Restore default naming rules</string>
     <string name="naming_video_placeholders_title">Video naming rule placeholders</string>
     <string name="naming_bangumi_placeholders_title">Bangumi naming rule placeholders</string>
+    <!-- i18n batch E10: device info / notification channel / foreground notification / error widget -->
+    <string name="device_info_copy_template">App version: %1$s\nSystem version: %2$s\nDevice model: %3$s\nMarket model: %4$s\nManufacturer: %5$s\nBrand: %6$s\nOS name: %7$s\nOS version name: %8$s</string>
+    <string name="common_unknown">Unknown</string>
+    <string name="notification_channel_name">Video caching</string>
+    <string name="notification_channel_desc">Keeps an eye on download progress</string>
+    <string name="notification_cache_title">Caching</string>
+    <string name="notification_pause_all">Pause all</string>
+    <string name="notification_cancel_all">Cancel all</string>
+    <string name="common_click_retry">Tap to retry</string>
+    <string name="clip_error_label">BDT error</string>
+    <string name="cd_copy_error">Copy error</string>
 </resources>

@@ -1,5 +1,6 @@
 package com.imcys.bilibilias.common.utils
 
+import com.imcys.bilibilias.R
 import android.app.NotificationChannel
 import android.app.NotificationManager
 import android.content.Context
@@ -18,8 +19,8 @@ fun Context.applyDownloadNotificationManager(notificationManagerContent: Notific
 fun Context.createDownloadNotificationChannel() {
     val channelId = DOWNLOAD_NOTIFICATION_CHANNEL_ID
     if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.O) {
-        val name = "视频缓存通知"
-        val descriptionText = "方便观察下载进度"
+        val name = getString(R.string.notification_channel_name)
+        val descriptionText = getString(R.string.notification_channel_desc)
         val importance = NotificationManager.IMPORTANCE_DEFAULT
         val channel = NotificationChannel(
             channelId,

@@ -102,8 +102,8 @@ class DownloadService : Service() {
                 this,
                 DOWNLOAD_NOTIFICATION_CHANNEL_ID
             ).apply {
-                setContentTitle("缓存通知")
-                setContentText("AS视频缓存中...")
+                setContentTitle(getString(R.string.notification_cache_title))
+                setContentText(getString(R.string.download_caching))
                     .setProgress(100, 0, false)
                 setContentIntent(pIntent)
                 setSmallIcon(R.drawable.ic_logo_mini)
@@ -123,8 +123,8 @@ class DownloadService : Service() {
                     Intent(this@DownloadService, DownloadService::class.java).setAction(ACTION_CANCEL_ALL),
                     PendingIntent.FLAG_IMMUTABLE,
                 )
-                addAction(android.R.drawable.ic_media_pause, "全部暂停", pauseAllIntent)
-                addAction(android.R.drawable.ic_menu_close_clear_cancel, "全部取消", cancelAllIntent)
+                addAction(android.R.drawable.ic_media_pause, getString(R.string.notification_pause_all), pauseAllIntent)
+                addAction(android.R.drawable.ic_menu_close_clear_cancel, getString(R.string.notification_cancel_all), cancelAllIntent)
             }
         }
 

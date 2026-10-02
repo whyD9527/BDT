@@ -1,5 +1,6 @@
 package com.imcys.bilibilias.widget
 
+import androidx.compose.ui.platform.LocalContext
 import android.content.ClipData
 import androidx.compose.animation.AnimatedContent
 import androidx.compose.animation.core.animateFloatAsState
@@ -140,7 +141,7 @@ fun CommonError(errorMsg: String, onRetry: (() -> Unit)?) {
                         onRetry.invoke()
                     },
                 ) {
-                    Text("点击重试")
+                    Text(stringResource(R.string.common_click_retry))
                 }
 
             }
@@ -152,6 +153,7 @@ fun CommonError(errorMsg: String, onRetry: (() -> Unit)?) {
 
 @Composable
 fun AsErrorCopyIconButton(errorMsg: String) {
+    val context = LocalContext.current
     val clipboardManager = LocalClipboard.current
     val coroutineScope = rememberCoroutineScope()
     val haptics = LocalHapticFeedback.current
@@ -163,7 +165,7 @@ fun AsErrorCopyIconButton(errorMsg: String) {
     )
     ASIconButton(onClick = {
         haptics.performHapticFeedback(HapticFeedbackType.Confirm)
-        val clipData = ClipData.newPlainText("BILIBILAIS异常", errorMsg)
+        val clipData = ClipData.newPlainText(context.getString(R.string.clip_error_label), errorMsg)
         val clipEntry = ClipEntry(clipData)
         coroutineScope.launch(Dispatchers.IO) {
             copyFinish = true
@@ -174,7 +176,7 @@ fun AsErrorCopyIconButton(errorMsg: String) {
     }) {
         Icon(
             imageVector = if (copyFinish) Icons.Outlined.Check else Icons.Outlined.ContentCopy,
-            contentDescription = "复制报错",
+            contentDescription = stringResource(R.string.cd_copy_error),
             modifier = Modifier.rotate(rotation)
         )
     }

@@ -588,4 +588,15 @@
     <string name="naming_restore_default">恢复默认命名规则</string>
     <string name="naming_video_placeholders_title">视频命名规则占位符</string>
     <string name="naming_bangumi_placeholders_title">番剧命名规则占位符</string>
+    <!-- i18n 批次 E10：设备信息 / 通知渠道 / 前台通知 / 错误组件 -->
+    <string name="device_info_copy_template">APP版本：%1$s\n系统版本：%2$s\n设备型号：%3$s\n市场型号：%4$s\n厂商：%5$s\n品牌：%6$s\n厂商系统名称：%7$s\n厂商系统版本名称：%8$s</string>
+    <string name="common_unknown">未知</string>
+    <string name="notification_channel_name">视频缓存通知</string>
+    <string name="notification_channel_desc">方便观察下载进度</string>
+    <string name="notification_cache_title">缓存通知</string>
+    <string name="notification_pause_all">全部暂停</string>
+    <string name="notification_cancel_all">全部取消</string>
+    <string name="common_click_retry">点击重试</string>
+    <string name="clip_error_label">BDT异常</string>
+    <string name="cd_copy_error">复制报错</string>
 </resources>

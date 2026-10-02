@@ -1,5 +1,6 @@
 package com.imcys.bilibilias.common.utils
 
+import com.imcys.bilibilias.R
 import android.content.Context
 import android.os.Build
 import com.hjq.device.compat.DeviceBrand.*
@@ -48,16 +49,17 @@ object DeviceInfoUtils {
     fun getDeviceInfoCopyString(context: Context): String {
         val deviceInfo = getDeviceInfo(context)
 
-        return """
-        APP版本：${deviceInfo.appVersion}
-        系统版本：${deviceInfo.systemVersion}
-        设备型号：${deviceInfo.model}
-        市场型号：${deviceInfo.marketModel}
-        厂商：${deviceInfo.manufacturer}
-        品牌：${deviceInfo.brandName}
-        厂商系统名称：${deviceInfo.osName}
-        厂商系统版本名称：${deviceInfo.osVersionName}
-    """.trimIndent()
+        return context.getString(
+            R.string.device_info_copy_template,
+            deviceInfo.appVersion,
+            deviceInfo.systemVersion,
+            deviceInfo.model,
+            deviceInfo.marketModel,
+            deviceInfo.manufacturer,
+            deviceInfo.brandName,
+            deviceInfo.osName,
+            deviceInfo.osVersionName,
+        )
     }
 
     fun getDeviceInfo(context: Context): DeviceInfo {
@@ -68,29 +70,29 @@ object DeviceInfoUtils {
         } catch (e: Exception) {
             null
         }
-        val appVersion = packageInfo?.versionName ?: "未知"
-        val systemVersion = Build.VERSION.RELEASE ?: "未知"
-        val model = Build.MODEL ?: "未知"
-        val marketModel = DeviceMarketName.getMarketName(context) ?: "未知"
+        val appVersion = packageInfo?.versionName ?: context.getString(R.string.common_unknown)
+        val systemVersion = Build.VERSION.RELEASE ?: context.getString(R.string.common_unknown)
+        val model = Build.MODEL ?: context.getString(R.string.common_unknown)
+        val marketModel = DeviceMarketName.getMarketName(context) ?: context.getString(R.string.common_unknown)
         // ⚠️ manufacturer 要用 Build.MANUFACTURER（2026-09-15 复审 L15）：
         // 原来写的是 Build.BRAND，导致"厂商/品牌"两行永远一模一样（Xiaomi/Redmi 这种会被抹平），
         // 用户复制设备信息来报障时反而误导排查。
-        val manufacturer = Build.MANUFACTURER ?: "未知"
-        val brand = Build.BRAND ?: "未知"
+        val manufacturer = Build.MANUFACTURER ?: context.getString(R.string.common_unknown)
+        val brand = Build.BRAND ?: context.getString(R.string.common_unknown)
         val brandName = try {
             getBrandName() ?: Build.DEVICE
         } catch (_: Throwable) {
             Build.DEVICE
         }
         val osName = try {
-            getOsName() ?: "未知"
+            getOsName() ?: context.getString(R.string.common_unknown)
         } catch (_: Throwable) {
-            "未知"
+            context.getString(R.string.common_unknown)
         }
         val osVersionName = try {
-            getOsVersionName() ?: "未知"
+            getOsVersionName() ?: context.getString(R.string.common_unknown)
         } catch (_: Throwable) {
-            "未知"
+            context.getString(R.string.common_unknown)
         }
         return DeviceInfo(
             appVersion = appVersion,
