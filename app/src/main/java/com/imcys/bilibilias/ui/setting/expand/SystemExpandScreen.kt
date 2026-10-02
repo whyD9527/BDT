@@ -1,5 +1,6 @@
 package com.imcys.bilibilias.ui.setting.expand
 
+import kotlinx.serialization.Serializable
 import androidx.compose.ui.res.stringResource
 import androidx.compose.foundation.layout.PaddingValues
 import androidx.compose.foundation.layout.fillMaxSize
@@ -25,6 +26,9 @@ import com.imcys.bilibilias.ui.widget.CategorySettingsItem
 import com.imcys.bilibilias.ui.widget.SwitchSettingsItem
 
 
+// ⚠️ 必须 @Serializable：Navigation3 在 Activity 状态保存（后台化）时会序列化路由，
+// 缺了它就会 `Serializer for class '…' is not found` 崩在 onSaveInstanceState（真机 crash.log 已复现）
+@Serializable
 data object SystemExpandRoute : NavKey
 
 @OptIn(ExperimentalMaterial3Api::class)

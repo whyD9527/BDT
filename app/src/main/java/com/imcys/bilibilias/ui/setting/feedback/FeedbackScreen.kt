@@ -1,5 +1,6 @@
 package com.imcys.bilibilias.ui.setting.feedback
 
+import kotlinx.serialization.Serializable
 import com.imcys.bilibilias.datastore.AppSettings
 import androidx.compose.material3.TextButton
 import android.app.NotificationManager
@@ -332,6 +333,9 @@ private fun statusValue(item: FeedbackReportRules.StatusItem): String = when (it
 
 
 /** 「问题反馈」页的路由（合并后的唯一反馈/诊断入口） */
+// ⚠️ 必须 @Serializable：Navigation3 在 Activity 状态保存（后台化）时会序列化路由，
+// 缺了它就会 `Serializer for class '…' is not found` 崩在 onSaveInstanceState（真机 crash.log 已复现）
+@Serializable
 data object FeedbackRoute : NavKey
 
 /** 页面外壳：与版本页一致的返回 + 内容 */
