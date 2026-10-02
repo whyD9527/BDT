@@ -1,5 +1,6 @@
 package com.imcys.bilibilias.widget
 
+import com.imcys.bilibilias.ui.download.localizeQualityLabel
 import com.imcys.bilibilias.ui.download.downloadModeLabel
 import androidx.compose.animation.AnimatedContent
 import androidx.compose.animation.core.animateFloatAsState
@@ -318,7 +319,7 @@ fun DownloadFinishTaskCard(
                     // 文案在这里映射到 strings.xml（2026-10-02 本地化改造）。
                     DownloadRecordDisplayRules.tags(
                         modeTitle = downloadModeLabel(downloadSegment.downloadMode),
-                        qualityTitle = downloadSegment.qualityDescription,
+                        qualityTitle = localizeQualityLabel(downloadSegment.qualityDescription),
                         extension = downloadSegment.mediaContainer.extension,
                         savePath = downloadSegment.savePath,
                         fileMissing = fileMissing,

@@ -675,4 +675,12 @@
     <string name="naming_ph_season_title">番剧标题</string>
     <string name="naming_ph_episode_number">集序号</string>
     <string name="naming_ph_episode_title">集标题</string>
+    <!-- i18n 批次 F：画质后缀（DB 里存的是中文描述，显示层本地化） -->
+    <string name="quality_suffix_clear">清晰</string>
+    <string name="quality_suffix_hd">高清</string>
+    <string name="quality_suffix_hq">准高清</string>
+    <string name="quality_suffix_uhd">超高清</string>
+    <string name="quality_suffix_bluray">蓝光</string>
+    <string name="quality_suffix_dolby">杜比</string>
+    <string name="quality_suffix_smooth">流畅</string>
 </resources>

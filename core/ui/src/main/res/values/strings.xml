@@ -1,0 +1,5 @@
+<?xml version="1.0" encoding="utf-8"?>
+<resources>
+    <!-- 通用返回（原先硬编码中文，英文界面下漏中文） -->
+    <string name="core_back">返回</string>
+</resources>

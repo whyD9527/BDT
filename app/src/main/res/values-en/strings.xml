@@ -675,4 +675,12 @@
     <string name="naming_ph_season_title">Season title</string>
     <string name="naming_ph_episode_number">Episode number</string>
     <string name="naming_ph_episode_title">Episode title</string>
+    <!-- i18n batch F: quality suffixes -->
+    <string name="quality_suffix_clear">SD</string>
+    <string name="quality_suffix_hd">HD</string>
+    <string name="quality_suffix_hq">HQ</string>
+    <string name="quality_suffix_uhd">UHD</string>
+    <string name="quality_suffix_bluray">Blu-ray</string>
+    <string name="quality_suffix_dolby">Dolby</string>
+    <string name="quality_suffix_smooth">Smooth</string>
 </resources>

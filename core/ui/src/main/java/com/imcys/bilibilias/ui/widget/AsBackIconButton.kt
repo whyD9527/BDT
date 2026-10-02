@@ -6,6 +6,8 @@ import androidx.compose.material3.Icon
 import androidx.compose.runtime.Composable
 import androidx.compose.ui.hapticfeedback.HapticFeedbackType
 import androidx.compose.ui.platform.LocalHapticFeedback
+import androidx.compose.ui.res.stringResource
+import com.imcys.bilibilias.ui.R
 
 @Composable
 fun AsBackIconButton(onClick: () -> Unit) {
@@ -17,7 +19,8 @@ fun AsBackIconButton(onClick: () -> Unit) {
     }) {
         Icon(
             Icons.AutoMirrored.Outlined.ArrowBack,
-            contentDescription = "返回"
+            // F（2026-10-02 真机复验）：原先硬编码 "返回"，英文界面下左上角就漏中文
+            contentDescription = stringResource(R.string.core_back)
         )
     }
 }
