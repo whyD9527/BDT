@@ -31,7 +31,8 @@ fun String.copyText(context: Context, title: String) {
         context.getSystemService(Context.CLIPBOARD_SERVICE) as ClipboardManager
     val clip = ClipData.newPlainText(title, this)
     clipboard.setPrimaryClip(clip)
-    sendToastEventOnBlocking(getString(R.string.tools_copied_to_clipboard))
+    // ⚠️ 这是 `String` 的扩展（接收者不是 Context）→ 必须用参数里的 `context.getString`
+    sendToastEventOnBlocking(context.getString(R.string.tools_copied_to_clipboard))
 }
 
 suspend fun <T> autoRequestRetry(
