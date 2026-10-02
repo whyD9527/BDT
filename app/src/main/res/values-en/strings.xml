@@ -475,4 +475,25 @@
     <string name="storage_open">Open</string>
     <string name="storage_has_record">· has record</string>
     <string name="storage_orphan">· no record (orphan)</string>
+    <!-- i18n batch E7a: analysis screen -->
+    <string name="analysis_creating_task_title">Creating download task</string>
+    <string name="analysis_creating_task_message">Creating the task; please do not send the app to the background...</string>
+    <string name="analysis_video_not_found">The video you entered does not exist; please check and try again</string>
+    <string name="analysis_video_container">Video container</string>
+    <string name="analysis_audio_container">Audio container</string>
+    <string name="analysis_container_note">Note: if the selected item has no separate audio/video streams, it cannot be downloaded separately.</string>
+    <string name="analysis_embed_config">Embed options</string>
+    <string name="analysis_embed_cover">Cover</string>
+    <string name="analysis_embed_subtitle">Subtitles</string>
+    <string name="cd_selected">Selected</string>
+    <string name="analysis_video_title">Video title</string>
+    <string name="analysis_not_logged_in">You are not signed in to Bilibili, so caching benefits are limited.</string>
+    <string name="cd_go_login">Sign in</string>
+    <string name="analysis_charging_video">This is a members-only charging video; support the creator to unlock caching.</string>
+    <string name="cd_up_avatar">Uploader avatar</string>
+    <string name="cd_problem_tip">Help</string>
+    <string name="cd_download_video">Download video</string>
+    <string name="analysis_permission_denied">Permission denied</string>
+    <string name="analysis_storage_permission_message">Storage permission is required to save downloads. Continue?</string>
+    <string name="analysis_download_tip_message">The resolutions you can pick depend on your Bilibili membership status and on what the video actually offers.\nPick the highest resolution available in the collection/part, and a premium membership unlocks higher-resolution caching.</string>
 </resources>

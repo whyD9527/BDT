@@ -475,4 +475,25 @@
     <string name="storage_open">打开</string>
     <string name="storage_has_record">· 有记录</string>
     <string name="storage_orphan">· 无记录（孤儿）</string>
+    <!-- i18n 批次 E7a：解析页 -->
+    <string name="analysis_creating_task_title">创建下载任务</string>
+    <string name="analysis_creating_task_message">正在创建任务，创建过程中请勿挂后台...</string>
+    <string name="analysis_video_not_found">输入的视频不存在哦~请检查后重新输入</string>
+    <string name="analysis_video_container">视频封装格式</string>
+    <string name="analysis_audio_container">音频封装格式</string>
+    <string name="analysis_container_note">注意：如果选中的子集没有音视频分离资源，将无法单独进行下载。</string>
+    <string name="analysis_embed_config">内嵌配置</string>
+    <string name="analysis_embed_cover">封面</string>
+    <string name="analysis_embed_subtitle">字幕</string>
+    <string name="cd_selected">已选中图标</string>
+    <string name="analysis_video_title">视频标题</string>
+    <string name="analysis_not_logged_in">你当前还未绑定B站账号，缓存权益受限哦。</string>
+    <string name="cd_go_login">去登录</string>
+    <string name="analysis_charging_video">当前视频属充电视频，请充电后申请缓存。</string>
+    <string name="cd_up_avatar">up头像</string>
+    <string name="cd_problem_tip">问题提示</string>
+    <string name="cd_download_video">下载视频</string>
+    <string name="analysis_permission_denied">权限未被授予</string>
+    <string name="analysis_storage_permission_message">需要存储权限以保存下载内容，是否继续？</string>
+    <string name="analysis_download_tip_message">可以选择的分辨率取决于你当前B站账号的大会员状态和当前解析视频的实际可选分辨率。\n因此建议选择合集/分P内分辨率最高的视频进行解析，同时开通大会员可享受更高的分辨率缓存。</string>
 </resources>
