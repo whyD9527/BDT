@@ -207,7 +207,7 @@ fun DownloadScreen(route: DownloadRoute, onToBack: () -> Unit) {
                 )
             }.onFailure {
                 vm.onDeleteRequestFinished()
-                sendToastEventOnBlocking("无法发起系统删除确认，请改用「所有文件访问」权限")
+                sendToastEventOnBlocking(context.getString(R.string.duplicate_delete_request_failed))
             }
         }
     }
@@ -219,7 +219,7 @@ fun DownloadScreen(route: DownloadRoute, onToBack: () -> Unit) {
         if (granted) {
             vm.refreshDuplicateGroups()
         } else {
-            sendToastEventOnBlocking("没有读取视频权限，只能发现本应用自己下载的副本")
+            sendToastEventOnBlocking(context.getString(R.string.duplicate_no_video_permission))
         }
     }
 
@@ -278,7 +278,7 @@ fun DownloadScreen(route: DownloadRoute, onToBack: () -> Unit) {
                                 .mapNotNull { it.savePath.takeIf { p -> p.startsWith("content://") } }
                                 .map { android.net.Uri.parse(it) }
                             if (uris.isEmpty()) {
-                                sendToastEventOnBlocking("选中的记录里没有可分享的文件")
+                                sendToastEventOnBlocking(context.getString(R.string.batch_share_empty))
                             } else {
                                 runCatching {
                                     val share = Intent(Intent.ACTION_SEND_MULTIPLE).apply {
@@ -286,8 +286,8 @@ fun DownloadScreen(route: DownloadRoute, onToBack: () -> Unit) {
                                         putParcelableArrayListExtra(Intent.EXTRA_STREAM, ArrayList(uris))
                                         addFlags(Intent.FLAG_GRANT_READ_URI_PERMISSION)
                                     }
-                                    context.startActivity(Intent.createChooser(share, "分享选中的文件"))
-                                }.onFailure { sendToastEventOnBlocking("没有能接收分享的应用") }
+                                    context.startActivity(Intent.createChooser(share, context.getString(R.string.batch_share_chooser_title)))
+                                }.onFailure { sendToastEventOnBlocking(context.getString(R.string.batch_share_no_app)) }
                             }
                         },
                     )
@@ -318,7 +318,7 @@ fun DownloadScreen(route: DownloadRoute, onToBack: () -> Unit) {
                         onCheck = {
                             if (hasVideoPermission) {
                                 vm.refreshDuplicateGroups()
-                                sendToastEventOnBlocking("已重新检查下载目录")
+                                sendToastEventOnBlocking(context.getString(R.string.duplicate_rechecked))
                             } else {
                                 videoPermissionLauncher.launch(Manifest.permission.READ_MEDIA_VIDEO)
                             }
@@ -457,10 +457,13 @@ private fun DuplicateFilesCard(
                 .padding(horizontal = 4.dp, vertical = 2.dp),
         ) {
             TextButton(onClick = onCheck) {
-                Text(if (hasVideoPermission) "检查重复下载文件" else "授予视频权限并检查重复文件")
+                Text(
+                    if (hasVideoPermission) stringResource(R.string.duplicate_check)
+                    else stringResource(R.string.duplicate_grant_and_check),
+                )
             }
             Text(
-                "同一部视频若有多份副本，会在这里列出来由你确认删除（只删副本、保留正式名那份）",
+                stringResource(R.string.duplicate_check_hint),
                 fontSize = 11.sp,
                 color = MaterialTheme.colorScheme.outline,
             )
@@ -481,18 +484,18 @@ private fun DuplicateFilesCard(
         ) {
             Column(Modifier.weight(1f)) {
                 Text(
-                    "发现 $groupCount 组重复下载文件",
+                    stringResource(R.string.duplicate_files_found, groupCount),
                     fontSize = 15.sp,
                     fontWeight = FontWeight.Medium,
                 )
                 Text(
-                    "同一个视频存在多份副本，共可清理 $removableCount 个（只删副本，保留正式名那份）",
+                    stringResource(R.string.duplicate_files_removable, removableCount),
                     fontSize = 12.sp,
                     color = MaterialTheme.colorScheme.onSurfaceVariant,
                 )
             }
             TextButton(onClick = onClean) {
-                Text("去清理")
+                Text(stringResource(R.string.duplicate_files_clean))
             }
         }
     }
@@ -517,13 +520,13 @@ private fun DuplicateFilesCleanupDialog(
 
     AlertDialog(
         onDismissRequest = onDismiss,
-        title = { Text("清理重复下载文件") },
+        title = { Text(stringResource(R.string.duplicate_cleanup_title)) },
         text = {
             LazyColumn(verticalArrangement = Arrangement.spacedBy(6.dp)) {
                 groups.forEach { group ->
                     item(key = "keep_${group.keepName}") {
                         Text(
-                            "保留：${group.keepName}",
+                            stringResource(R.string.duplicate_keep_prefix) + group.keepName,
                             fontSize = 13.sp,
                             fontWeight = FontWeight.Medium,
                         )
@@ -551,11 +554,11 @@ private fun DuplicateFilesCleanupDialog(
                 onClick = { onConfirm(selected.toList()) },
                 enabled = selected.isNotEmpty(),
             ) {
-                Text("删除选中 (${selected.size})")
+                Text(stringResource(R.string.duplicate_delete_selected, selected.size))
             }
         },
         dismissButton = {
-            TextButton(onClick = onDismiss) { Text("取消") }
+            TextButton(onClick = onDismiss) { Text(stringResource(R.string.common_cancel)) }
         },
     )
 }
@@ -581,7 +584,7 @@ private fun openFile(context: Context, segment: DownloadSegment) {
         }.getOrNull()
 
         if (fileUri == null) {
-            sendToastEventOnBlocking("无法打开此文件，可能没有合适的应用")
+            sendToastEventOnBlocking(context.getString(R.string.open_file_no_app))
             return
         }
         fileUri to (context.contentResolver.getType(fileUri) ?: "")
@@ -596,7 +599,7 @@ private fun openFile(context: Context, segment: DownloadSegment) {
     runCatching {
         context.startActivity(intent)
     }.onFailure {
-        sendToastEventOnBlocking("无法打开此文件，可能没有合适的应用")
+        sendToastEventOnBlocking(context.getString(R.string.open_file_no_app))
     }
 }
 // endregion
@@ -694,15 +697,16 @@ private fun PageChangeTools(
     }
 }
 
+@Composable
 private fun getSortTypeDisplayName(sortType: AppSettings.DownloadSortType): String {
     return when (sortType) {
-        AppSettings.DownloadSortType.DownloadSort_TimeDesc -> "时间↓"
-        AppSettings.DownloadSortType.DownloadSort_TimeAsc -> "时间↑"
-        AppSettings.DownloadSortType.DownloadSort_TitleAsc -> "标题A→Z"
-        AppSettings.DownloadSortType.DownloadSort_TitleDesc -> "标题Z→A"
-        AppSettings.DownloadSortType.DownloadSort_SizeDesc -> "大小↓"
-        AppSettings.DownloadSortType.DownloadSort_SizeAsc -> "大小↑"
-        else -> "时间↓"
+        AppSettings.DownloadSortType.DownloadSort_TimeDesc -> stringResource(R.string.sort_time_desc)
+        AppSettings.DownloadSortType.DownloadSort_TimeAsc -> stringResource(R.string.sort_time_asc)
+        AppSettings.DownloadSortType.DownloadSort_TitleAsc -> stringResource(R.string.sort_title_asc)
+        AppSettings.DownloadSortType.DownloadSort_TitleDesc -> stringResource(R.string.sort_title_desc)
+        AppSettings.DownloadSortType.DownloadSort_SizeDesc -> stringResource(R.string.sort_size_desc)
+        AppSettings.DownloadSortType.DownloadSort_SizeAsc -> stringResource(R.string.sort_size_asc)
+        else -> stringResource(R.string.sort_time_desc)
     }
 }
 
@@ -803,7 +807,7 @@ fun DownloadScaffold(
         topBar = {
             ASTopAppBar(
                 style = BILIBILIASTopAppBarStyle.Small,
-                title = { Text(text = "下载管理") },
+                title = { Text(text = stringResource(R.string.download_manage_title)) },
                 colors = TopAppBarDefaults.topAppBarColors(
                     containerColor = MaterialTheme.colorScheme.surfaceContainer,
                 ),

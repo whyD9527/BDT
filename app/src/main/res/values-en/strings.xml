@@ -335,4 +335,22 @@
     <string name="batch_rename_partial">Renamed %1$d, %2$d failed: %3$s</string>
     <string name="batch_rename_failed">Rename failed (the file may not belong to this app)</string>
     <string name="batch_rename_bad_name">Invalid name: it cannot be empty or contain ..</string>
+    <!-- i18n batch E2: downloads screen (reuses the duplicate_* keys B1 added but never wired) -->
+    <string name="duplicate_delete_request_failed">Cannot start the system delete confirmation; use "All files access" instead</string>
+    <string name="duplicate_no_video_permission">Without video read permission only copies created by this app can be found</string>
+    <string name="duplicate_rechecked">Download folder re-checked</string>
+    <string name="duplicate_check">Check for duplicate downloads</string>
+    <string name="duplicate_grant_and_check">Grant video permission and check</string>
+    <string name="duplicate_check_hint">If a video has several copies, they are listed here for you to confirm (only copies are deleted; the properly named file is kept)</string>
+    <string name="batch_share_empty">None of the selected records has a shareable file</string>
+    <string name="batch_share_chooser_title">Share selected files</string>
+    <string name="batch_share_no_app">No app can receive the share</string>
+    <string name="open_file_no_app">Cannot open this file; no suitable app was found</string>
+    <string name="sort_time_desc">Time ↓</string>
+    <string name="sort_time_asc">Time ↑</string>
+    <string name="sort_title_asc">Title A→Z</string>
+    <string name="sort_title_desc">Title Z→A</string>
+    <string name="sort_size_desc">Size ↓</string>
+    <string name="sort_size_asc">Size ↑</string>
+    <string name="download_manage_title">Downloads</string>
 </resources>

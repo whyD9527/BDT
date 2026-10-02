@@ -335,4 +335,22 @@
     <string name="batch_rename_partial">已重命名 %1$d 个，%2$d 个失败：%3$s</string>
     <string name="batch_rename_failed">重命名失败（文件可能不是本应用创建的）</string>
     <string name="batch_rename_bad_name">新名字不可用：不能为空，也不能包含 ..</string>
+    <!-- i18n 批次 E2：下载管理页（复用 B1 已建但没接上的 duplicate_* 键） -->
+    <string name="duplicate_delete_request_failed">无法发起系统删除确认，请改用「所有文件访问」权限</string>
+    <string name="duplicate_no_video_permission">没有读取视频权限，只能发现本应用自己下载的副本</string>
+    <string name="duplicate_rechecked">已重新检查下载目录</string>
+    <string name="duplicate_check">检查重复下载文件</string>
+    <string name="duplicate_grant_and_check">授予视频权限并检查重复文件</string>
+    <string name="duplicate_check_hint">同一部视频若有多份副本，会在这里列出来由你确认删除（只删副本、保留正式名那份）</string>
+    <string name="batch_share_empty">选中的记录里没有可分享的文件</string>
+    <string name="batch_share_chooser_title">分享选中的文件</string>
+    <string name="batch_share_no_app">没有能接收分享的应用</string>
+    <string name="open_file_no_app">无法打开此文件，可能没有合适的应用</string>
+    <string name="sort_time_desc">时间↓</string>
+    <string name="sort_time_asc">时间↑</string>
+    <string name="sort_title_asc">标题A→Z</string>
+    <string name="sort_title_desc">标题Z→A</string>
+    <string name="sort_size_desc">大小↓</string>
+    <string name="sort_size_asc">大小↑</string>
+    <string name="download_manage_title">下载管理</string>
 </resources>
