@@ -67,10 +67,19 @@ class AppSettingsBackupTest {
     }
 
     @Test
-    fun `不是备份文件时返回 null`() {
+    fun `不是备份文件时返回 null，或给出一份"什么都不改"的空备份`() {
         assertNull(AppSettingsBackup.fromJson("这不是 JSON"))
         assertNull(AppSettingsBackup.fromJson(""))
-        assertEquals(AppSettingsBackup(), AppSettingsBackup.fromJson("""{"hello":"world"}"""))
+
+        // 能解析成 JSON、但不是我们的备份：schema=0 且所有字段为空 →
+        // overlay 到当前设置上等于"什么都没改"（这才是关键：不能把别人的 JSON 当备份用）
+        val foreign = AppSettingsBackup.fromJson("""{"hello":"world"}""")
+        assertEquals(0, foreign?.schema)
+        assertNull(foreign?.videoNamingRule)
+        assertNull(foreign?.bangumiNamingRule)
+        assertNull(foreign?.segmentedDownloadConcurrency)
+        val current = sampleSettings()
+        assertEquals(current, AppSettingsBackupRules.overlay(current, requireNotNull(foreign)))
     }
 
     @Test
