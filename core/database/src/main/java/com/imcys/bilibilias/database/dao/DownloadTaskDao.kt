@@ -109,9 +109,14 @@ interface DownloadTaskDao {
     suspend fun insertNode(node: DownloadTaskNode): Long
 
     /**
-     * 插入下载片段
+     * 插入下载片段。
+     *
+     * ⚠️ 用 **IGNORE** 而不是 REPLACE（④ 阶段 2，2026-10-02）：表上现在有「产物身份」唯一索引，
+     * 而 REPLACE 的语义是**先删掉冲突的那一行、再插新的** —— 于是一次意外的重复插入会连
+     * 那条记录的 `save_path`/`file_size` 一起删掉（磁盘上的文件还在，记录却没了）。
+     * 返回 **`-1`** 表示"被唯一索引忽略了"，调用方（`createSegment`）会回查那条已有记录并复用它。
      */
-    @Insert(onConflict = OnConflictStrategy.REPLACE)
+    @Insert(onConflict = OnConflictStrategy.IGNORE)
     suspend fun insertSegment(segment: DownloadSegment): Long
 
 

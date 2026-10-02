@@ -132,7 +132,20 @@ data class DownloadTaskNode(
         childColumns = ["task_id"],
         onDelete = ForeignKey.CASCADE
     )],
-    indices = [Index("node_id"), Index("task_id")]
+    indices = [
+        Index("node_id"),
+        Index("task_id"),
+        // ④ 阶段 2（2026-10-02）：把「一条记录 = 一份产物」变成 **DB 级约束**。
+        // 应用层 `createSegment` 已经是"先查再写"，但并发/异常路径下仍可能插出两条
+        // （第二十四轮真机 DB 里就积了 3 条同 (nodeId, platformId) 的记录）→ 之后一条永远指向不存在的文件。
+        // ⚠️ 列名顺序决定了 Room 生成的索引名，**必须与 `MIGRATION_5_6` 里 `CREATE INDEX` 的名字逐字相同**
+        // （Room 升级后会校验 schema；名字不一致 = 用户升级后打不开 app）。
+        // ⚠️ 四列都是 `NOT NULL`（见 5.json），所以唯一索引不会踩"SQLite 把 NULL 当互不相同"的坑。
+        Index(
+            value = ["platform_id", "node_id", "download_mode", "media_container"],
+            unique = true,
+        ),
+    ]
 )
 @TypeConverters(
     DownloadModeConverter::class, DateConverter::class,

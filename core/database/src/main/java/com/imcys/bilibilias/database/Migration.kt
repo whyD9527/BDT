@@ -88,3 +88,47 @@ val MIGRATION_4_5 = object : Migration(4, 5) {
         Migration45Sql.statements.forEach { db.execSQL(it) }
     }
 }
+
+/**
+ * `MIGRATION_5_6` 实际执行的 SQL 清单（抽出来是为了**能被测试直接跑一遍**，同 `Migration45Sql`）。
+ *
+ * 干了什么：给 `download_segment` 建
+ * **(platform_id, node_id, download_mode, media_container) 唯一索引**（④ 阶段 2，2026-10-02）。
+ *
+ * 为什么要先删重复行：老版本"复用"只看 `(nodeId, platformId)`，而且更早的版本在
+ * "已完成"分支会再插一条 —— 真机 DB 里真的积过重复（第二十四轮 3 条）。
+ * **直接建唯一索引会让迁移失败 → 用户升级后打不开 app**，所以先把每组多余的删掉
+ * （保留 `segment_id` 最大的那条 = 最新），再建索引。
+ *
+ * ⚠️ **空表安全性**（4→5 那次真机踩过"整表被删"）：外层必须是
+ * `DELETE ... WHERE segment_id IN (子查询)`。
+ * 若写成 `DELETE ... WHERE segment_id NOT IN (SELECT MAX(...) ...)`，
+ * **空表时子查询是空集，而 `x NOT IN (空集)` 恒为真** → 整表删光。
+ * 现在这个形状在空表时子查询也为空 → `IN (空集)` 恒假 → **一行都不删**，有测试钉着。
+ *
+ * ⚠️ **索引名**：`INDEX_NAME` 必须与 Room 按实体 `indices` 生成的索引名逐字一致，
+ * 否则 Room 升级校验不过（用户升级后打不开 app）。名字来自 `6.json` 里的 `createSql`。
+ */
+object Migration56Sql {
+
+    const val INDEX_NAME: String =
+        "index_download_segment_platform_id_node_id_download_mode_media_container"
+
+    /** 同一份产物里"较旧"的那些行：`segment_id` 不是该组最大的。 */
+    const val OBSOLETE_SEGMENT_IDS: String =
+        "SELECT segment_id FROM download_segment WHERE segment_id NOT IN " +
+            "(SELECT MAX(segment_id) FROM download_segment " +
+            "GROUP BY platform_id, node_id, download_mode, media_container)"
+
+    val statements: List<String> = listOf(
+        "DELETE FROM download_segment WHERE segment_id IN ($OBSOLETE_SEGMENT_IDS)",
+        "CREATE UNIQUE INDEX IF NOT EXISTS $INDEX_NAME " +
+            "ON download_segment(platform_id, node_id, download_mode, media_container)",
+    )
+}
+
+val MIGRATION_5_6 = object : Migration(5, 6) {
+    override fun migrate(db: SupportSQLiteDatabase) {
+        Migration56Sql.statements.forEach { db.execSQL(it) }
+    }
+}

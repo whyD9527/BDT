@@ -832,9 +832,27 @@ class DownloadTaskRepository(
             namingConventionInfo = mNamingConventionInfo,
             qualityDescription = qualityDescription,
             mediaContainer = productContainer,
-        ).let {
-            val segmentId = downloadTaskDao.insertSegment(it)
-            it.copy(segmentId = segmentId)
+        ).let { fresh ->
+            val segmentId = downloadTaskDao.insertSegment(fresh)
+            if (segmentId > 0L) {
+                fresh.copy(segmentId = segmentId)
+            } else {
+                // -1：被「产物身份」唯一索引忽略（同一份产物已经有行了）。
+                // 应用层是"先查再写"，所以这只可能是并发/残留，但既然发生了就必须**复用**那一条 ——
+                // 绝不能返回一条 segmentId 都不存在的记录。
+                val winner = downloadTaskDao.getSegmentByProduct(
+                    nodeId = nodeId,
+                    platformId = platformId,
+                    downloadMode = downloadMode.name,
+                    mediaContainer = productContainer.extension,
+                ) ?: error("同产物记录插入被唯一索引拒绝，回查也找不到（数据异常）")
+                val reused = winner.copy(
+                    updateTime = Date(),
+                    downloadState = DownloadRecordReuseRules.stateWhenReused(winner.downloadState),
+                )
+                downloadTaskDao.updateSegment(reused)
+                reused
+            }
         }
         }
     }
