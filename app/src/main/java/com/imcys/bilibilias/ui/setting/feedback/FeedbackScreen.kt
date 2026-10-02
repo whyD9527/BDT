@@ -1,5 +1,7 @@
 package com.imcys.bilibilias.ui.setting.feedback
 
+import com.imcys.bilibilias.datastore.AppSettings
+import androidx.compose.material3.TextButton
 import android.app.NotificationManager
 import android.content.ClipData
 import android.content.ClipboardManager
@@ -60,6 +62,8 @@ fun FeedbackContent(
     val fileOutputManager = remember { koin.get<FileOutputManager>() }
     val appSettingsRepository = remember { koin.get<AppSettingsRepository>() }
 
+    val scope = androidx.compose.runtime.rememberCoroutineScope()
+
     val deviceInfo = remember { DeviceInfoUtils.getDeviceInfo(context) }
     val deviceCopyText = remember { DeviceInfoUtils.getDeviceInfoCopyString(context) }
 
@@ -84,7 +88,9 @@ fun FeedbackContent(
         runCatching {
             val settings = appSettingsRepository.appSettingsFlow.first()
             // proto: bili_line_host = 13（空串 = 默认线路）
-            cacheLine = settings.biliLineHost.ifBlank { null }
+            // L4：设置里存的是裸 host（upos-sz-mirrorali.bilivideo.com），展示时映射成品牌名（ali（阿里））
+            cacheLine = com.imcys.bilibilias.data.diagnostics.LineDisplayRules
+                .displayName(settings.biliLineHost)
             // proto: video_naming_rule = 11（命名规则模板，如 {title}_{p}）
             namingRule = settings.videoNamingRule.ifBlank { null }
         }
@@ -127,6 +133,34 @@ fun FeedbackContent(
                     value = statusValue(item),
                     ok = item.ok,
                 )
+                // P1（大加强）：把"后果"写出来 —— 未同意/未授权/未开启时各配一句解释，
+                // 让"某个功能像坏了"变成"缺一步、点哪里"（文案走 strings.xml 中英双套）
+                if (!item.ok) {
+                    statusHint(item.key)?.let { hint ->
+                        Text(
+                            hint,
+                            style = MaterialTheme.typography.bodySmall,
+                            color = MaterialTheme.colorScheme.error,
+                            modifier = Modifier.padding(start = 12.dp, bottom = 4.dp),
+                        )
+                    }
+                    // P2（大加强）：缺隐私政策同意时，直接给一键「同意隐私政策」——
+                    // 由用户在这里点（不是应用自作主张 ✓），点完状态自检立刻变绿、剪贴板/更新检查随之可用
+                    if (item.key == FeedbackReportRules.StatusKey.PRIVACY) {
+                        TextButton(onClick = {
+                            scope.launch {
+                                runCatching {
+                                    appSettingsRepository.updatePrivacyPolicyAgreement(
+                                        AppSettings.AgreePrivacyPolicyState.Agreed,
+                                    )
+                                    privacyAgreed = true
+                                }
+                            }
+                        }) {
+                            Text(stringResource(R.string.feedback_action_agree_privacy))
+                        }
+                    }
+                }
             }
         }
 
@@ -306,4 +340,13 @@ fun FeedbackScreen(
     onToBack: () -> Unit = {},
 ) {
     FeedbackContent(onToBack = onToBack)
+}
+
+/** P1：状态不满足时的"后果说明"（只给会静默失效的三项） */
+@Composable
+private fun statusHint(key: FeedbackReportRules.StatusKey): String? = when (key) {
+    FeedbackReportRules.StatusKey.PRIVACY -> stringResource(R.string.feedback_hint_privacy)
+    FeedbackReportRules.StatusKey.ALL_FILES_ACCESS -> stringResource(R.string.feedback_hint_all_files)
+    FeedbackReportRules.StatusKey.NOTIFICATION -> stringResource(R.string.feedback_hint_notification)
+    else -> null
 }

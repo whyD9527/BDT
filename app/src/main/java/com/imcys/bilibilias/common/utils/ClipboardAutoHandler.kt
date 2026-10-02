@@ -1,3 +1,4 @@
+import com.imcys.bilibilias.R
 import com.imcys.bilibilias.common.utils.AsRegexUtil
 
 import android.content.ClipboardManager
@@ -48,6 +49,18 @@ fun ClipboardAutoHandler(
         )
     )
     val onClipboardTextState by rememberUpdatedState(onClipboardText)
+
+    // P4（大加强）：隐私门槛拦下时给**一次被动轻提示** —— ⚠️ 这里**绝不读剪贴板**
+    // （未同意就去读，本身才是违背门槛 ✗），只在"用户开了自动识别、但没同意隐私政策"时说一句该怎么办。
+    LaunchedEffect(allowed, appSettings.enabledClipboardAutoHandling) {
+        if (!allowed && appSettings.enabledClipboardAutoHandling) {
+            android.widget.Toast.makeText(
+                context,
+                context.getString(R.string.clipboard_need_privacy_hint),
+                android.widget.Toast.LENGTH_LONG,
+            ).show()
+        }
+    }
 
     if (!allowed) return
 

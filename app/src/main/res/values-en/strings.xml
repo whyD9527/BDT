@@ -430,7 +430,7 @@
     <string name="setting_privacy_agreed">Agreed</string>
     <string name="setting_privacy_refused">Declined</string>
     <string name="setting_privacy_unselected">Not chosen</string>
-    <string name="setting_privacy_status">Current status: %1$s. You can accept or decline our privacy policy here.</string>
+    <string name="setting_privacy_status">Current status: %1$s. You can accept or decline our privacy policy here. While not agreed: no clipboard auto-detect, no update check. Effective date: 2026-10-03.</string>
     <string name="setting_logout_desc">Clear the login info and release the login session.</string>
     <string name="setting_advanced_category">Advanced</string>
     <string name="setting_line_config_desc">Try to improve your download experience.</string>
@@ -580,7 +580,7 @@
     <string name="frame_extractor_export">Export frames</string>
     <string name="line_config_info">Line configuration can, in some cases, redirect where cached resources are fetched from to speed up caching, but it does not always help.</string>
     <string name="line_config_warning">If videos fail to play after switching to a non-automatic line, switch back to automatic; the built-in line may have been retired.</string>
-    <string name="line_config_cdn_tip">This acceleration is provided by CDNs supported by Bilibili; traffic never goes through a BDT server.</string>
+    <string name="line_config_cdn_tip">This acceleration is provided by CDNs supported by Bilibili; traffic never goes through a BDT server. If downloads feel slow, tap Detect on each line and pick the fastest (or use Pick the fastest above).</string>
     <string name="line_config_detect">Test</string>
     <string name="naming_info">Naming rules help you manage downloaded files. You can use the placeholders below to define a rule.\nFolder paths are supported: you can write a rule like “{author}/{p_title}” and the app creates the folders automatically; you do not need to handle the file type.</string>
     <string name="naming_warning">Naming rules are still being tested: only a few variables are available and reliability is still being checked, so problems may occur. If you find any, please report them in the community.\nExtra files (danmaku, subtitles, covers) cannot be renamed by rules yet.</string>
@@ -722,4 +722,14 @@
     <string name="feedback_need_attention">Needs attention</string>
     <string name="feedback_issue_body">Please export the report from the in-app Feedback page and attach it.</string>
     <string name="crash_export_report">Export report &amp; share</string>
+    <string name="feedback_action_agree_privacy">Agree to privacy policy</string>
+    <!-- i18n: line config / privacy enhancements -->
+    <string name="line_current_in_use">In use</string>
+    <string name="line_default">Default line</string>
+    <string name="line_pick_fastest">Pick the fastest</string>
+    <string name="line_fastest_tag">Fastest</string>
+    <string name="line_tap_to_switch_hint">Tap a row to switch to that line; tap Detect to measure speed.</string>
+    <string name="clipboard_need_privacy_hint">Link copied. Agree to the privacy policy to detect it automatically.</string>
+    <string name="download_slow_try_line_hint">Slow? Try another line in Settings → Line configuration.</string>
+    <string name="privacy_effective_date">Effective date: 2026-10-03</string>
 </resources>

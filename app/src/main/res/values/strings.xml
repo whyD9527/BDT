@@ -430,7 +430,7 @@
     <string name="setting_privacy_agreed">已同意</string>
     <string name="setting_privacy_refused">已拒绝</string>
     <string name="setting_privacy_unselected">未选择</string>
-    <string name="setting_privacy_status">当前状态：%1$s，可在这里拒绝或同意我们的隐私政策。</string>
+    <string name="setting_privacy_status">当前状态：%1$s，可在这里拒绝或同意我们的隐私政策。未同意时：不会自动识别剪贴板、也不会检查更新。 生效日期：2026-10-03。</string>
     <string name="setting_logout_desc">清空登录信息，解除登录占用。</string>
     <string name="setting_advanced_category">高级</string>
     <string name="setting_line_config_desc">试着改进你的下载体验。</string>
@@ -580,7 +580,7 @@
     <string name="frame_extractor_export">导出逐帧图片</string>
     <string name="line_config_info">线路配置可在部分情况下重定向缓存资源的地址路径，从而加快缓存，但并不是任何时候都有用。</string>
     <string name="line_config_warning">如果你发现使用非自动线路后出现视频无法播放等问题，请切换回自动线路，这可能是内置的线路已经被废弃。</string>
-    <string name="line_config_cdn_tip">这些加速由B站支持的CDN提供，全程不经过BDT服务器代理。</string>
+    <string name="line_config_cdn_tip">这些加速由B站支持的CDN提供，全程不经过BDT服务器代理。 网速偏慢时，点各行「检测」测一下，再挑最快的线路（或直接点上方「选最快的」）。</string>
     <string name="line_config_detect">检测</string>
     <string name="naming_info">命名规则可以帮助你更好地管理下载的文件，你可以使用以下占位符来定义命名规则。\n目前支持文件夹路径：也就是你可以做到 “{author}/{p_title}” 这样的命名规则，系统会自动创建对应的文件夹，无需处理文件类型。</string>
     <string name="naming_warning">当前命名规则仍在测试阶段，提供的变量较少，正在检验可靠程度，可能存在一些问题，如有任何问题，请前往社区反馈。\n目前不支持对弹幕、字幕、封面等附加文件进行命名规则的设置。</string>
@@ -722,4 +722,14 @@
     <string name="feedback_need_attention">需要处理</string>
     <string name="feedback_issue_body">请在应用内「问题反馈」页导出反馈包后一并附上。</string>
     <string name="crash_export_report">导出反馈包并分享</string>
+    <string name="feedback_action_agree_privacy">同意隐私政策</string>
+    <!-- i18n：线路配置/隐私政策 大加强 -->
+    <string name="line_current_in_use">当前使用</string>
+    <string name="line_default">默认线路</string>
+    <string name="line_pick_fastest">选最快的</string>
+    <string name="line_fastest_tag">最快</string>
+    <string name="line_tap_to_switch_hint">点某一行即可切换到该线路；「检测」可测速。</string>
+    <string name="clipboard_need_privacy_hint">已复制链接。同意隐私政策后可自动识别，无需手动粘贴。</string>
+    <string name="download_slow_try_line_hint">网速偏慢？试试「设置 → 线路配置」换一条线路。</string>
+    <string name="privacy_effective_date">生效日期：2026-10-03</string>
 </resources>

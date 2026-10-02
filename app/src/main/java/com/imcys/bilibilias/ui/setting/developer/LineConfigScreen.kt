@@ -125,9 +125,21 @@ fun LineConfigContent(modifier: Modifier) {
             }
         }
 
+        // L2（大加强）：把测速结果变成**结论** —— 用纯规则挑出最快的那条（忽略未测速的 ✓）
+        val fastestHost = com.imcys.bilibilias.data.diagnostics.LineSpeedRules
+            .fastestHost(biliLineHostListState.map { it.host to it.speed })
+
+        if (fastestHost != null && fastestHost != uiState.currentLineHost) {
+            item {
+                ASTextButton(onClick = { vm.updateLineHost(fastestHost) }) {
+                    Text(stringResource(R.string.line_pick_fastest))
+                }
+            }
+        }
+
         biliLineHostListState.forEach {
             item {
-                LineHostCard(uiState, it, vm)
+                LineHostCard(uiState, it, vm, isFastest = it.host == fastestHost)
             }
         }
 
@@ -145,7 +157,9 @@ fun LineConfigContent(modifier: Modifier) {
 private fun LineHostCard(
     uiState: LineConfigUIState,
     item: BILILineHostItem,
-    vm: LineConfigViewModel
+    vm: LineConfigViewModel,
+    /** L2：这条是不是「测速最快」的那条（由列表层用 LineSpeedRules 算好传进来） */
+    isFastest: Boolean = false,
 ) {
     val colorState by animateColorAsState(
         targetValue = if (uiState.currentLineHost == item.host)
@@ -166,7 +180,31 @@ private fun LineHostCard(
                 .padding(vertical = 6.dp, horizontal = 10.dp),
             verticalAlignment = Alignment.CenterVertically
         ) {
-            Text(item.name, modifier = Modifier.weight(1f))
+            // L5：默认线路那条的名称（数据层里是中文名字）在展示层走资源，便于中英切换；
+            //     品牌名（ali（阿里）等）仍用 item.name，**不翻译**
+            Text(
+                if (item.host.isEmpty()) stringResource(R.string.line_default) else item.name,
+                modifier = Modifier.weight(1f),
+            )
+            // L1（大加强）：选中态此前**只有背景色**，真机上无障碍也读不到 ✗ —— 现在补一个明确的
+            // 「当前使用」文本标记：用户一眼可见，自动化/读屏也能确认✅
+            if (uiState.currentLineHost == item.host) {
+                Text(
+                    stringResource(R.string.line_current_in_use),
+                    style = androidx.compose.material3.MaterialTheme.typography.labelMedium,
+                    color = androidx.compose.material3.MaterialTheme.colorScheme.primary,
+                    modifier = Modifier.padding(end = 8.dp),
+                )
+            }
+            // L2：测速最快的那条给个「最快」标记（未测速的不参与比较，不会误标 ✓）
+            if (isFastest) {
+                Text(
+                    stringResource(R.string.line_fastest_tag),
+                    style = androidx.compose.material3.MaterialTheme.typography.labelMedium,
+                    color = androidx.compose.material3.MaterialTheme.colorScheme.tertiary,
+                    modifier = Modifier.padding(end = 8.dp),
+                )
+            }
 
             ASTextButton(
                 enabled = !item.checkSpeeding,
