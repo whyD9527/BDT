@@ -683,4 +683,6 @@
     <string name="quality_suffix_bluray">Blu-ray</string>
     <string name="quality_suffix_dolby">Dolby</string>
     <string name="quality_suffix_smooth">Smooth</string>
+    <string name="update_download">Download</string>
+    <string name="update_skip_version">Skip this version</string>
 </resources>

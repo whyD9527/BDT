@@ -1,5 +1,8 @@
 package com.imcys.bilibilias
 
+import androidx.compose.foundation.verticalScroll
+import com.imcys.bilibilias.common.update.GitHubUpdateChecker
+import com.imcys.bilibilias.data.update.GitHubUpdateRules
 import android.content.Intent
 import android.os.Build
 import android.os.Bundle
@@ -61,6 +64,11 @@ class MainActivity : ComponentActivity() {
     }
 
     private val appSettingsRepository: AppSettingsRepository by inject()
+    private val fileOutputManager: com.imcys.bilibilias.download.FileOutputManager by inject()
+
+    /** GitHub 检测到的新版本（非空即弹应用内提示） */
+    private val githubUpdateInfo =
+        MutableStateFlow<com.imcys.bilibilias.common.update.GitHubUpdateChecker.UpdateInfo?>(null)
 
     private val appSettingsFlow: Flow<AppSettings> = appSettingsRepository.appSettingsFlow
 
@@ -78,6 +86,29 @@ class MainActivity : ComponentActivity() {
         super.onCreate(savedInstanceState)
         enableEdgeToEdge()
         setContent {
+            // GitHub 更新提示（发现新版本才显示）
+            GithubUpdateDialog(
+                info = githubUpdateInfo.collectAsState().value,
+                onDismiss = { githubUpdateInfo.value = null },
+                onSkip = { info ->
+                    githubUpdateInfo.value = null
+                    lifecycleScope.launch(Dispatchers.IO) {
+                        appSettingsRepository.updateLastSkipUpdateVersionCode(info.version.encode())
+                        fileOutputManager.logDiagnostic("更新检查", "用户跳过版本 ${info.tag}")
+                    }
+                },
+                onDownload = { url ->
+                    githubUpdateInfo.value = null
+                    runCatching {
+                        startActivity(
+                            android.content.Intent(
+                                android.content.Intent.ACTION_VIEW,
+                                android.net.Uri.parse(url),
+                            ),
+                        )
+                    }
+                },
+            )
             var enabledDynamicColor by remember { mutableStateOf(false) }
             val updateSnackBarHostState = remember { SnackbarHostState() }
             val showSkipVersionState by showSkipVersion.collectAsState()
@@ -228,17 +259,22 @@ class MainActivity : ComponentActivity() {
      * 初始化更新检查
      */
     private fun initUpdateCheck() {
-        // 暂时留个技术债，因为接口问题，无法直接使用多态，后续再优化
-        if (BuildConfig.ENABLED_PLAY_APP_MODE) {
-            with(GooglePlayAppUpdateManage(this, appSettingsRepository)) {
-                // 跳过版本号监听
-                googlePlaySkipVersionListener = {
-                    lifecycleScope.launch(Dispatchers.IO) {
-                        appSettingsRepository.updateLastSkipUpdateVersionCode(getUpdateVersion())
-                    }
-                }
-                // 检查更新
-                handleGooglePlayUpdate()
+        // ⚠️ 2026-10-02：更新检查**从 Google Play 换成 GitHub Releases**。
+        // 原因：alpha 渠道 `ENABLED_PLAY_APP_MODE = false` → 原生 Play 检查从不执行；
+        // 而且侧载安装的包 Play 也查不到新版本（用户反映"根本没有检测更新"）。
+        lifecycleScope.launch(Dispatchers.IO) {
+            // 隐私门槛：未同意隐私政策不发请求（与剪贴板自动识别同一口径）
+            if (!GitHubUpdateRules.shouldCheck(appSettingsRepository.hasAgreedPrivacyPolicy())) {
+                fileOutputManager.logDiagnostic("更新检查", "未同意隐私政策，跳过（不发请求）")
+                return@launch
+            }
+            val info = GitHubUpdateChecker.check(
+                currentVersionName = BuildConfig.VERSION_NAME,
+                abi = Build.SUPPORTED_ABIS.firstOrNull().orEmpty(),
+                lastSkippedCode = appSettingsRepository.getLastSkipUpdateVersionCode(),
+            ) { tag, message -> fileOutputManager.logDiagnostic(tag, message) }
+            if (info != null) {
+                githubUpdateInfo.value = info
             }
         }
     }
@@ -288,4 +324,55 @@ fun GreetingPreview() {
     BILIBILIASTheme {
         BILIBILIASAppScreen()
     }
+
+/** GitHub 更新提示：版本号 + 更新要点 + 下载 / 跳过此版本 / 稍后 */
+@androidx.compose.runtime.Composable
+private fun GithubUpdateDialog(
+    info: com.imcys.bilibilias.common.update.GitHubUpdateChecker.UpdateInfo?,
+    onDismiss: () -> Unit,
+    onSkip: (com.imcys.bilibilias.common.update.GitHubUpdateChecker.UpdateInfo) -> Unit,
+    onDownload: (String) -> Unit,
+) {
+    val current = info ?: return
+    androidx.compose.material3.AlertDialog(
+        onDismissRequest = onDismiss,
+        title = {
+            androidx.compose.material3.Text("发现新版本 ${current.tag}")
+        },
+        text = {
+            androidx.compose.foundation.layout.Column(
+                modifier = androidx.compose.ui.Modifier
+                    .verticalScroll(androidx.compose.foundation.rememberScrollState()),
+            ) {
+                androidx.compose.material3.Text(
+                    current.notes.ifBlank { "有可用的新版本，建议更新。" },
+                    style = androidx.compose.material3.MaterialTheme.typography.bodySmall,
+                )
+                if (current.apkUrl == null) {
+                    androidx.compose.material3.Text(
+                        "\n（该版本没有匹配本机架构的 APK，请到 Releases 页面手动下载）",
+                        style = androidx.compose.material3.MaterialTheme.typography.bodySmall,
+                    )
+                }
+            }
+        },
+        confirmButton = {
+            if (current.apkUrl != null) {
+                androidx.compose.material3.TextButton(onClick = { onDownload(current.apkUrl) }) {
+                    androidx.compose.material3.Text(stringResource(R.string.update_download))
+                }
+            }
+        },
+        dismissButton = {
+            androidx.compose.foundation.layout.Row {
+                androidx.compose.material3.TextButton(onClick = { onSkip(current) }) {
+                    androidx.compose.material3.Text(stringResource(R.string.update_skip_version))
+                }
+                androidx.compose.material3.TextButton(onClick = onDismiss) {
+                    androidx.compose.material3.Text(stringResource(R.string.common_cancel))
+                }
+            }
+        },
+    )
+}
 }
