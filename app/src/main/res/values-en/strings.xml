@@ -496,4 +496,20 @@
     <string name="analysis_permission_denied">Permission denied</string>
     <string name="analysis_storage_permission_message">Storage permission is required to save downloads. Continue?</string>
     <string name="analysis_download_tip_message">The resolutions you can pick depend on your Bilibili membership status and on what the video actually offers.\nPick the highest resolution available in the collection/part, and a premium membership unlocks higher-resolution caching.</string>
+    <!-- i18n batch E7b: video coding explainer (long text) -->
+    <string name="coding_screen_title">Video coding explained</string>
+    <string name="coding_tips_title">Tips: thanks to Mingzhi Xiaorui for putting this together</string>
+    <string name="coding_note_common_formats">● In a codec choice, the former is the codec format you usually see; the latter is the CodecTag used by each encoding method — think of it as a signature.</string>
+    <string name="coding_note_efficiency">● The codec affects compression efficiency: AV1 &gt; HEVC &gt; AVC. Higher efficiency also demands more from the device decoder, so compatibility suffers (newer formats may not play on older devices).</string>
+    <string name="coding_note_choose">★ In practice: for the best quality or compatibility with older devices pick AVC (larger files); HEVC is the balanced choice; if you want small files and your device is fast, pick AV1.</string>
+    <string name="coding_note_codec_tag">● A CodecTag labels a specific encoding method within a codec. AVC and AV1 are simple — Bilibili offers only one CodecTag each; HEVC is more complicated.</string>
+    <string name="coding_note_three_tags">◆ In our testing, Bilibili uses three CodecTags for HEVC: hev1, hvc1 and dvh1.</string>
+    <string name="coding_note_tag_usage">• hev1 — Bilibili SDR videos, and some HDR10 videos too\n• hvc1 — Bilibili HDR10, HDR Vivid and Dolby Vision (Profile8.4) videos\n• dvh1 — Bilibili Dolby Vision (Profile5) videos; a Dolby-specific tag</string>
+    <string name="coding_reading">■ Further reading:</string>
+    <string name="coding_q1">❶ What is the difference between CodecTags? Does it affect the encoding?</string>
+    <string name="coding_a1">○ Take hev1 and hvc1: the essential difference is where the file header (resolution, frame rate, etc.) is written. hev1 is more flexible — it rewrites the header before every fragment; hvc1 is fixed at the start of the video and cannot change mid-stream. That can cause tiny file-size differences, but image quality is identical at the same settings.</string>
+    <string name="coding_q2">❷ How do HDR10, HDR Vivid and Dolby Vision (Profile5 &amp; 8.4) differ?</string>
+    <string name="coding_a2">○ HDR10 is the most basic HDR format: static metadata only (no dynamic colour/luminance adjustment), supporting both PQ and HLG curves — Bilibili seems to use only PQ.\n○ HDR Vivid is a domestic HDR standard comparable to Dolby Vision; it supports PQ and HLG, though Bilibili seems to use only PQ, and HDR Vivid videos also output an HDR10 stream for the web and older apps.\n○ Dolby Vision is the highest-standard HDR format, split into several encoding levels called Profiles; Bilibili supports the common streaming Profiles 8.4 and 5.\n▷ Profile8.4 is based on the HLG curve, which lets non-Dolby-Vision devices show it as ordinary HDR10 or map it to SDR without much distortion — very compatible.\n▷ Profile5 is based on the PQ curve; forced playback on unsupported devices looks washed out, and because of its special ICtCp colour space (unlike the common YCbCr) such devices show purple/green colour-mapping errors — but on supported devices Profile5 looks better than Profile8.4.</string>
+    <string name="coding_note_dolby">☆ So Bilibili does not deliver full Dolby Vision to every device: P8.4 is broadly supported, P5 is not. If you download a dvh1 file, check in the Bilibili app that Dolby Vision plays correctly before downloading.</string>
+    <string name="coding_corrections">(If anything above is wrong or missing, corrections are welcome.)</string>
 </resources>

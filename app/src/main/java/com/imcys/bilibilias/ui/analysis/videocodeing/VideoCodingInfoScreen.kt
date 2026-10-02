@@ -95,7 +95,7 @@ fun VideoCodingInfoScreen(onToBack: () -> Unit = {}) {
 
             item {
                 Text(
-                    text = "Tips：感谢明智小锐总结本篇内容",
+                    text = stringResource(R.string.coding_tips_title),
                     style = MaterialTheme.typography.bodyLarge
                 )
                 Spacer(Modifier.height(10.dp))
@@ -104,7 +104,7 @@ fun VideoCodingInfoScreen(onToBack: () -> Unit = {}) {
             item {
                 Text(
                     text = highlightKeywords(
-                        "● 编码选择中的前者是我们比较常见的编码格式，后者则是各种编码方式标的CodecTag,可以理解为一种签辨识。",
+                        stringResource(R.string.coding_note_common_formats),
                         keywordColorMap
                     ),
                     fontSize = MaterialTheme.typography.bodyLarge.fontSize,
@@ -114,7 +114,7 @@ fun VideoCodingInfoScreen(onToBack: () -> Unit = {}) {
             item {
                 Text(
                     text = highlightKeywords(
-                        "● 视频的编码会影响视频的压缩效率:AV1>HEVC>AVC,同时效率高对设备解码能力要求也高,兼容性也更差（出现较晚 部分老设备不支持)。",
+                        stringResource(R.string.coding_note_efficiency),
                         keywordColorMap
                     ),
                     fontSize = MaterialTheme.typography.bodyLarge.fontSize,
@@ -122,7 +122,7 @@ fun VideoCodingInfoScreen(onToBack: () -> Unit = {}) {
                 Spacer(modifier = Modifier.padding(top = 4.dp))
                 Text(
                     text = highlightKeywords(
-                        "★ 根据B站的实际情况,如果你想获得最优画质或兼容老设备建议选择AVC编码(体积大),均衡选择HEVC编码,追求小体积且设备性能强的可以选AV1编码。",
+                        stringResource(R.string.coding_note_choose),
                         keywordColorMap
                     ),
                     fontSize = MaterialTheme.typography.bodyLarge.fontSize,
@@ -132,7 +132,7 @@ fun VideoCodingInfoScreen(onToBack: () -> Unit = {}) {
             item {
                 Text(
                     text = highlightKeywords(
-                        "● 而CodecTag则是各种编码中具体编码方式的标签,AVC和AV1不太复杂,B站只提供了一种CodecTag;HEVC情况比较复杂。",
+                        stringResource(R.string.coding_note_codec_tag),
                         keywordColorMap
                     ),
                     fontSize = MaterialTheme.typography.bodyLarge.fontSize,
@@ -140,16 +140,14 @@ fun VideoCodingInfoScreen(onToBack: () -> Unit = {}) {
                 Spacer(modifier = Modifier.padding(top = 4.dp))
                 Text(
                     text = highlightKeywords(
-                        "◆ 根据我们的测试,B站的HEVC有三种CodecTag:hev1,hvc1和dvh1.",
+                        stringResource(R.string.coding_note_three_tags),
                         keywordColorMap
                     ),
                     fontSize = MaterialTheme.typography.bodyLarge.fontSize,
                 )
                 Text(
                     text = highlightKeywords(
-                        "• hev1,用于B站的SDR视频,以及部分HDR真彩视频也是用hev1编码的\n" +
-                        "• hvc1,用于B站的HDR真彩,HDR Vivid以及杜比视界（Profile8.4）视频\n" +
-                        "• dvh1 用于B站的杜比视界（Profile5）视频 为杜比专属tag",
+                        stringResource(R.string.coding_note_tag_usage),
                         keywordColorMap
                     ),
                     fontSize = MaterialTheme.typography.bodyMedium.fontSize,
@@ -159,7 +157,7 @@ fun VideoCodingInfoScreen(onToBack: () -> Unit = {}) {
             item {
                 Text(
                     text = highlightKeywords(
-                        "■ 拓展阅读:",
+                        stringResource(R.string.coding_reading),
                         keywordColorMap
                     ),
                     fontWeight = FontWeight.Bold,
@@ -169,7 +167,7 @@ fun VideoCodingInfoScreen(onToBack: () -> Unit = {}) {
                 Spacer(modifier = Modifier.padding(top = 4.dp))
                 Text(
                     text = highlightKeywords(
-                        "❶ 不同的CodecTag有什么区别?对编码有影响吗?",
+                        stringResource(R.string.coding_q1),
                         keywordColorMap
                     ),
                     fontWeight = FontWeight.Medium,
@@ -177,7 +175,7 @@ fun VideoCodingInfoScreen(onToBack: () -> Unit = {}) {
                 )
                 Text(
                     text = highlightKeywords(
-                        "○ 拿hev1和hvc1举例,他们最本质的不同就是文件头(描述分辨率,帧率等信息)的写入位置不一样;hev1更加灵活,在每一个片段之前都会写一遍;hvc1在一个视频开头就定好了,所以中间不能更改;这样也就导致了文件大小由于这些文件头可能有一点点很细微的差异,不过对于画面画质来说不会有任何差异(相同参数下)",
+                        stringResource(R.string.coding_a1),
                         keywordColorMap
                     ),
                     fontSize = MaterialTheme.typography.bodyMedium.fontSize,
@@ -185,7 +183,7 @@ fun VideoCodingInfoScreen(onToBack: () -> Unit = {}) {
                 Spacer(modifier = Modifier.padding(top = 4.dp))
                 Text(
                     text = highlightKeywords(
-                        "❷ HDR真彩,HDR Vivid,杜比视界(Profile5&8.4)有什么不同?",
+                        stringResource(R.string.coding_q2),
                         keywordColorMap
                     ),
                     fontWeight = FontWeight.Medium,
@@ -193,11 +191,7 @@ fun VideoCodingInfoScreen(onToBack: () -> Unit = {}) {
                 )
                 Text(
                     text = highlightKeywords(
-                        "○ HDR真彩就是HDR10——最基础的HDR格式,只支持静态元数据(整个视频不会有色彩亮度的动态调节) , 支持PQ和HLG两种曲线,不过B站貌似仅支持PQ曲线\n" +
-                        "○ HDR Vivid是国产的HDR标准,对标杜比视界,支持PQ和HLG两种曲线,不过B站貌似仅支持PQ曲线,并且HDR Vivid视频还会输出一路HDR真彩用于web及旧版app\n" +
-                        "○ 杜比视界是标准最高的HDR格式,不过其分为几个编码等级(level),杜比称作Profile,B站支持流媒体中常见的Profile8.4和Profile5\n" +
-                        "▷ Profile8.4基于HLG曲线,这种曲线支持在不支持杜比视界的设备将画面调整为普通的HDR10,也可以直接映射到SDR,不会产生太大的画面失真,兼容性很好\n" +
-                        "▷ Profile5基于PQ曲线,这种曲线在不支持的设备上强制播放会显得发灰,并且由于其特殊的ICtCp色彩空间,不同于常见的YCbCr,在不支持的设备上会呈现色彩映射错误的紫绿色,不过在支持的设备上Profile5显示效果是会比Profile8.4更好的",
+                        stringResource(R.string.coding_a2),
                         keywordColorMap
                     ),
                     fontSize = MaterialTheme.typography.bodyMedium.fontSize,
@@ -205,7 +199,7 @@ fun VideoCodingInfoScreen(onToBack: () -> Unit = {}) {
                 Spacer(modifier = Modifier.padding(top = 4.dp))
                 Text(
                     text = highlightKeywords(
-                        "☆ 所以B站杜比视界并不是对每个设备都满血提供,P8.4大家都支持,P5可就不一定咯,所以下载到dvh1时最好打开B站看看能不能正常打开播放杜比视界,确保可以正常播放再下载.",
+                        stringResource(R.string.coding_note_dolby),
                         keywordColorMap
                     ),
                     color = MaterialTheme.colorScheme.tertiary,
@@ -216,7 +210,7 @@ fun VideoCodingInfoScreen(onToBack: () -> Unit = {}) {
             }
             item {
                 Text(
-                    text = "（以上内容如有错漏 劳烦各位大佬指正）",
+                    text = stringResource(R.string.coding_corrections),
                     color = MaterialTheme.colorScheme.outline,
                     fontSize = MaterialTheme.typography.bodySmall.fontSize,
                     modifier = Modifier.padding(top = 8.dp, bottom = 8.dp)
@@ -246,7 +240,7 @@ private fun VideoCodingInfoScaffold(
                 scrollBehavior = scrollBehavior,
                 style = BILIBILIASTopAppBarStyle.Large,
                 title = {
-                    Text(text = "视频编码解释")
+                    Text(text = stringResource(R.string.coding_screen_title))
                 },
                 navigationIcon = {
                     AsBackIconButton(onClick = {

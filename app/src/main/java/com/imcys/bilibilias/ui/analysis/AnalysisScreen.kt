@@ -974,7 +974,9 @@ fun BILIDonghuaCard(
                                 .combinedClickable(
                                     onClick = {},
                                     onLongClick = {
-                                        title.copyText(context, stringResource(R.string.analysis_video_title))
+                                // ⚠️ 这里是**非 composable** 的回调，不能写 `stringResource`
+                                // （CI 报 `@Composable invocations can only happen from the context of a @Composable function`）
+                                        title.copyText(context, context.getString(R.string.analysis_video_title))
                                     }
                                 ),
                         )
@@ -1142,7 +1144,7 @@ fun BILIVideoCard(
                                 .combinedClickable(
                                     onClick = {},
                                     onLongClick = {
-                                        title.copyText(context, stringResource(R.string.analysis_video_title))
+                                        title.copyText(context, context.getString(R.string.analysis_video_title))
                                     }
                                 ),
                         )
