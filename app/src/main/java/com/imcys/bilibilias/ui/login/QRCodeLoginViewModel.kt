@@ -1,5 +1,7 @@
 package com.imcys.bilibilias.ui.login
 
+import com.imcys.bilibilias.R
+import com.imcys.bilibilias.common.utils.AppStrings
 import android.content.ContentResolver
 import android.content.ContentValues
 import android.content.Context
@@ -55,6 +57,8 @@ class QRCodeLoginViewModel(
     private val usersDataSource: UsersDataSource,
     private val asCookiesStorage: AsCookiesStorage,
     private val appSettingsRepository: AppSettingsRepository,
+    /** 只用来取文案（i18n 批次 E11b2）—— 与 AnalysisViewModel 用同一套 `AppStrings` */
+    private val strings: AppStrings,
 ) : ViewModel() {
 
     data class UIState(
@@ -202,13 +206,13 @@ class QRCodeLoginViewModel(
         viewModelScope.launch(Dispatchers.Main) {
             val qrContent = qrCodeInfoState.value.data?.url
             if (qrContent.isNullOrBlank()) {
-                sendToastEvent("下载失败，请刷新QR查看")
+                sendToastEvent(strings.get(R.string.qr_download_failed_refresh))
                 return@launch
             }
             // 本地生成二维码位图，不再向第三方服务器请求图片
             val bitmap = withContext(Dispatchers.IO) { generateQRCodeBitmap(qrContent) }
             if (bitmap == null) {
-                sendToastEvent("下载失败，请重新尝试。")
+                sendToastEvent(strings.get(R.string.qr_download_failed_retry))
                 return@launch
             }
             saveImageWithMediaStore(bitmap, context)
@@ -258,7 +262,7 @@ class QRCodeLoginViewModel(
                 null
             }
         }
-        sendToastEventOnBlocking("保存成功")
+        sendToastEventOnBlocking(strings.get(R.string.common_saved))
     }
 
     fun addWhiteBorder(originalBitmap: Bitmap, borderWidth: Int): Bitmap {
@@ -293,7 +297,7 @@ class QRCodeLoginViewModel(
                 context.startActivity(it)
             }
         }.onFailure {
-            sendToastEventOnBlocking("你还没有安装哔哩哔哩哦~")
+            sendToastEventOnBlocking(strings.get(R.string.qr_bilibili_not_installed))
         }
 
     }

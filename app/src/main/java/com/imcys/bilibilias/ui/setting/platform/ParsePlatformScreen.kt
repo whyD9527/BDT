@@ -81,7 +81,7 @@ private fun ParsePlatformContent(modifier: Modifier = Modifier) {
             }
 
             ParsePlatformViewModel.ParsePlatformUIState.ChangeLoading -> {
-                ASCommonLoadingScreen(stringResource(R.string.parse_switching_account))
+                ASCommonLoadingScreen(R.string.parse_switching_account)
             }
 
             is ParsePlatformViewModel.ParsePlatformUIState.Default -> {
@@ -92,7 +92,7 @@ private fun ParsePlatformContent(modifier: Modifier = Modifier) {
             }
 
             ParsePlatformViewModel.ParsePlatformUIState.EffectiveCheckLoading -> {
-                ASCommonLoadingScreen(stringResource(R.string.parse_checking_account))
+                ASCommonLoadingScreen(R.string.parse_checking_account)
             }
         }
     }

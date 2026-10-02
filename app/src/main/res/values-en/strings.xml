@@ -644,4 +644,13 @@
     <string name="expand_permission_desc">Use Shizuku to provide ADB permissions and unlock more features.</string>
     <string name="expand_capability_title">Extended capabilities</string>
     <string name="login_platform_switch_hint">After signing in, the matching parse platform is selected automatically; you can also change it in Settings. If you are not sure, use web login.</string>
+    <!-- i18n batch E11b2: login/storage ViewModels + loading default + input hint -->
+    <string name="common_loading">Loading...</string>
+    <string name="common_saved">Saved</string>
+    <string name="qr_download_failed_refresh">Download failed; refresh the QR code and try again</string>
+    <string name="qr_download_failed_retry">Download failed; please try again.</string>
+    <string name="qr_bilibili_not_installed">You do not have the Bilibili app installed yet</string>
+    <string name="storage_unknown_error">Unknown error</string>
+    <string name="storage_task_active">A download task is running or paused; finish or cancel it before clearing the cache</string>
+    <string name="card_text_field_hint">BV / AV / EP / SS number...</string>
 </resources>

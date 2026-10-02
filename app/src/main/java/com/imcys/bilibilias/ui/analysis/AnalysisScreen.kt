@@ -190,6 +190,7 @@ fun AnalysisScreen(
                             animatedVisibilityScope = animatedContentScope
                         ),
                         elevation = CardDefaults.cardElevation(0.dp),
+                        hint = stringResource(R.string.card_text_field_hint),
                         value = uiState.inputAsText,
                         onValueChange = { value ->
                             vm.updateInputAsText(value)

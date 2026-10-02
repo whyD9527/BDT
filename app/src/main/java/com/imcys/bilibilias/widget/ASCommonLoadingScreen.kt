@@ -1,5 +1,8 @@
 package com.imcys.bilibilias.widget
 
+import androidx.compose.ui.res.stringResource
+import com.imcys.bilibilias.R
+import androidx.annotation.StringRes
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.fillMaxSize
@@ -12,13 +15,13 @@ import androidx.compose.ui.Modifier
 
 @OptIn(ExperimentalMaterial3ExpressiveApi::class)
 @Composable
-fun ASCommonLoadingScreen(tip: String = "加载中...") {
+fun ASCommonLoadingScreen(@StringRes tipRes: Int = R.string.common_loading) {
     Column(
         modifier = Modifier.fillMaxSize(),
         verticalArrangement = Arrangement.Center,
         horizontalAlignment = Alignment.CenterHorizontally
     ) {
         CircularWavyProgressIndicator()
-        Text(text = tip)
+        Text(text = stringResource(tipRes))
     }
 }

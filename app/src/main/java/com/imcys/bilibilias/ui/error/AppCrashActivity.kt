@@ -97,7 +97,7 @@ class AppCrashActivity : ComponentActivity() {
                 }
                 Spacer(Modifier.width(10.dp))
                 Button(onClick = {
-                    val clipData = ClipData.newPlainText("BILIBILAIS异常", appErrorMsg)
+                    val clipData = ClipData.newPlainText(getString(R.string.clip_error_label), appErrorMsg)
                     val clipEntry = ClipEntry(clipData)
                     coroutineScope.launch(Dispatchers.IO) {
                         clipboardManager.setClipEntry(clipEntry)

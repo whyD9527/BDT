@@ -644,4 +644,13 @@
     <string name="expand_permission_desc">使用Shizuku提供ADB权限，解锁更多功能。</string>
     <string name="expand_capability_title">扩展能力</string>
     <string name="login_platform_switch_hint">登录后将自动切换对应的平台解析，也可在设置切换，如果您不熟悉，建议直接Web登录。</string>
+    <!-- i18n 批次 E11b2：登录/存储 VM + 加载默认值 + 输入提示 -->
+    <string name="common_loading">加载中...</string>
+    <string name="common_saved">保存成功</string>
+    <string name="qr_download_failed_refresh">下载失败，请刷新QR查看</string>
+    <string name="qr_download_failed_retry">下载失败，请重新尝试。</string>
+    <string name="qr_bilibili_not_installed">你还没有安装哔哩哔哩哦~</string>
+    <string name="storage_unknown_error">未知错误</string>
+    <string name="storage_task_active">有下载任务正在进行或已暂停，请先让它结束或取消，再清缓存</string>
+    <string name="card_text_field_hint">BV / AV / EP / SS 号...</string>
 </resources>

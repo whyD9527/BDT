@@ -1,5 +1,7 @@
 package com.imcys.bilibilias.ui.setting.storage
 
+import com.imcys.bilibilias.R
+import com.imcys.bilibilias.common.utils.AppStrings
 import android.content.Context
 import android.net.Uri
 import androidx.lifecycle.ViewModel
@@ -19,6 +21,8 @@ import kotlinx.coroutines.launch
 class StorageManagementViewModel(
     private val appSettingsRepository: AppSettingsRepository,
     private val downloadTaskRepository: DownloadTaskRepository,
+    /** 只用来取文案（i18n 批次 E11b2） */
+    private val strings: AppStrings,
 ) : ViewModel() {
 
     companion object {
@@ -60,7 +64,7 @@ class StorageManagementViewModel(
                     )
                 )
             } catch (e: Exception) {
-                _uiState.emit(StorageManagementUIState.Error(e.message ?: "未知错误"))
+                _uiState.emit(StorageManagementUIState.Error(e.message ?: strings.get(R.string.storage_unknown_error)))
             }
         }
     }
@@ -77,7 +81,7 @@ class StorageManagementViewModel(
                         .any { it.downloadState in ACTIVE_STATES }
                 }.getOrDefault(false)
                 if (busy) {
-                    sendToastEvent("有下载任务正在进行或已暂停，请先让它结束或取消，再清缓存")
+                    sendToastEvent(strings.get(R.string.storage_task_active))
                     return@launch
                 }
                 StorageUtil.clearCache(context)

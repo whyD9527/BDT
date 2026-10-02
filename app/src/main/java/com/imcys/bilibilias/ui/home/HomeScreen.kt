@@ -258,6 +258,7 @@ internal fun HomeScreen(
                                     modifier = Modifier.animateContentSize()
                                 ) {
                                     ASCardTextField(
+                                        hint = stringResource(R.string.card_text_field_hint),
                                         modifier = Modifier
                                             .then(
                                                 if (windowsWidthSizeClass != WindowWidthSizeClass.Compact &&
