@@ -134,13 +134,13 @@ fun SettingScreen(
             }
             val backup = text?.let { com.imcys.bilibilias.data.backup.AppSettingsBackup.fromJson(it) }
             if (backup == null) {
-                Toast.makeText(backupContext, "这不是 BDT 的设置备份文件", Toast.LENGTH_LONG).show()
+                Toast.makeText(backupContext, backupContext.getString(R.string.setting_backup_invalid), Toast.LENGTH_LONG).show()
                 return@launch
             }
             appSettingsRepository.updateSettings { current ->
                 com.imcys.bilibilias.data.backup.AppSettingsBackupRules.overlay(current, backup)
             }
-            Toast.makeText(backupContext, "已恢复设置（只覆盖备份里有的项）", Toast.LENGTH_LONG).show()
+            Toast.makeText(backupContext, backupContext.getString(R.string.setting_restore_done), Toast.LENGTH_LONG).show()
         }
     }
     val appSettings by vm.appSettings.collectAsState(initial = AppSettings.getDefaultInstance())
@@ -181,7 +181,7 @@ fun SettingScreen(
 
             item {
                 CategorySettingsItem(
-                    text = "缓存配置"
+                    text = stringResource(R.string.analysis_cache_config)
                 )
             }
 //            item {
@@ -218,8 +218,8 @@ fun SettingScreen(
             item {
                 BaseSettingsItem(
                     painter = painterResource(R.drawable.ic_save_24px),
-                    text = "存储管理",
-                    descriptionText = "管理APP内存占用",
+                    text = stringResource(R.string.setting_storage_management),
+                    descriptionText = stringResource(R.string.setting_storage_management_desc),
                     onClick = onToStorageManagement
                 )
             }
@@ -228,7 +228,7 @@ fun SettingScreen(
             item {
                 BaseSettingsItem(
                     painter = rememberVectorPainter(Icons.Outlined.Save),
-                    text = "缓存目录",
+                    text = stringResource(R.string.setting_cache_dir),
                     descriptionText = com.imcys.bilibilias.download.DownloadDir.RELATIVE_PATH,
                     onClick = {
                     }
@@ -240,8 +240,8 @@ fun SettingScreen(
             item {
                 BaseSettingsItem(
                     painter = rememberVectorPainter(Icons.Outlined.Edit),
-                    text = "命名规则",
-                    descriptionText = "自定义下载文件名称",
+                    text = stringResource(R.string.setting_naming_convention),
+                    descriptionText = stringResource(R.string.setting_naming_rule_desc),
                     onClick = onToNamingConvention
                 )
             }
@@ -254,7 +254,7 @@ fun SettingScreen(
                     onClick = {
                         val settings = currentAppSettings
                         if (settings == null) {
-                            Toast.makeText(backupContext, "设置还没加载好，稍后再试", Toast.LENGTH_SHORT).show()
+                            Toast.makeText(backupContext, backupContext.getString(R.string.setting_not_loaded), Toast.LENGTH_SHORT).show()
                         } else {
                             backupScope.launch {
                                 val name = withContext(Dispatchers.IO) {
@@ -274,7 +274,11 @@ fun SettingScreen(
                                 }
                                 Toast.makeText(
                                     backupContext,
-                                    if (name != null) "已导出：$name（在 Download/BDT 里）" else "导出失败",
+                                    if (name != null) {
+                                        backupContext.getString(R.string.setting_backup_exported, name)
+                                    } else {
+                                        backupContext.getString(R.string.setting_backup_export_failed)
+                                    },
                                     Toast.LENGTH_LONG,
                                 ).show()
                             }
@@ -296,8 +300,8 @@ fun SettingScreen(
             item {
                 SwitchSettingsItem(
                     imageVector = Icons.Outlined.Bolt,
-                    text = "多线程分片下载",
-                    description = "大文件分片并发下载，速度更快；服务端不支持或出错时自动回落到单线程",
+                    text = stringResource(R.string.setting_segmented_title),
+                    description = stringResource(R.string.setting_segmented_desc),
                     checked = segmentedEnabled,
                 ) { check ->
                     haptics.switchHapticFeedback(check)
@@ -342,8 +346,8 @@ fun SettingScreen(
                 item {
                     BaseSettingsItem(
                         painter = rememberVectorPainter(Icons.Outlined.Speed),
-                        text = "分片并发数",
-                        descriptionText = "当前 $segmentedConcurrency 片（默认 4，太高可能被 CDN 限速）",
+                        text = stringResource(R.string.setting_segmented_concurrency_title),
+                        descriptionText = stringResource(R.string.setting_segmented_concurrency_desc, segmentedConcurrency),
                         onClick = { showSegmentConcurrencyDialog = true }
                     )
                 }
@@ -352,14 +356,14 @@ fun SettingScreen(
 
             item {
                 CategorySettingsItem(
-                    text = "主题设置"
+                    text = stringResource(R.string.setting_theme_category)
                 )
             }
             item {
                 SwitchSettingsItem(
                     imageVector = Icons.Outlined.Palette,
-                    text = "动态主题",
-                    description = "使用桌面壁纸颜色作为主题",
+                    text = stringResource(R.string.setting_dynamic_color),
+                    description = stringResource(R.string.setting_dynamic_color_desc),
                     checked = appSettings.enabledDynamicColor,
                 ) { check ->
                     haptics.switchHapticFeedback(check)
@@ -370,7 +374,7 @@ fun SettingScreen(
             if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.TIRAMISU) {
                 item {
                     CategorySettingsItem(
-                        text = "权限设置"
+                        text = stringResource(R.string.setting_permission_category)
                     )
                 }
             }
@@ -382,14 +386,14 @@ fun SettingScreen(
 
             item {
                 CategorySettingsItem(
-                    text = "布局配置"
+                    text = stringResource(R.string.setting_layout_category)
                 )
             }
 
             item {
                 BaseSettingsItem(
                     painter = rememberVectorPainter(Icons.AutoMirrored.Outlined.ListAlt),
-                    text = "首页排版",
+                    text = stringResource(R.string.setting_home_layout),
                     description = {},
                     onClick = onToLayoutTypeset
                 )
@@ -399,15 +403,15 @@ fun SettingScreen(
 
             item {
                 CategorySettingsItem(
-                    text = "解析配置"
+                    text = stringResource(R.string.setting_parse_category)
                 )
             }
 
             item {
                 BaseSettingsItem(
                     painter = rememberVectorPainter(Icons.Outlined.Hub),
-                    text = "解析平台",
-                    descriptionText = "使用不同的平台标识来解析视频",
+                    text = stringResource(R.string.setting_parse_platform),
+                    descriptionText = stringResource(R.string.setting_parse_platform_desc),
                     onClick = { onToPage(ParsePlatformRoute) }
                 )
             }
@@ -415,8 +419,8 @@ fun SettingScreen(
             item {
                 SwitchSettingsItem(
                     imageVector = Icons.Default.ContentPaste,
-                    text = "自动解析",
-                    description = "恢复前台时自动提取剪切板进行解析",
+                    text = stringResource(R.string.setting_auto_parse),
+                    description = stringResource(R.string.setting_auto_parse_desc),
                     checked = appSettings.enabledClipboardAutoHandling,
                 ) { check ->
                     vm.updateClipboardAutoHandling(check)
@@ -426,7 +430,7 @@ fun SettingScreen(
 
             item {
                 CategorySettingsItem(
-                    text = "关于程序"
+                    text = stringResource(R.string.setting_about_category)
                 )
             }
 
@@ -434,8 +438,8 @@ fun SettingScreen(
             item {
                 BaseSettingsItem(
                     painter = rememberVectorPainter(Icons.Outlined.Group),
-                    text = "关于",
-                    descriptionText = "作为依赖平台的程序，我们有责任和义务维护平台生态的健康发展！",
+                    text = stringResource(R.string.setting_about_item),
+                    descriptionText = stringResource(R.string.setting_about_desc),
                     onClick = onToAbout
                 )
 
@@ -445,7 +449,7 @@ fun SettingScreen(
             item {
                 BaseSettingsItem(
                     painter = painterResource(R.drawable.ic_github_24px),
-                    text = "Github仓库",
+                    text = stringResource(R.string.setting_github_repo),
                     description = {},
                     onClick = {
                         val intent = Intent().apply {
@@ -487,15 +491,15 @@ fun SettingScreen(
 
             item {
                 CategorySettingsItem(
-                    text = "账户"
+                    text = stringResource(R.string.setting_account_category)
                 )
             }
 
             item {
                 BaseSettingsItem(
                     painter = rememberVectorPainter(Icons.Outlined.Android),
-                    text = "设备信息",
-                    descriptionText = "提交反馈时记得带上这个！",
+                    text = stringResource(R.string.setting_device_info),
+                    descriptionText = stringResource(R.string.setting_device_info_desc),
                     onClick = onToVersionInfo
                 )
 
@@ -504,14 +508,17 @@ fun SettingScreen(
             item {
                 BaseSettingsItem(
                     painter = rememberVectorPainter(Icons.Outlined.Policy),
-                    text = "隐私政策",
-                    descriptionText = "当前状态：${
-                        when (appSettings.agreePrivacyPolicy) {
-                            Agreed -> "已同意"
-                            Refuse -> "已拒绝"
-                            else -> "未选择"
-                        }
-                    }，可在这里拒绝或同意我们的隐私政策。",
+                    text = stringResource(R.string.common_privacy_policy),
+                    descriptionText = stringResource(
+                        R.string.setting_privacy_status,
+                        stringResource(
+                            when (appSettings.agreePrivacyPolicy) {
+                                Agreed -> R.string.setting_privacy_agreed
+                                Refuse -> R.string.setting_privacy_refused
+                                else -> R.string.setting_privacy_unselected
+                            }
+                        ),
+                    ),
                     onClick = { showPrivacyPolicy = true }
                 )
             }
@@ -520,8 +527,8 @@ fun SettingScreen(
                 item {
                     BaseSettingsItem(
                         painter = rememberVectorPainter(Icons.AutoMirrored.Default.Logout),
-                        text = "退出登录",
-                        descriptionText = "清空登录信息，解除登录占用。",
+                        text = stringResource(R.string.setting_logout),
+                        descriptionText = stringResource(R.string.setting_logout_desc),
                         onClick = { showLogoutDialog = true }
                     )
                 }
@@ -530,15 +537,15 @@ fun SettingScreen(
 
             item {
                 CategorySettingsItem(
-                    text = "高级"
+                    text = stringResource(R.string.setting_advanced_category)
                 )
             }
 
             item {
                 BaseSettingsItem(
                     painter = rememberVectorPainter(Icons.Outlined.Cloud),
-                    text = "线路配置",
-                    descriptionText = "试着改进你的下载体验。",
+                    text = stringResource(R.string.developer_line_config),
+                    descriptionText = stringResource(R.string.setting_line_config_desc),
                     onClick = onToLineConfig
                 )
             }
@@ -583,10 +590,10 @@ fun SettingScreen(
         if (showSpeedLimitDialog) {
             androidx.compose.material3.AlertDialog(
                 onDismissRequest = { showSpeedLimitDialog = false },
-                title = { Text("下载限速") },
+                title = { Text(stringResource(R.string.download_speed_limit)) },
                 text = {
                     Column {
-                        Text("限的是平均速率；网络本来就比它慢时不会有任何额外等待。")
+                        Text(stringResource(R.string.setting_speed_limit_hint))
                         listOf(0, 512, 1024, 2048, 4096).forEach { kbps ->
                             TextButton(onClick = {
                                 showSpeedLimitDialog = false
@@ -594,7 +601,7 @@ fun SettingScreen(
                             }) {
                                 Text(
                                     text = when {
-                                        kbps <= 0 -> "不限速"
+                                        kbps <= 0 -> stringResource(R.string.speed_limit_none)
                                         kbps >= 1024 -> "${kbps / 1024} MB/s"
                                         else -> "$kbps KB/s"
                                     } + if (kbps == speedLimitKbps) "　✓" else "",
@@ -604,7 +611,7 @@ fun SettingScreen(
                     }
                 },
                 confirmButton = {
-                    TextButton(onClick = { showSpeedLimitDialog = false }) { Text("关闭") }
+                    TextButton(onClick = { showSpeedLimitDialog = false }) { Text(stringResource(R.string.cd_close)) }
                 },
             )
         }
@@ -612,13 +619,13 @@ fun SettingScreen(
         // 分片并发数选择
         ASAlertDialog(
             showState = showSegmentConcurrencyDialog,
-            title = { Text("分片并发数") },
+            title = { Text(stringResource(R.string.setting_segmented_concurrency_title)) },
             text = {
                 Column(
                     modifier = Modifier.fillMaxWidth(),
                     horizontalAlignment = Alignment.CenterHorizontally
                 ) {
-                    Text("同时下载的片数越多越快，但过高可能被 CDN 限速或拒绝。")
+                    Text(stringResource(R.string.setting_concurrency_hint))
                     listOf(2, 4, 6, 8).forEach { option ->
                         TextButton(onClick = {
                             vm.updateSegmentedDownloadConcurrency(option)
@@ -626,7 +633,7 @@ fun SettingScreen(
                         }) {
                             Text(
                                 text = if (option == SegmentedDownloadPlan.DEFAULT_CONCURRENCY) {
-                                    "$option（默认）"
+                                    stringResource(R.string.setting_concurrency_default, option)
                                 } else {
                                     "$option"
                                 },
@@ -719,11 +726,11 @@ fun DownloadPostNotifications() {
 
         SwitchSettingsItem(
             imageVector = Icons.Outlined.Notifications,
-            text = "前台通知",
+            text = stringResource(R.string.setting_foreground_notification),
             // ⚠️ 文案要说清"关不掉"这件事（2026-10-01 复审）：POST_NOTIFICATIONS 一旦授予，
             // Android **不允许应用自己撤销**，只能由用户在系统设置里关掉；原来开关看起来能关，
             // 点一下却什么都不发生（checked 直接来自权限状态），用户会以为开关坏了。
-            description = "开启后后台下载任务不会被系统回收；关闭需到系统设置里操作",
+            description = stringResource(R.string.setting_foreground_notification_desc),
             checked = hasForegroundServicePermission,
         ) { wanted ->
             haptics.switchHapticFeedback(wanted)
@@ -739,7 +746,7 @@ fun DownloadPostNotifications() {
                 // 用户想关掉：把系统设置的通知页打开（这是唯一能真正关闭的地方）
                 Toast.makeText(
                     context,
-                    "通知权限只能在系统设置里关闭，已为你打开设置页",
+                    context.getString(R.string.setting_notification_settings_opened),
                     Toast.LENGTH_LONG,
                 ).show()
                 runCatching {
@@ -819,7 +826,7 @@ fun DownloadServicePermissionRequestTipDialog(
     }
     PermissionRequestTipDialog(
         show = true,
-        message = "为了我们可以在后台缓存较长视频，接下来将向您申请通知服务权限。",
+        message = stringResource(R.string.setting_notification_request_tip),
         onConfirm = {
             launcher.launch(permission.POST_NOTIFICATIONS)
         },
@@ -844,7 +851,7 @@ fun SettingScaffold(
                 ),
                 scrollBehavior = scrollBehavior,
                 style = BILIBILIASTopAppBarStyle.Large,
-                title = { Text(text = "设置") },
+                title = { Text(text = stringResource(R.string.cd_settings)) },
                 navigationIcon = {
                     AsBackIconButton(onClick = {
                         onToBack.invoke()
