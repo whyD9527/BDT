@@ -528,4 +528,16 @@
     <string name="analysis_type_anime">Anime</string>
     <string name="analysis_type_user">User</string>
     <string name="analysis_type_unknown">Unknown</string>
+    <!-- i18n batch E8a: user screen / bangumi follow -->
+    <string name="user_play_count">%1$s views</string>
+    <string name="cd_more_uploads">More uploads</string>
+    <string name="cd_recent_likes">Recent likes</string>
+    <string name="cd_recent_history">Recent history</string>
+    <string name="cd_linked_platform">Linked platform</string>
+    <string name="cd_bilibili_logo">Bilibili logo</string>
+    <string name="cd_linked_account_avatar">Linked account avatar</string>
+    <string name="user_name_fallback">Username</string>
+    <string name="user_sign_fallback">Bio</string>
+    <string name="bangumi_load_failed">Load failed \n%1$s</string>
+    <string name="cd_bangumi_cover">Bangumi cover</string>
 </resources>

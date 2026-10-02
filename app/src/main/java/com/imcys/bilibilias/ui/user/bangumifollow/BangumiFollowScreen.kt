@@ -1,5 +1,7 @@
 package com.imcys.bilibilias.ui.user.bangumifollow
 
+import androidx.compose.ui.res.stringResource
+import com.imcys.bilibilias.R
 import android.util.Log
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Column
@@ -129,7 +131,7 @@ fun BangumiFollowContent(
         when (val state = itemList.loadState.refresh) {
             is LoadState.Error -> {
                 item {
-                    CommonError(errorMsg = "加载失败 \n ${state.error}", onRetry = {
+                    CommonError(errorMsg = stringResource(R.string.bangumi_load_failed, state.error), onRetry = {
                         itemList.refresh()
                     })
                 }
@@ -155,7 +157,7 @@ fun BangumiFollowContent(
             }
 
             is LoadState.Error -> item(span = { GridItemSpan(1) }) {
-                CommonError("加载失败 \n ${append.error}", onRetry = {
+                CommonError(stringResource(R.string.bangumi_load_failed, append.error), onRetry = {
                     itemList.retry()
                 })
             }
@@ -213,7 +215,7 @@ fun BangumiCard(
                 ASAsyncImage(
                     model = pic.toHttps(),
                     shape = CardDefaults.shape,
-                    contentDescription = "番剧封面",
+                    contentDescription = stringResource(R.string.cd_bangumi_cover),
                     modifier = Modifier
                         .fillMaxSize()
                 )
@@ -256,7 +258,7 @@ private fun BangumiFollowScaffold(
                 scrollBehavior = scrollBehavior,
                 style = BILIBILIASTopAppBarStyle.Large,
                 title = {
-                    Text(text = "追番")
+                    Text(text = stringResource(R.string.user_bangumi))
                 },
                 navigationIcon = {
                     AsBackIconButton(onClick = {

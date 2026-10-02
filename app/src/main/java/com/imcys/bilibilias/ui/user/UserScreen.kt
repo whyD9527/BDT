@@ -190,7 +190,7 @@ private fun VideoCard(item: BILISpaceArchiveModel.Item?, onClick: () -> Unit = {
                 // 可空时给 null，别把字符串 "null@672w_..." 交给 Coil（2026-10-01 复审 L34）
                 item?.pic?.toHttps()?.let { "$it@672w_378h_1c" },
                 modifier = Modifier.fillMaxSize(),
-                contentDescription = "视频封面"
+                contentDescription = stringResource(R.string.cd_video_cover)
             )
         }
 
@@ -214,7 +214,7 @@ private fun VideoCard(item: BILISpaceArchiveModel.Item?, onClick: () -> Unit = {
             Row {
                 Text(
                     // 数据没回来时不要显示 "null次播放"
-                    "${NumberUtils.formatLargeNumber(item?.play ?: 0)}次播放",
+                    stringResource(R.string.user_play_count, NumberUtils.formatLargeNumber(item?.play ?: 0)),
                     fontSize = 11.sp,
                     color = MaterialTheme.colorScheme.outline,
                     modifier = Modifier.shimmer(item == null),
@@ -241,7 +241,7 @@ private fun VideoHeader(
             ) {
                 Icon(
                     Icons.Outlined.Movie,
-                    contentDescription = "投稿视频",
+                    contentDescription = stringResource(R.string.user_uploaded_videos),
                     tint = MaterialTheme.colorScheme.outline
                 )
                 Spacer(Modifier.width(8.dp))
@@ -251,7 +251,7 @@ private fun VideoHeader(
                 ASIconButton(onClick = { onToWorkList.invoke() }) {
                     Icon(
                         Icons.AutoMirrored.Outlined.ArrowForward,
-                        contentDescription = "更多投稿",
+                        contentDescription = stringResource(R.string.cd_more_uploads),
                         tint = MaterialTheme.colorScheme.outline
                     )
                 }
@@ -323,7 +323,7 @@ fun ActionRow(
                 verticalArrangement = Arrangement.Center,
                 horizontalAlignment = Alignment.CenterHorizontally
             ) {
-                Icon(Icons.Outlined.ThumbUp, contentDescription = "最近点赞")
+                Icon(Icons.Outlined.ThumbUp, contentDescription = stringResource(R.string.cd_recent_likes))
                 Spacer(Modifier.height(4.dp))
                 Text(stringResource(R.string.user_likes), fontSize = 14.sp)
             }
@@ -342,7 +342,7 @@ fun ActionRow(
                 verticalArrangement = Arrangement.Center,
                 horizontalAlignment = Alignment.CenterHorizontally
             ) {
-                Icon(Icons.Outlined.History, contentDescription = "最近播放图标")
+                Icon(Icons.Outlined.History, contentDescription = stringResource(R.string.cd_recent_history))
                 Spacer(Modifier.height(4.dp))
                 Text(stringResource(R.string.user_recent), fontSize = 14.sp)
             }
@@ -361,7 +361,7 @@ fun ActionRow(
                 verticalArrangement = Arrangement.Center,
                 horizontalAlignment = Alignment.CenterHorizontally
             ) {
-                Icon(Icons.Outlined.Star, contentDescription = "收藏")
+                Icon(Icons.Outlined.Star, contentDescription = stringResource(R.string.user_favorites))
                 Spacer(Modifier.height(4.dp))
                 Text(stringResource(R.string.user_favorites), fontSize = 14.sp)
             }
@@ -380,7 +380,7 @@ fun ActionRow(
                 verticalArrangement = Arrangement.Center,
                 horizontalAlignment = Alignment.CenterHorizontally
             ) {
-                Icon(Icons.Outlined.Subscriptions, contentDescription = "追番")
+                Icon(Icons.Outlined.Subscriptions, contentDescription = stringResource(R.string.user_bangumi))
                 Spacer(Modifier.height(4.dp))
                 Text(stringResource(R.string.user_bangumi), fontSize = 14.sp)
             }
@@ -409,7 +409,7 @@ fun PlatformList(biliUsersEntity: BILIUsersEntity?) {
                     Icon(
                         Icons.Outlined.Link,
                         tint = MaterialTheme.colorScheme.outline,
-                        contentDescription = "关联平台"
+                        contentDescription = stringResource(R.string.cd_linked_platform)
                     )
                     Spacer(Modifier.width(8.dp))
                     Text(stringResource(R.string.user_linked_accounts), color = MaterialTheme.colorScheme.outline)
@@ -422,7 +422,7 @@ fun PlatformList(biliUsersEntity: BILIUsersEntity?) {
                 ) {
                     Icon(
                         painterResource(R.drawable.ic_mini_bili_logo_24px),
-                        contentDescription = "B站Logo",
+                        contentDescription = stringResource(R.string.cd_bilibili_logo),
                         tint = MaterialTheme.colorScheme.onSurfaceVariant
                     )
                     Spacer(Modifier.weight(1f))
@@ -443,7 +443,7 @@ fun PlatformList(biliUsersEntity: BILIUsersEntity?) {
                             // 可空时传 null（而不是字符串 "null"）给 Coil，否则它会去请求一个不存在的地址
                             biliUsersEntity?.face?.takeIf { it.isNotBlank() },
                             modifier = Modifier.size(24.dp),
-                            contentDescription = "关联账户头像",
+                            contentDescription = stringResource(R.string.cd_linked_account_avatar),
                         )
                     }
                 }
@@ -558,7 +558,7 @@ fun TopUserInfo(
                     ) {
                         ASAsyncImage(
                             pageInfoState.data?.face ?: "",
-                            contentDescription = "头像",
+                            contentDescription = stringResource(R.string.cd_avatar),
                             modifier = Modifier.size(64.dp)
                         )
                     }
@@ -568,7 +568,7 @@ fun TopUserInfo(
                             verticalAlignment = Alignment.CenterVertically
                         ) {
                             Text(
-                                pageInfoState.data?.name ?: "用户名",
+                                pageInfoState.data?.name ?: stringResource(R.string.user_name_fallback),
                                 color = MaterialTheme.colorScheme.onSurface,
                                 fontSize = 20.sp,
                                 maxLines = 1,
@@ -598,7 +598,7 @@ fun TopUserInfo(
                         }
                         Spacer(Modifier.height(4.dp))
                         Text(
-                            pageInfoState.data?.sign ?: "个性签名",
+                            pageInfoState.data?.sign ?: stringResource(R.string.user_sign_fallback),
                             color = MaterialTheme.colorScheme.onSecondaryContainer,
                             fontSize = 14.sp,
                             maxLines = 2,
@@ -653,7 +653,7 @@ private fun UserScaffold(
                         }) {
                             Icon(
                                 Icons.Outlined.Settings,
-                                contentDescription = "设置"
+                                contentDescription = stringResource(R.string.cd_settings)
                             )
                         }
                     }

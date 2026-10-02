@@ -528,4 +528,16 @@
     <string name="analysis_type_anime">动画</string>
     <string name="analysis_type_user">用户</string>
     <string name="analysis_type_unknown">未知</string>
+    <!-- i18n 批次 E8a：用户页 / 追番页 -->
+    <string name="user_play_count">%1$s次播放</string>
+    <string name="cd_more_uploads">更多投稿</string>
+    <string name="cd_recent_likes">最近点赞</string>
+    <string name="cd_recent_history">最近播放图标</string>
+    <string name="cd_linked_platform">关联平台</string>
+    <string name="cd_bilibili_logo">B站Logo</string>
+    <string name="cd_linked_account_avatar">关联账户头像</string>
+    <string name="user_name_fallback">用户名</string>
+    <string name="user_sign_fallback">个性签名</string>
+    <string name="bangumi_load_failed">加载失败 \n%1$s</string>
+    <string name="cd_bangumi_cover">番剧封面</string>
 </resources>
