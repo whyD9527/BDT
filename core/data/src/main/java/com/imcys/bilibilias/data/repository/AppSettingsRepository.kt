@@ -59,6 +59,16 @@ class AppSettingsRepository(
 
     suspend fun getSegmentedDownloadConcurrency(): Int = segmentedDownloadConcurrencyFlow.first()
 
+    /**
+     * 用一个纯函数整体改写设置（「恢复设置备份」用它一次写回多项）。
+     *
+     * 注意：备份里**没有的字段不要动**（`AppSettingsBackupRules.overlay` 只覆盖非空项），
+     * 否则"恢复一份旧备份"会把用户后来设的东西悄悄抹掉。
+     */
+    suspend fun updateSettings(transform: (AppSettings) -> AppSettings) {
+        dataStore.updateData { current -> transform(current) }
+    }
+
     suspend fun updateSegmentedDownloadEnabled(enabled: Boolean) {
         dataStore.updateData { currentSettings ->
             currentSettings.copy {

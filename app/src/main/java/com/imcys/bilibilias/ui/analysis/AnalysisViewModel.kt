@@ -57,6 +57,8 @@ class AnalysisViewModel(
     private val userInfoRepository: UserInfoRepository,
     private val downloadManager: NewDownloadManager,
     private val appSettingsRepository: AppSettingsRepository,
+    // 解析失败也写进轨迹：这台 ROM 会过滤 logcat，"为什么没解析出来"以前只能靠用户复述
+    private val fileOutputManager: com.imcys.bilibilias.download.FileOutputManager,
 ) : ViewModel() {
 
     private val _uiState = MutableStateFlow(AnalysisUIState())
@@ -264,6 +266,8 @@ class AnalysisViewModel(
      */
     private fun reportParseFailure(reason: String) {
         Log.w("ASAnalysis", "解析失败：$reason")
+        // 也落轨迹文件：MIUI 会过滤 app 自己的 logcat，"为什么没解析出来"以前只能靠用户复述
+        fileOutputManager.logDiagnostic("解析失败", reason)
         _uiState.update { it.copy(parseErrorMessage = reason) }
     }
 

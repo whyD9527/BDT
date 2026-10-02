@@ -21,6 +21,8 @@ dependencies {
     // 注意：**纯逻辑放在库模块而不是 :app** —— :app 的单测在本机跑不了
     // （编译依赖 AAR 资源需要 x86_64 的 aapt2，而设备是 arm64）。
     testImplementation(libs.junit)
+    // 设置备份的 JSON 往返测试要真的 JSONObject（Android 单测里的 org.json 是 stub）
+    testImplementation(libs.json)
     // 用内存假服务器（MockEngine）对分片下载做**字节级**验证：
     // 每个片是否落在正确偏移、Range 是否真被遵守、失败时会不会写出错位文件。
     // 这些是"编译通过但运行时写坏文件"的那类问题，只有真跑一遍才拦得住。

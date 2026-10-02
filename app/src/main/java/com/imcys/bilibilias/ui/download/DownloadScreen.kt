@@ -138,6 +138,7 @@ fun DownloadScreen(route: DownloadRoute, onToBack: () -> Unit) {
 
     // 「文件已丢失」清单：列表变化时探一次（文件被外部删掉后，记录还在，但要让用户看得见）
     val missingFileIds by vm.missingFileIds.collectAsState()
+    val errorSegments by vm.errorSegments.collectAsState()
     LaunchedEffect(completedSegments) {
         vm.refreshMissingFiles(completedSegments)
     }
@@ -253,6 +254,15 @@ fun DownloadScreen(route: DownloadRoute, onToBack: () -> Unit) {
                         // platformId 是"哪一集"的标识、不是"哪一条记录"的标识，
                         // 一旦列表里出现同 platformId 的两条，Compose 会因为重复 key 直接崩。
                         // 第 5 批已经把"重复 segment"的产因修掉，但 key 本身也该选对。
+                        if (errorSegments.isNotEmpty()) {
+                            item(key = "retry_all_failed") {
+                                RetryAllFailedCard(
+                                    count = errorSegments.size,
+                                    onRetry = { vm.retryAllFailed() },
+                                )
+                            }
+                        }
+
                         items(downloadListState, key = { it.downloadSegment.segmentId }) { task ->
                             DownloadTaskCard(
                                 modifier = Modifier.animateItem(),
@@ -691,3 +701,30 @@ fun DownloadScaffold(
     }
 }
 // endregion
+
+/** 失败任务提示卡（A4）：一键重试全部失败项 */
+@Composable
+private fun RetryAllFailedCard(
+    count: Int,
+    onRetry: () -> Unit,
+) {
+    Surface(
+        color = MaterialTheme.colorScheme.errorContainer,
+        shape = CardDefaults.shape,
+        modifier = Modifier.fillMaxWidth().padding(horizontal = 4.dp, vertical = 2.dp),
+    ) {
+        Row(
+            Modifier.padding(10.dp),
+            verticalAlignment = Alignment.CenterVertically,
+        ) {
+            Column(Modifier.weight(1f)) {
+                Text("有 $count 个任务下载失败", style = MaterialTheme.typography.titleSmall)
+                Text(
+                    "失败原因已写进诊断日志（存储管理 → 诊断日志）",
+                    fontSize = 11.sp,
+                )
+            }
+            TextButton(onClick = onRetry) { Text("全部重试") }
+        }
+    }
+}

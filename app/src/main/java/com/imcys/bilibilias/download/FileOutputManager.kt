@@ -768,6 +768,102 @@ class FileOutputManager(
     }
 
     /**
+     * 把一段文本导出到下载目录（设置备份、诊断日志都用它），返回导出后的文件名。
+     *
+     * Android 10+ 没有「所有文件访问」时不能直接用 File 写公共下载目录，
+     * 所以同样走 `MediaStore.Downloads` 插入（本 app 自己拥有的行）。
+     */
+    fun exportTextToDownload(displayName: String, content: String, mimeType: String = "application/json"): String? =
+        runCatching {
+            if (Build.VERSION.SDK_INT < Build.VERSION_CODES.Q) {
+                val dir = DownloadDir.dir().apply { mkdirs() }
+                File(dir, displayName).writeText(content)
+                trace("导出文本(legacy): $displayName")
+                return@runCatching displayName
+            }
+            val values = ContentValues().apply {
+                put(MediaStore.Downloads.DISPLAY_NAME, displayName)
+                put(MediaStore.Downloads.MIME_TYPE, mimeType)
+                put(MediaStore.Downloads.RELATIVE_PATH, DownloadDir.RELATIVE_PATH)
+                put(MediaStore.Downloads.IS_PENDING, 1)
+            }
+            val resolver = context.contentResolver
+            val uri = resolver.insert(MediaStore.Downloads.EXTERNAL_CONTENT_URI, values)
+                ?: return@runCatching null
+            resolver.openOutputStream(uri)?.use { out -> out.write(content.toByteArray()) }
+            values.clear()
+            values.put(MediaStore.Downloads.IS_PENDING, 0)
+            resolver.update(uri, values, null, null)
+            trace("导出文本: $displayName")
+            displayName
+        }.getOrNull()
+
+    /** 读轨迹日志（默认取末尾 500 行），用于应用内「诊断日志」 */
+    fun readTraceText(maxLines: Int = 500): String = runCatching {
+        val file = traceFile()
+        if (!file.exists()) "" else file.readLines().takeLast(maxLines).joinToString("\n")
+    }.getOrElse { "" }
+
+    /** 清空轨迹日志 */
+    fun clearTrace() {
+        runCatching { traceFile().delete() }
+    }
+
+    /** 下载目录里的一个文件（给「下载目录文件」用） */
+    data class DownloadFileEntry(
+        val displayName: String,
+        val uriString: String,
+        val sizeBytes: Long,
+        val addedMs: Long,
+        val relativePath: String,
+    )
+
+    /**
+     * 列出下载目录（含子目录）里的文件。
+     *
+     * ⚠️ 走 MediaStore 而不是 `File.listFiles()`：这台 ROM 上 app 对媒体库拥有的文件
+     * `listFiles()` 会返回 null（2026-10-01 真机复现）。
+     */
+    fun listDownloadFiles(relativePath: String = DownloadDir.RELATIVE_PATH): List<DownloadFileEntry> {
+        val result = mutableListOf<DownloadFileEntry>()
+        runCatching {
+            val like = DownloadRecordReuseRules.downloadDirRelativePath(relativePath) + "%"
+            context.contentResolver.query(
+                MediaStore.Downloads.EXTERNAL_CONTENT_URI,
+                arrayOf(
+                    MediaStore.Downloads._ID,
+                    MediaStore.Downloads.DISPLAY_NAME,
+                    MediaStore.Downloads.SIZE,
+                    MediaStore.Downloads.DATE_ADDED,
+                    MediaStore.Downloads.RELATIVE_PATH,
+                ),
+                "${MediaStore.Downloads.RELATIVE_PATH} LIKE ? OR ${MediaStore.Downloads.DATA} LIKE ?",
+                arrayOf(like, "%/$like%"),
+                "${MediaStore.Downloads.DATE_ADDED} DESC",
+            )?.use { c ->
+                val idIdx = c.getColumnIndexOrThrow(MediaStore.Downloads._ID)
+                val nameIdx = c.getColumnIndexOrThrow(MediaStore.Downloads.DISPLAY_NAME)
+                val sizeIdx = c.getColumnIndexOrThrow(MediaStore.Downloads.SIZE)
+                val dateIdx = c.getColumnIndexOrThrow(MediaStore.Downloads.DATE_ADDED)
+                val pathIdx = c.getColumnIndexOrThrow(MediaStore.Downloads.RELATIVE_PATH)
+                while (c.moveToNext()) {
+                    val id = c.getLong(idIdx)
+                    result += DownloadFileEntry(
+                        displayName = c.getString(nameIdx) ?: continue,
+                        uriString = android.content.ContentUris.withAppendedId(
+                            MediaStore.Downloads.EXTERNAL_CONTENT_URI, id
+                        ).toString(),
+                        sizeBytes = c.getLong(sizeIdx),
+                        addedMs = c.getLong(dateIdx) * 1000L,
+                        relativePath = c.getString(pathIdx) ?: "",
+                    )
+                }
+            }
+        }
+        return result
+    }
+
+    /**
      * 某个下载目录里**是否存在这个显示名对应的媒体库行**。
      *
      * 用途（2026-10-02 真机）：`savePath` 可能是 `file://` 形式，而这台 ROM 上 app

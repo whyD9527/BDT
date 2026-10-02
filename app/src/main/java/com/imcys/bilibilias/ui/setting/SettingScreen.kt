@@ -1,5 +1,7 @@
 package com.imcys.bilibilias.ui.setting
 
+import org.koin.compose.koinInject
+import kotlinx.coroutines.withContext
 import android.Manifest.permission
 import android.content.Intent
 import android.provider.Settings
@@ -111,6 +113,36 @@ fun SettingScreen(
     val scrollBehavior = TopAppBarDefaults.exitUntilCollapsedScrollBehavior()
     val context = LocalContext.current
     val vm = koinViewModel<SettingViewModel>()
+
+    // 「备份设置 / 恢复设置」：一天重装三次的人最需要这个（2026-10-02）
+    val appSettingsRepository: com.imcys.bilibilias.data.repository.AppSettingsRepository = koinInject()
+    val backupFileOutputManager: com.imcys.bilibilias.download.FileOutputManager = koinInject()
+    val backupContext = androidx.compose.ui.platform.LocalContext.current
+    val backupScope = rememberCoroutineScope()
+    val currentAppSettings by appSettingsRepository.appSettingsFlow
+        .collectAsState(initial = null)
+    val restoreSettingsLauncher = rememberLauncherForActivityResult(
+        ActivityResultContracts.OpenDocument()
+    ) { uri ->
+        if (uri == null) return@rememberLauncherForActivityResult
+        backupScope.launch {
+            val text = withContext(Dispatchers.IO) {
+                runCatching {
+                    backupContext.contentResolver.openInputStream(uri)
+                        ?.bufferedReader()?.use { it.readText() }
+                }.getOrNull()
+            }
+            val backup = text?.let { com.imcys.bilibilias.data.backup.AppSettingsBackup.fromJson(it) }
+            if (backup == null) {
+                Toast.makeText(backupContext, "这不是 BDT 的设置备份文件", Toast.LENGTH_LONG).show()
+                return@launch
+            }
+            appSettingsRepository.updateSettings { current ->
+                com.imcys.bilibilias.data.backup.AppSettingsBackupRules.overlay(current, backup)
+            }
+            Toast.makeText(backupContext, "已恢复设置（只覆盖备份里有的项）", Toast.LENGTH_LONG).show()
+        }
+    }
     val appSettings by vm.appSettings.collectAsState(initial = AppSettings.getDefaultInstance())
     val haptics = LocalHapticFeedback.current
     var showLogoutDialog by remember { mutableStateOf(false) }
@@ -205,6 +237,52 @@ fun SettingScreen(
                     text = "命名规则",
                     descriptionText = "自定义下载文件名称",
                     onClick = onToNamingConvention
+                )
+            }
+
+            item {
+                BaseSettingsItem(
+                    painter = rememberVectorPainter(Icons.Outlined.Save),
+                    text = "备份设置",
+                    descriptionText = "把命名规则、平台、画质/编码偏好等导出到 Download/BDT（JSON）",
+                    onClick = {
+                        val settings = currentAppSettings
+                        if (settings == null) {
+                            Toast.makeText(backupContext, "设置还没加载好，稍后再试", Toast.LENGTH_SHORT).show()
+                        } else {
+                            backupScope.launch {
+                                val name = withContext(Dispatchers.IO) {
+                                    val ts = java.text.SimpleDateFormat(
+                                        "yyyyMMdd-HHmmss", java.util.Locale.ROOT
+                                    ).format(java.util.Date())
+                                    val version = runCatching {
+                                        backupContext.packageManager
+                                            .getPackageInfo(backupContext.packageName, 0).versionName
+                                    }.getOrNull().orEmpty()
+                                    val backup = com.imcys.bilibilias.data.backup.AppSettingsBackupRules
+                                        .from(settings, ts, version)
+                                    backupFileOutputManager.exportTextToDownload(
+                                        "BDT-设置备份-$ts.json",
+                                        backup.toJson(),
+                                    )
+                                }
+                                Toast.makeText(
+                                    backupContext,
+                                    if (name != null) "已导出：$name（在 Download/BDT 里）" else "导出失败",
+                                    Toast.LENGTH_LONG,
+                                ).show()
+                            }
+                        }
+                    }
+                )
+            }
+
+            item {
+                BaseSettingsItem(
+                    painter = rememberVectorPainter(Icons.Outlined.Cloud),
+                    text = "恢复设置",
+                    descriptionText = "从备份文件恢复（只覆盖备份里有的项，其余不动）",
+                    onClick = { restoreSettingsLauncher.launch(arrayOf("application/json", "*/*")) }
                 )
             }
 
