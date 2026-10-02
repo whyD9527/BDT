@@ -47,6 +47,7 @@ import androidx.compose.ui.hapticfeedback.HapticFeedbackType
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.platform.LocalHapticFeedback
 import androidx.compose.ui.res.painterResource
+import androidx.annotation.StringRes
 import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.tooling.preview.Preview
 import androidx.compose.ui.unit.dp
@@ -79,8 +80,15 @@ fun ToolsScreen(vm: HomeViewModel, onToPage: (NavKey) -> Unit) {
 
 
 enum class ToolInfo(
-    val title: String,
-    val desc: String,
+    /**
+     * ⚠️ 存**资源 id** 而不是文案（i18n 批次 E5）：enum 里拿不到 Context/Composable，
+     * 写死中文就永远没法本地化。
+     *
+     * 注意枚举的 **`name`（`FrameExtractor`/`WebParser`/`Feedback`）是"工具历史"持久化用的键**
+     * （`AppSettingsSerializer` 存的就是它），所以只改字段、**绝不能改枚举名**。
+     */
+    @StringRes val titleRes: Int,
+    @StringRes val descRes: Int,
     val icon: ImageVector? = null,
     val iconRes: Int? = null,
     val navKey: NavKey = HomeRoute(),
@@ -88,21 +96,21 @@ enum class ToolInfo(
 ) {
     // 逐帧提取
     FrameExtractor(
-        title = "逐帧提取",
-        desc = "从视频中逐帧提取图片，画手书的好帮手！",
+        titleRes = R.string.tools_frame_extractor_title,
+        descRes = R.string.tools_frame_extractor_desc,
         icon = Icons.Outlined.VideoCameraBack,
         navKey = FrameExtractorRoute
     ),
     WebParser(
-        title = "网页解析",
-        desc = "直接在网页找到你需要的视频，可自动解析视频。",
+        titleRes = R.string.tools_web_parser_title,
+        descRes = R.string.tools_web_parser_desc,
         icon = Icons.Outlined.WebAsset,
         navKey = WebParserRoute
     ),
     // 反馈问题
     Feedback(
-        title = "反馈问题",
-        desc = "🐞帮助我们改进程序，这对本项目的发展有重大意义！",
+        titleRes = R.string.tools_feedback_title,
+        descRes = R.string.tools_feedback_desc,
         icon = Icons.Outlined.BugReport,
         isScreen = false,
     ),
@@ -212,7 +220,7 @@ fun FeedbackDialog(showFeedbackDialog: Boolean, onDismiss: () -> Unit) {
                         verticalAlignment = Alignment.CenterVertically
                     ) {
                         Text(
-                            "反馈时需要带上你的设备信息，点击可一键复制。",
+                            stringResource(R.string.tools_device_info_hint),
                             fontSize = 14.sp,
                             modifier = Modifier.weight(1f)
                         )
@@ -222,12 +230,12 @@ fun FeedbackDialog(showFeedbackDialog: Boolean, onDismiss: () -> Unit) {
                                 haptics.performHapticFeedback(HapticFeedbackType.Confirm)
                                 val clipboard =
                                     context.getSystemService(Context.CLIPBOARD_SERVICE) as ClipboardManager
-                                val clip = ClipData.newPlainText("版本信息", copyText)
+                                val clip = ClipData.newPlainText(context.getString(R.string.tools_version_info_clip_label), copyText)
                                 clipboard.setPrimaryClip(clip)
-                             sendToastEvent("已复制到剪贴板")
+                             sendToastEvent(context.getString(R.string.tools_copied_to_clipboard))
                             }
                         }) {
-                            Icon(Icons.Outlined.CopyAll, contentDescription = "复制按钮")
+                            Icon(Icons.Outlined.CopyAll, contentDescription = stringResource(R.string.cd_copy))
                         }
                     }
                 }
@@ -247,11 +255,11 @@ fun FeedbackDialog(showFeedbackDialog: Boolean, onDismiss: () -> Unit) {
                         ) {
                             Icon(
                                 painter = painterResource(R.drawable.ic_github_24px),
-                                contentDescription = "图标",
+                                contentDescription = stringResource(R.string.cd_icon),
                             )
                             Spacer(Modifier.width(10.dp))
                             Text(
-                                "前往Github反馈，由开发者和社区贡献者处理你的问题。",
+                                stringResource(R.string.tools_feedback_github_hint),
                             )
                         }
                     }
@@ -294,7 +302,7 @@ private fun ToolCard(
                 toolInfo.icon?.let {
                     Icon(
                         it,
-                        contentDescription = "图标",
+                        contentDescription = stringResource(R.string.cd_icon),
                         modifier = Modifier
                             .padding(8.dp)
                             .size(22.dp)
@@ -302,7 +310,7 @@ private fun ToolCard(
                 } ?: run {
                     Icon(
                         painter = painterResource(toolInfo.iconRes!!),
-                        contentDescription = "图标",
+                        contentDescription = stringResource(R.string.cd_icon),
                         modifier = Modifier
                             .padding(8.dp)
                             .size(22.dp)
@@ -311,10 +319,10 @@ private fun ToolCard(
 
             }
             Spacer(Modifier.height(2.dp))
-            Text(toolInfo.title, style = MaterialTheme.typography.titleMedium)
+            Text(stringResource(toolInfo.titleRes), style = MaterialTheme.typography.titleMedium)
             Spacer(Modifier.height(2.dp))
             Text(
-                toolInfo.desc,
+                stringResource(toolInfo.descRes),
                 style = MaterialTheme.typography.bodyMedium,
                 maxLines = 2,
                 minLines = 2,

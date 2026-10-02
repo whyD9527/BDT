@@ -486,7 +486,7 @@ private fun HomeContent(
                                     }
                                     useToolHistoryList.take(allToolCount)
                                         .forEachIndexed { index, tool ->
-                                            key(tool.title) {
+                                            key(tool.name) {
                                                 Surface(
                                                     modifier = Modifier
                                                         .weight(1f)
@@ -520,7 +520,7 @@ private fun HomeContent(
                                                             )
                                                         }
                                                         Spacer(Modifier.height(8.dp))
-                                                        Text(tool.title, fontSize = 22.sp)
+                                                        Text(stringResource(tool.titleRes), fontSize = 22.sp)
                                                         Spacer(Modifier.weight(1f))
                                                         Row(
                                                             Modifier.fillMaxWidth(),

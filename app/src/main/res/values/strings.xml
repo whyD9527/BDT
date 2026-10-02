@@ -379,4 +379,20 @@
     <string name="cd_settings">设置</string>
     <string name="cd_video_analysis">视频解析</string>
     <string name="common_confirm_action">确认</string>
+    <!-- i18n 批次 E5：工具页 + 作品卡片 -->
+    <string name="tools_frame_extractor_title">逐帧提取</string>
+    <string name="tools_frame_extractor_desc">从视频中逐帧提取图片，画手书的好帮手！</string>
+    <string name="tools_web_parser_title">网页解析</string>
+    <string name="tools_web_parser_desc">直接在网页找到你需要的视频，可自动解析视频。</string>
+    <string name="tools_feedback_title">反馈问题</string>
+    <string name="tools_feedback_desc">🐞帮助我们改进程序，这对本项目的发展有重大意义！</string>
+    <string name="tools_device_info_hint">反馈时需要带上你的设备信息，点击可一键复制。</string>
+    <string name="tools_version_info_clip_label">版本信息</string>
+    <string name="tools_copied_to_clipboard">已复制到剪贴板</string>
+    <string name="tools_feedback_github_hint">前往Github反馈，由开发者和社区贡献者处理你的问题。</string>
+    <string name="cd_copy">复制按钮</string>
+    <string name="cd_video_cover">视频封面</string>
+    <string name="work_play_count">%1$s播放</string>
+    <string name="work_danmu_count">%1$s弹幕</string>
+    <string name="work_watched">已看完</string>
 </resources>

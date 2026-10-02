@@ -59,7 +59,7 @@ fun WorkCard(
             ASAsyncImage(
                 model = pic,
                 shape = CardDefaults.shape,
-                contentDescription = "视频封面",
+                contentDescription = stringResource(R.string.cd_video_cover),
                 modifier = Modifier.aspectRatio(16f / 9f)
             )
 
@@ -76,9 +76,9 @@ fun WorkCard(
             Spacer(Modifier.height(4.dp))
 
             Row {
-                Text("${NumberUtils.formatLargeNumber(view)}播放", fontSize = 12.sp)
+                Text(stringResource(R.string.work_play_count, NumberUtils.formatLargeNumber(view)), fontSize = 12.sp)
                 Spacer(Modifier.weight(1f))
-                Text("${NumberUtils.formatLargeNumber(danmu)}弹幕", fontSize = 12.sp)
+                Text(stringResource(R.string.work_danmu_count, NumberUtils.formatLargeNumber(danmu)), fontSize = 12.sp)
             }
         }
     }
@@ -109,7 +109,7 @@ fun UserWorkCard(
             ASAsyncImage(
                 model = pic,
                 shape = CardDefaults.shape,
-                contentDescription = "视频封面",
+                contentDescription = stringResource(R.string.cd_video_cover),
                 modifier = Modifier.aspectRatio(16f / 9f)
             )
 
@@ -188,11 +188,11 @@ fun HistoryPlayVideoCard(
                 ASAsyncImage(
                     model = pic,
                     shape = CardDefaults.shape,
-                    contentDescription = "视频封面",
+                    contentDescription = stringResource(R.string.cd_video_cover),
                     modifier = Modifier.fillMaxSize()
                 )
                 Text(
-                    if (progress == -1L) "已看完" else
+                    if (progress == -1L) stringResource(R.string.work_watched) else
                         "%02d:%02d/%02d:%02d".format(
                             progress / 60, progress % 60,
                             duration / 60, duration % 60

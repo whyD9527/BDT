@@ -379,4 +379,20 @@
     <string name="cd_settings">Settings</string>
     <string name="cd_video_analysis">Video analysis</string>
     <string name="common_confirm_action">Confirm</string>
+    <!-- i18n batch E5: tools screen + work card -->
+    <string name="tools_frame_extractor_title">Frame extractor</string>
+    <string name="tools_frame_extractor_desc">Extract frames from a video — handy for hand-drawn animation.</string>
+    <string name="tools_web_parser_title">Web parser</string>
+    <string name="tools_web_parser_desc">Find the video you need on a web page and parse it automatically.</string>
+    <string name="tools_feedback_title">Send feedback</string>
+    <string name="tools_feedback_desc">🐞 Help us improve the app — it matters a lot for this project!</string>
+    <string name="tools_device_info_hint">When reporting, include your device info; tap to copy it in one go.</string>
+    <string name="tools_version_info_clip_label">Version info</string>
+    <string name="tools_copied_to_clipboard">Copied to clipboard</string>
+    <string name="tools_feedback_github_hint">Report on GitHub; the maintainer and contributors will look into it.</string>
+    <string name="cd_copy">Copy</string>
+    <string name="cd_video_cover">Video cover</string>
+    <string name="work_play_count">%1$s views</string>
+    <string name="work_danmu_count">%1$s danmaku</string>
+    <string name="work_watched">Watched</string>
 </resources>
