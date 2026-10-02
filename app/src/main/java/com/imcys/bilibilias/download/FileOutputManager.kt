@@ -895,7 +895,7 @@ class FileOutputManager(
             put(MediaStore.Downloads.RELATIVE_PATH, target)
         }
         val moved = context.contentResolver
-            .update(Uri.parse(uriString), values, null, null) > 0
+            .update(android.net.Uri.parse(uriString), values, null, null) > 0
         trace("批量移动: ${uriString.substringAfterLast("/")} → $target 结果=$moved")
         moved
     }.getOrElse { false }
