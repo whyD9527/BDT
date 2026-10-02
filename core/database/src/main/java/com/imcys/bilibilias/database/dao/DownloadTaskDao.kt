@@ -51,8 +51,15 @@ interface DownloadTaskDao {
         nodeId: Long,
     ): DownloadTaskNode?
     /**
-     *  根据 platformId 查询单个任务
+     * ⚠️ **别再用它做"这条下载是不是已经存在"的判断**（④ 阶段 1，2026-10-02）。
+     *
+     * 这个键 `(nodeId, platformId)` **不含产物形态**：同一集先下音频、再下视频会命中同一条，
+     * 于是覆盖掉它的 `download_mode`/`media_container`，先下那份文件变成没有记录的孤儿。
+     * 而且现在同一个 node 合法地**可以有多条记录**，这个方法只会返回其中一条（顺序还不确定）。
+     *
+     * 要判断"同一份产物"请用 [getSegmentByProduct]。
      */
+    @Deprecated("④ 阶段 1 起改用 getSegmentByProduct（同一个 node 现在允许多份产物）")
     @Query("SELECT * FROM download_segment WHERE node_id = :nodeId AND platform_id = :platformId")
     suspend fun getSegmentByNodeIdAndPlatformId(nodeId: Long, platformId: String): DownloadSegment?
 
