@@ -75,16 +75,19 @@ fun PlayVoucherErrorPage(onBlack:()-> Unit = {}) {
                     )
                 }
                 val points = listOf(
-                    stringResource(R.string.voucher_risk_1),
-                    stringResource(R.string.voucher_risk_2),
-                    stringResource(R.string.voucher_risk_3),
-                    stringResource(R.string.voucher_risk_4),
-                    stringResource(R.string.voucher_risk_5),
-                    stringResource(R.string.voucher_risk_6)
+                    R.string.voucher_risk_1,
+                    R.string.voucher_risk_2,
+                    R.string.voucher_risk_3,
+                    R.string.voucher_risk_4,
+                    R.string.voucher_risk_5,
+                    R.string.voucher_risk_6
                 )
                 items(points.size) { index ->
                     Text(
-                        text = "• ${points[index]}",
+                        // ⚠️ `LazyColumn` 的 content 是 `LazyListScope.() -> Unit`，**不是** @Composable
+                        // —— 只有 `item { }` / `items { }` 的 lambda 里才能调 `stringResource`。
+                        // 所以上面 listOf 存的是**资源 id**，这里才取文案。
+                        text = "• " + stringResource(points[index]),
                         style = MaterialTheme.typography.bodyMedium
                     )
                 }
