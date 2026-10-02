@@ -87,8 +87,16 @@ class DownloadService : Service() {
     private fun buildDownloadFileNotification() =
         run {
             val intent = Intent(this, MainActivity::class.java)
-            val pIntent =
-                PendingIntent.getActivity(this, 0, intent, PendingIntent.FLAG_IMMUTABLE)
+                // B3 点通知直达：带上"启动目标"，MainActivity 收到后让导航层跳到下载管理页
+                .putExtra(MainActivity.EXTRA_START_TARGET, MainActivity.START_TARGET_DOWNLOAD_LIST)
+            // ⚠️ 必须带 FLAG_UPDATE_CURRENT：这个 PendingIntent 的 requestCode 固定为 0，
+            // 在 FLAG_IMMUTABLE 下不带 update 时系统会复用**已存在的**那个（extras 是老的就丢了）。
+            val pIntent = PendingIntent.getActivity(
+                this,
+                0,
+                intent,
+                PendingIntent.FLAG_IMMUTABLE or PendingIntent.FLAG_UPDATE_CURRENT,
+            )
 
             NotificationCompat.Builder(
                 this,

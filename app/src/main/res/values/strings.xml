@@ -304,4 +304,19 @@
     <string name="dialog_cancel">取消</string>
     <string name="skip_downloaded">跳过已下载</string>
     <string name="skip_downloaded_desc">同一内容的同一产物形态已经下过（且文件还在），就不再重下；默认关</string>
+    <!-- 「已完成下载」列表标签 / 打不开提示（判定在 :core:data 的纯规则里，只返回码） -->
+    <string name="download_record_extras_only">仅附加内容（无媒体文件）</string>
+    <string name="download_record_unknown_quality">未知画质</string>
+    <string name="download_record_unopenable_extras_only">这条记录只有附加内容（弹幕/封面/字幕），没有可打开的文件</string>
+    <string name="download_record_unopenable_missing">文件已被删除或移动（可以用右侧的删除按钮清掉这条记录，再重新下载）</string>
+    <string name="download_record_unopenable_unknown">文件打不开，可能已被删除或没有访问权限</string>
+    <!-- B2 批量重命名 -->
+    <string name="batch_rename">重命名</string>
+    <string name="batch_rename_hint">只改文件名（记录不动）；扩展名保持不变。多选时会自动加 (1)/(2) 避免互撞。</string>
+    <string name="batch_rename_label">新文件名（不含扩展名）</string>
+    <string name="batch_rename_confirm">重命名</string>
+    <string name="batch_rename_done">已重命名 %1$d 个文件：%2$s</string>
+    <string name="batch_rename_partial">已重命名 %1$d 个，%2$d 个失败：%3$s</string>
+    <string name="batch_rename_failed">重命名失败（文件可能不是本应用创建的）</string>
+    <string name="batch_rename_bad_name">新名字不可用：不能为空，也不能包含 ..</string>
 </resources>

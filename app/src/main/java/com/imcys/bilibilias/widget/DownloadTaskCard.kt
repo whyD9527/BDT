@@ -305,6 +305,8 @@ fun DownloadFinishTaskCard(
                     // （只勾了封面/弹幕/字幕）不能再显示「音视频 / 未知画质 / mp4」——
                     // 那会让人以为视频已经下好了，点「打开」才发现文件不存在。
                     // 见交接文档第二十一轮的真机验证记录。
+                    // ⚠️ 规则在纯模块（`:core:data`，没有 Android 资源）里只返回**码**，
+                    // 文案在这里映射到 strings.xml（2026-10-02 本地化改造）。
                     DownloadRecordDisplayRules.tags(
                         modeTitle = downloadSegment.downloadMode.title,
                         qualityTitle = downloadSegment.qualityDescription,
@@ -312,6 +314,18 @@ fun DownloadFinishTaskCard(
                         savePath = downloadSegment.savePath,
                         fileMissing = fileMissing,
                     ).forEach { tag ->
+                        val tagText = when (tag) {
+                            is DownloadRecordDisplayRules.Tag.ExtrasOnly ->
+                                stringResource(R.string.download_record_extras_only)
+
+                            is DownloadRecordDisplayRules.Tag.MissingFile ->
+                                stringResource(R.string.file_missing)
+
+                            is DownloadRecordDisplayRules.Tag.UnknownQuality ->
+                                stringResource(R.string.download_record_unknown_quality)
+
+                            is DownloadRecordDisplayRules.Tag.Text -> tag.text
+                        }
                         Surface(
                             shape = RoundedCornerShape(percent = 50),
                             color = MaterialTheme.colorScheme.primary,
@@ -321,7 +335,7 @@ fun DownloadFinishTaskCard(
                                     horizontal = 8.dp,
                                     vertical = 0.dp
                                 ),
-                                text = tag,
+                                text = tagText,
                                 fontSize = 8.sp,
                                 fontWeight = FontWeight.W400,
                             )

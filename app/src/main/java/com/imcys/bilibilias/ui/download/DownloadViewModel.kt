@@ -14,6 +14,7 @@ import android.net.Uri
 import java.io.FileNotFoundException
 import com.imcys.bilibilias.data.download.record.DownloadRecordDisplayRules
 import com.imcys.bilibilias.download.DownloadDir
+import com.imcys.bilibilias.data.download.output.BatchRenameRules
 import com.imcys.bilibilias.data.download.output.DuplicateDownloadRules
 import com.imcys.bilibilias.download.FileOutputManager
 import com.imcys.bilibilias.download.NewDownloadManager
@@ -332,6 +333,51 @@ class DownloadViewModel(
             sendToast(
                 if (moved > 0) "已移动 $moved 个文件到 $subDirName/"
                 else "没有文件被移动（可能不是本应用的文件，需要「所有文件访问」或系统确认）"
+            )
+        }
+    }
+
+    /**
+     * 批量重命名选中的文件（B2）。
+     *
+     * ⚠️ 与"移动"的关键差异：改名会撞上这台 ROM 的 `(N)` 自动后缀
+     * （`update(DISPLAY_NAME)` 撞名不报错，MediaProvider 自己加 `xxx (1).mp4`），
+     * 所以：
+     * 1. **后缀由我们自己按选中顺序分配**（[BatchRenameRules]）：第 1 个用新名、
+     *    第 2..N 个 `新名 (1)`/`(2)`…，避免选中项互相撞名、序号被 ROM 打乱；
+     * 2. 每个文件改完都由 `FileOutputManager.renameDownloadFile` **回读真实显示名**，
+     *    结果通过 [DownloadUiEvent.RenameFinished] 原样告诉用户。
+     *
+     * 只改文件、不动记录：`savePath` 是 content URI（行的 `_ID` 不变）→ 记录依然有效。
+     */
+    fun renameSelectedTasks(segments: List<DownloadSegment>, newBaseName: String) {
+        if (segments.isEmpty()) return
+        // 名字不可用时返回 null → 一个文件都不动（no-op 比改出半个名字安全），
+        // 由 UI 层用 strings.xml 的文案提示（VM 里不写死中文）
+        val baseNames = BatchRenameRules.assignBaseNames(newBaseName, segments.size)
+        if (baseNames == null) {
+            viewModelScope.launch {
+                _uiEvent.emit(
+                    DownloadUiEvent.RenameFinished(
+                        finalNames = emptyList(),
+                        failedCount = segments.size,
+                        invalidName = true,
+                    )
+                )
+            }
+            return
+        }
+        viewModelScope.launch {
+            val results = withContext(Dispatchers.IO) {
+                segments.mapIndexed { index, segment ->
+                    fileOutputManager.renameDownloadFile(segment.savePath, baseNames[index])
+                }
+            }
+            _uiEvent.emit(
+                DownloadUiEvent.RenameFinished(
+                    finalNames = results.filterNotNull(),
+                    failedCount = results.count { it == null },
+                )
             )
         }
     }

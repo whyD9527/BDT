@@ -304,4 +304,19 @@
     <string name="dialog_cancel">Cancel</string>
     <string name="skip_downloaded">Skip downloaded</string>
     <string name="skip_downloaded_desc">Skip items already downloaded (file still present). Off by default.</string>
+    <!-- Completed-download list tags / unopenable messages (rules in :core:data return codes only) -->
+    <string name="download_record_extras_only">Extras only (no media file)</string>
+    <string name="download_record_unknown_quality">Unknown quality</string>
+    <string name="download_record_unopenable_extras_only">This entry only has extras (danmaku/cover/subtitles); there is no file to open</string>
+    <string name="download_record_unopenable_missing">The file was deleted or moved (use the delete button on the right to remove this entry, then download again)</string>
+    <string name="download_record_unopenable_unknown">The file cannot be opened; it may have been deleted or is not accessible</string>
+    <!-- B2 batch rename -->
+    <string name="batch_rename">Rename</string>
+    <string name="batch_rename_hint">Renames the file only (the record is untouched); the extension is kept. With multiple selections, (1)/(2) suffixes avoid collisions.</string>
+    <string name="batch_rename_label">New file name (without extension)</string>
+    <string name="batch_rename_confirm">Rename</string>
+    <string name="batch_rename_done">Renamed %1$d file(s): %2$s</string>
+    <string name="batch_rename_partial">Renamed %1$d, %2$d failed: %3$s</string>
+    <string name="batch_rename_failed">Rename failed (the file may not belong to this app)</string>
+    <string name="batch_rename_bad_name">Invalid name: it cannot be empty or contain ..</string>
 </resources>

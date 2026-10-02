@@ -29,6 +29,7 @@ import androidx.compose.foundation.layout.Spacer
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.width
 import androidx.compose.material3.Checkbox
+import com.imcys.bilibilias.data.download.output.BatchRenameRules
 import com.imcys.bilibilias.data.download.output.DuplicateDownloadRules
 import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.items
@@ -116,6 +117,29 @@ fun DownloadScreen(route: DownloadRoute, onToBack: () -> Unit) {
                 is DownloadUiEvent.OpenFile -> {
                     openFile(context, event.segment)
                 }
+
+                is DownloadUiEvent.RenameFinished -> {
+                    // 文案在 strings.xml；这里只负责把**回读到的真实文件名**拼进去
+                    //（撞名时 MediaStore 会给它加 `(N)`，那才是磁盘上的真名）
+                    val shown = event.finalNames.take(3).joinToString("、")
+                    val message = when {
+                        event.invalidName -> context.getString(R.string.batch_rename_bad_name)
+                        event.finalNames.isEmpty() -> context.getString(R.string.batch_rename_failed)
+                        event.failedCount > 0 -> context.getString(
+                            R.string.batch_rename_partial,
+                            event.finalNames.size,
+                            event.failedCount,
+                            shown,
+                        )
+
+                        else -> context.getString(
+                            R.string.batch_rename_done,
+                            event.finalNames.size,
+                            shown,
+                        )
+                    }
+                    sendToastEventOnBlocking(message)
+                }
             }
         }
     }
@@ -141,6 +165,8 @@ fun DownloadScreen(route: DownloadRoute, onToBack: () -> Unit) {
     val missingFileIds by vm.missingFileIds.collectAsState()
     var showMoveSelectedDialog by remember { mutableStateOf(false) }
     var moveSubDirName by remember { mutableStateOf("") }
+    var showRenameSelectedDialog by remember { mutableStateOf(false) }
+    var renameBaseName by remember { mutableStateOf("") }
     val errorSegments by vm.errorSegments.collectAsState()
     LaunchedEffect(completedSegments) {
         vm.refreshMissingFiles(completedSegments)
@@ -206,6 +232,21 @@ fun DownloadScreen(route: DownloadRoute, onToBack: () -> Unit) {
         }
     }
 
+    if (showRenameSelectedDialog) {
+        RenameSelectedDialog(
+            name = renameBaseName,
+            onNameChange = { renameBaseName = it },
+            onConfirm = {
+                vm.renameSelectedTasks(selectDeleteList.toList(), renameBaseName.trim())
+                showRenameSelectedDialog = false
+                renameBaseName = ""
+                // 文件名变了，退出编辑态 —— 免得继续拿着"改了名之后"的旧选中项做批量操作
+                downloadFinishEditState = false
+            },
+            onDismiss = { showRenameSelectedDialog = false },
+        )
+    }
+
     if (showMoveSelectedDialog) {
         MoveSelectedDialog(
             name = moveSubDirName,
@@ -229,6 +270,7 @@ fun DownloadScreen(route: DownloadRoute, onToBack: () -> Unit) {
                         onCancelEdit = { downloadFinishEditState = false },
                         onShowDeleteDialog = { showDeleteDialog = true },
                         onShowMoveDialog = { showMoveSelectedDialog = true },
+                        onShowRenameDialog = { showRenameSelectedDialog = true },
                         onShareSelected = {
                             // 批量分享：必须带 FLAG_GRANT_READ_URI_PERMISSION，
                             // 否则接收方读不到 content://media/...（URI 授权是按 Intent 授的）
@@ -332,9 +374,23 @@ fun DownloadScreen(route: DownloadRoute, onToBack: () -> Unit) {
                                             // 别再报"文件不存在，可能已被删除" —— 那会让人以为文件丢了。
                                             // 分情况说实话：纯附加内容 / 文件被外部删掉 / 其它打不开原因
                                             sendToastEventOnBlocking(
-                                                DownloadRecordDisplayRules.unopenableMessage(
-                                                    savePath = segment.savePath,
-                                                    fileMissing = segment.segmentId in missingFileIds,
+                                                // 文案在 strings.xml（规则模块只返回"原因码"）
+                                                context.getString(
+                                                    when (
+                                                        DownloadRecordDisplayRules.unopenableReason(
+                                                            savePath = segment.savePath,
+                                                            fileMissing = segment.segmentId in missingFileIds,
+                                                        )
+                                                    ) {
+                                                        DownloadRecordDisplayRules.UnopenableReason.EXTRAS_ONLY ->
+                                                            R.string.download_record_unopenable_extras_only
+
+                                                        DownloadRecordDisplayRules.UnopenableReason.MISSING_FILE ->
+                                                            R.string.download_record_unopenable_missing
+
+                                                        DownloadRecordDisplayRules.UnopenableReason.UNKNOWN ->
+                                                            R.string.download_record_unopenable_unknown
+                                                    }
                                                 ),
                                             )
                                         }
@@ -657,6 +713,7 @@ private fun EditTopTools(
     onCancelEdit: () -> Unit,
     onShowDeleteDialog: () -> Unit,
     onShowMoveDialog: () -> Unit,
+    onShowRenameDialog: () -> Unit,
     onShareSelected: () -> Unit,
 ) {
     Row(
@@ -687,6 +744,13 @@ private fun EditTopTools(
             },
         ) {
             Text(stringResource(R.string.download_select_all))
+        }
+
+        OutlinedButton(
+            shape = CardDefaults.shape,
+            onClick = onShowRenameDialog,
+        ) {
+            Text(stringResource(R.string.batch_rename))
         }
 
         OutlinedButton(
@@ -814,6 +878,50 @@ private fun MoveSelectedDialog(
                 onClick = onConfirm,
                 enabled = name.isNotBlank() && !name.contains(".."),
             ) { Text(stringResource(R.string.batch_move_confirm)) }
+        },
+        dismissButton = {
+            TextButton(onClick = onDismiss) { Text(stringResource(R.string.dialog_cancel)) }
+        },
+    )
+}
+
+/**
+ * 批量重命名对话框（B2）。
+ *
+ * 只输入**新基名**（不含扩展名）：扩展名沿用每个文件自己的，避免把 `视频.mp4` 改成
+ * `视频.txt` 这种"文件还在、却打不开了"的结果。
+ *
+ * ⚠️ 这台 ROM 上 MediaProvider 撞名会自己加 `(N)`，所以：
+ * - 多选的后缀由 [BatchRenameRules] 主动分配（`新名` / `新名 (1)` / `新名 (2)`…）；
+ * - 真正的结果由 `FileOutputManager.renameDownloadFile` **回读**后告诉用户。
+ */
+@Composable
+private fun RenameSelectedDialog(
+    name: String,
+    onNameChange: (String) -> Unit,
+    onConfirm: () -> Unit,
+    onDismiss: () -> Unit,
+) {
+    AlertDialog(
+        onDismissRequest = onDismiss,
+        title = { Text(stringResource(R.string.batch_rename)) },
+        text = {
+            Column {
+                Text(stringResource(R.string.batch_rename_hint), fontSize = 12.sp)
+                androidx.compose.material3.OutlinedTextField(
+                    value = name,
+                    onValueChange = onNameChange,
+                    singleLine = true,
+                    label = { Text(stringResource(R.string.batch_rename_label)) },
+                )
+            }
+        },
+        confirmButton = {
+            TextButton(
+                onClick = onConfirm,
+                // 判据与 VM / FileOutputManager 用的是同一条纯规则，三处一致
+                enabled = BatchRenameRules.isUsableBaseName(name),
+            ) { Text(stringResource(R.string.batch_rename_confirm)) }
         },
         dismissButton = {
             TextButton(onClick = onDismiss) { Text(stringResource(R.string.dialog_cancel)) }

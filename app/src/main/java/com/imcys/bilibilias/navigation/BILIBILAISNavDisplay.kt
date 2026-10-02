@@ -34,6 +34,8 @@ import androidx.navigation3.ui.NavDisplay
 import com.imcys.bilibilias.common.event.analysisHandleChannel
 import com.imcys.bilibilias.common.event.playVoucherErrorChannel
 import com.imcys.bilibilias.common.event.requestFrequentHandleChannel
+import com.imcys.bilibilias.common.event.StartTarget
+import com.imcys.bilibilias.common.event.startTargetChannel
 import com.imcys.bilibilias.ui.analysis.AnalysisScreen
 import com.imcys.bilibilias.ui.analysis.AnalysisViewModel
 import com.imcys.bilibilias.ui.analysis.navigation.AnalysisRoute
@@ -119,6 +121,16 @@ fun BILIBILAISNavDisplay() {
     LaunchedEffect(Unit) {
         requestFrequentHandleChannel.collect {
             backStack.addWithReuse(RequestFrequentRoute(it.url))
+        }
+    }
+
+    // B3 点通知直达：缓存通知带的"启动目标" → 直接进下载管理页
+    // （DownloadRoute 默认落在"正在下载"标签页，正是点缓存通知时想看的东西）
+    LaunchedEffect(Unit) {
+        startTargetChannel.collect { target ->
+            when (target) {
+                StartTarget.DOWNLOAD_LIST -> backStack.addWithReuse(DownloadRoute())
+            }
         }
     }
 

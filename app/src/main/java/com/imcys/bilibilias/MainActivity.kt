@@ -28,7 +28,9 @@ import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.tooling.preview.Preview
 import androidx.lifecycle.lifecycleScope
 import com.imcys.bilibilias.common.event.AnalysisEvent
+import com.imcys.bilibilias.common.event.StartTarget
 import com.imcys.bilibilias.common.event.sendAnalysisEvent
+import com.imcys.bilibilias.common.event.sendStartTargetEvent
 import com.imcys.bilibilias.common.update.GooglePlayAppUpdateManage
 import com.imcys.bilibilias.common.utils.Manufacturers.XIAOMI
 import com.imcys.bilibilias.common.utils.createDownloadNotificationChannel
@@ -46,6 +48,18 @@ import com.imcys.bilibilias.common.data.CommonBuildConfig
 import com.imcys.bilibilias.ui.widget.ASTextButton
 
 class MainActivity : ComponentActivity() {
+
+    companion object {
+        /**
+         * B3「点通知直达」：通知 Intent 里的"启动目标"参数名与取值。
+         *
+         * 放在这里是因为**读写两头都在本模块**：`DownloadService` 写、
+         * `MainActivity` 自己读；用常量而不是裸字符串，改一处不会漏掉另一处。
+         */
+        const val EXTRA_START_TARGET = "com.imcys.bilibilias.extra.START_TARGET"
+        const val START_TARGET_DOWNLOAD_LIST = "download_list"
+    }
+
     private val appSettingsRepository: AppSettingsRepository by inject()
 
     private val appSettingsFlow: Flow<AppSettings> = appSettingsRepository.appSettingsFlow
@@ -152,6 +166,15 @@ class MainActivity : ComponentActivity() {
 
     private fun handleShareInfo(incoming: Intent?) {
         if (incoming == null) return
+        // B3 点通知直达：通知里带的"启动目标" → 发事件让导航层跳下载管理页。
+        // ⚠️ 消费掉这个 extra（removeExtra）：MainActivity 是 singleTask，
+        // 同一个 Intent 在重建/再次 onNewIntent 时会被复用，不清理会重复触发导航。
+        incoming.getStringExtra(EXTRA_START_TARGET)?.let { target ->
+            if (target == START_TARGET_DOWNLOAD_LIST) {
+                sendStartTargetEvent(StartTarget.DOWNLOAD_LIST)
+            }
+            incoming.removeExtra(EXTRA_START_TARGET)
+        }
         val action = incoming.action
         val type = incoming.type
         when (action) {

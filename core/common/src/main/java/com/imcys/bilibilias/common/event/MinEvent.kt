@@ -67,3 +67,23 @@ val updateAccountChannel = _updateAccountChannel.receiveAsFlow()
 fun sendUpdateAccountEvent() {
     _updateAccountChannel.trySend(UpdateAccountChannel)
 }
+
+/**
+ * 「启动目标」（B3 点通知直达）：从通知/外部 Intent 进来时，App 应该把用户送到哪个页面。
+ *
+ * 为什么放在 `:core:common` 的事件通道里：`MainActivity`（解析 Intent 的地方）与
+ * 导航层 `BILIBILAISNavDisplay`（决定去哪个页面的地方）是两个不同的 Composable 作用域，
+ * 现有几个跨作用域跳转（解析事件 / 风控页 / 请求频繁）走的都是同一条 `Channel` 通道 ——
+ * 沿用同一套写法，不另造机制。
+ */
+enum class StartTarget {
+    /** 下载管理页（缓存通知点进来的默认落点） */
+    DOWNLOAD_LIST,
+}
+
+private val _startTargetChannel = Channel<StartTarget>(Channel.UNLIMITED)
+val startTargetChannel = _startTargetChannel.receiveAsFlow()
+
+fun sendStartTargetEvent(target: StartTarget) {
+    _startTargetChannel.trySend(target)
+}

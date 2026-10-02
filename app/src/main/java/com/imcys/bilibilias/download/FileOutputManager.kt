@@ -11,6 +11,8 @@ import android.provider.MediaStore
 import android.util.Log
 import androidx.core.net.toUri
 import com.imcys.bilibilias.data.download.record.DownloadRecordReuseRules
+import com.imcys.bilibilias.data.download.naming.FileNameLengthRules
+import com.imcys.bilibilias.data.download.output.BatchRenameRules
 import com.imcys.bilibilias.data.download.output.DuplicateDownloadRules
 import com.imcys.bilibilias.data.download.output.FinalNameVerifyRules
 import kotlinx.coroutines.Dispatchers
@@ -899,6 +901,66 @@ class FileOutputManager(
         trace("批量移动: ${uriString.substringAfterLast("/")} → $target 结果=$moved")
         moved
     }.getOrElse { false }
+
+    /**
+     * 把**已下载的媒体行**改名（B2 批量重命名）。
+     *
+     * ## 为什么必须回读真实名字
+     * 这台 ROM（小米 / Android 16）上 `update(DISPLAY_NAME)` **撞名不报错**：
+     * MediaProvider 会把新名字改成 `xxx (1).mp4`（交接文档 §14.2 第 1、2 条）。
+     * 所以这里**更新完必须重新查询 `DISPLAY_NAME`**，并用 [FinalNameVerifyRules] 判定
+     * 这次改名到底发生了什么，然后把**真实显示名**返回给用户 —— 绝不能把"期望名"当结果。
+     *
+     * 返回的 URI 本身没变（行的 `_ID` 不变）→ 记录里的 `savePath` 依然有效，**不用改记录**。
+     *
+     * @param newBaseName 新基名（**不含扩展名**；扩展名沿用这一行当前的显示名）。
+     * @return 改名后**回读到的真实显示名**；不是本 app 的行、更新没生效、读不回来时返回 null。
+     */
+    fun renameDownloadFile(uriString: String, newBaseName: String): String? = runCatching {
+        if (!uriString.startsWith("content://")) {
+            trace("批量重命名: 跳过（不是 content URI）=$uriString")
+            return@runCatching null
+        }
+        // 双保险：入口再清一次（`/` 会让 MediaStore 直接拒绝），空名字一律 no-op
+        val cleanBase = BatchRenameRules.sanitizeBaseName(newBaseName)
+        if (cleanBase.isEmpty() || cleanBase.contains("..")) {
+            trace("批量重命名: 跳过（名字不可用）=$newBaseName")
+            return@runCatching null
+        }
+
+        val resolver = context.contentResolver
+        val uri = android.net.Uri.parse(uriString)
+        val oldName = storedDisplayName(resolver, uri)
+        val extension = oldName?.let { FinalNameVerifyRules.splitName(it).second }.orEmpty()
+        // 与交付链路同一条长度规则：名字按 UTF-8 字节截断、保留扩展名
+        val expected = FileNameLengthRules.truncateToUtf8Bytes(cleanBase + extension)
+
+        val rows = runCatching {
+            resolver.update(
+                uri,
+                ContentValues().apply { put(MediaStore.Downloads.DISPLAY_NAME, expected) },
+                null,
+                null,
+            )
+        }.getOrDefault(0)
+
+        // ⚠️ 回读才是真相：撞名时这里读到的是 `... (N).ext`
+        val actual = storedDisplayName(resolver, uri)
+        val verdict = when {
+            actual == null -> "回读失败"
+            FinalNameVerifyRules.displayNameMatches(expected, actual) -> "成功"
+            // MediaStore 自动加了 `(N)`：文件是好的，只是名字带后缀 —— 如实告诉用户
+            FinalNameVerifyRules.isSameContentName(actual, expected) -> "撞名（MediaStore 加了后缀）"
+            else -> "名字与期望不符"
+        }
+        trace(
+            "批量重命名: 旧=$oldName 期望=$expected 回读=$actual 更新行=$rows 判定=$verdict",
+        )
+        actual
+    }.getOrElse { e ->
+        trace("批量重命名失败: $newBaseName ${e.javaClass.simpleName} ${e.message}")
+        null
+    }
 
     /**
      * 这个 `savePath` 现在还能打开吗（B4 用它判断"已下载"是否还成立）。
