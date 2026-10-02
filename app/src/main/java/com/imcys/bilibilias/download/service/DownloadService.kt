@@ -20,6 +20,10 @@ class DownloadService : Service() {
 
     companion object {
         const val DOWNLOAD_SERVICE_ID = 100
+
+        /** 通知上的两个动作（B3）。聚合通知只能做"全部"语义，这样才不含糊。 */
+        const val ACTION_PAUSE_ALL = "com.imcys.bilibilias.download.action.PAUSE_ALL"
+        const val ACTION_CANCEL_ALL = "com.imcys.bilibilias.download.action.CANCEL_ALL"
     }
 
     lateinit var notificationCompat: NotificationCompat.Builder
@@ -34,6 +38,16 @@ class DownloadService : Service() {
     override fun onBind(intent: Intent?): IBinder? = binder
 
     override fun onStartCommand(intent: Intent?, flags: Int, startId: Int): Int {
+        // 通知动作（B3）：暂停全部 / 取消全部。
+        // 管理器是 Koin single（本服务与它同进程），这里拿一次就够了；
+        // 用 runCatching 包住：拿不到也不能让服务崩掉（它就是条通知而已）。
+        runCatching {
+            val manager = org.koin.core.context.GlobalContext.get().get<NewDownloadManager>()
+            when (intent?.action) {
+                ACTION_PAUSE_ALL -> manager.pauseAllActive()
+                ACTION_CANCEL_ALL -> manager.cancelAllActive()
+            }
+        }
         // 防止用户突然进后台
         runCatching { startForeground() }
         // ⚠️ 必须 **NOT_STICKY**。原先返回 START_STICKY：进程被系统/用户杀掉后，
@@ -86,6 +100,22 @@ class DownloadService : Service() {
                 setSmallIcon(R.drawable.ic_logo_mini)
                 setPriority(NotificationCompat.PRIORITY_DEFAULT)
                 setOnlyAlertOnce(true)
+
+                // B3：两个动作按钮。理由同 pauseAllActive 的注释 —— 聚合通知只做"全部"。
+                val pauseAllIntent = PendingIntent.getService(
+                    this@DownloadService,
+                    1,
+                    Intent(this@DownloadService, DownloadService::class.java).setAction(ACTION_PAUSE_ALL),
+                    PendingIntent.FLAG_IMMUTABLE,
+                )
+                val cancelAllIntent = PendingIntent.getService(
+                    this@DownloadService,
+                    2,
+                    Intent(this@DownloadService, DownloadService::class.java).setAction(ACTION_CANCEL_ALL),
+                    PendingIntent.FLAG_IMMUTABLE,
+                )
+                addAction(android.R.drawable.ic_media_pause, "全部暂停", pauseAllIntent)
+                addAction(android.R.drawable.ic_menu_close_clear_cancel, "全部取消", cancelAllIntent)
             }
         }
 

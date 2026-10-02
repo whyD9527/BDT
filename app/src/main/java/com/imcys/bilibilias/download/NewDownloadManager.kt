@@ -363,6 +363,39 @@ class NewDownloadManager(
         downloadTaskRepository.updateSegment(task.downloadSegment.copy(downloadState = DownloadState.PAUSE))
     }
 
+    /**
+     * 通知上的「全部暂停」（B3）。
+     *
+     * 通知是**聚合**的（一条"AS视频缓存中…"代表整个队列），所以动作只能是"全部"语义 ——
+     * 具体到某一条任务的暂停/取消在应用内的下载列表里做。
+     */
+    fun pauseAllActive() {
+        downloadScope.launch {
+            _downloadTasks.value
+                .filter { DownloadQueueRules.canPause(it.downloadState) }
+                .forEach { pauseTask(it.downloadSegment.segmentId) }
+        }
+    }
+
+    /**
+     * 通知上的「全部取消」（B3）。
+     *
+     * ⚠️ 用**排除法**筛"还没收工"的任务（COMPLETED/ERROR/CANCELLED 一律不碰）：
+     * `cancelTask` 会删文件，对已完成的记录调它等于把用户下好的东西删掉。
+     */
+    fun cancelAllActive() {
+        val settled = setOf(
+            DownloadState.COMPLETED,
+            DownloadState.ERROR,
+            DownloadState.CANCELLED,
+        )
+        downloadScope.launch {
+            _downloadTasks.value
+                .filter { it.downloadState !in settled }
+                .forEach { cancelTask(it.downloadSegment.segmentId) }
+        }
+    }
+
     suspend fun cancelTask(segmentId: Long) {
         val task = findTaskById(segmentId) ?: return
 
