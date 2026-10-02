@@ -298,7 +298,7 @@
     <string name="export_button">导出</string>
     <string name="batch_move">移动到</string>
     <string name="batch_share">分享</string>
-    <string name="batch_move_hint">会移动到 Download/BDT/<名字>/ 下；记录仍然有效（文件的 URI 不变）。</string>
+    <string name="batch_move_hint">会移动到 Download/BDT/名字/ 下；记录仍然有效（文件的 URI 不变）。</string>
     <string name="batch_move_label">子目录名（如 番剧）</string>
     <string name="batch_move_confirm">移动</string>
     <string name="dialog_cancel">取消</string>

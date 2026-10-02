@@ -298,7 +298,7 @@
     <string name="export_button">Export</string>
     <string name="batch_move">Move to</string>
     <string name="batch_share">Share</string>
-    <string name="batch_move_hint">Files are moved under Download/BDT/<name>/; records stay valid.</string>
+    <string name="batch_move_hint">Files are moved under Download/BDT/name/; records stay valid.</string>
     <string name="batch_move_label">Subfolder name (e.g. bangumi)</string>
     <string name="batch_move_confirm">Move</string>
     <string name="dialog_cancel">Cancel</string>
