@@ -302,4 +302,6 @@
     <string name="batch_move_label">子目录名（如 番剧）</string>
     <string name="batch_move_confirm">移动</string>
     <string name="dialog_cancel">取消</string>
+    <string name="skip_downloaded">跳过已下载</string>
+    <string name="skip_downloaded_desc">同一内容的同一产物形态已经下过（且文件还在），就不再重下；默认关</string>
 </resources>

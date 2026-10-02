@@ -507,10 +507,56 @@ class NewDownloadManager(
     }
 
     @RequiresPermission(Manifest.permission.POST_NOTIFICATIONS)
+    /**
+     * 「跳过已下载」（B4）：等待中的任务，如果**同一个 platformId + 下载模式**已经有
+     * "完成且文件还在"的记录，就直接复用那条记录（savePath/画质/大小），把本任务标成完成、不再下载。
+     *
+     * 为什么不按 `download_task.type` 比：那是**任务级**的字段（VIDEO/BANGUMI…），
+     * 而"同一集是否已经下过"更精确的键是 `platformId + downloadMode`（同一个内容 + 同一种产物形态）。
+     *
+     * ⚠️ 记录指向的文件**必须还能打开**才算"已下载"（见 FileOutputManager.canOpenSavePath）——
+     * 否则用户删了文件之后会永远下不下来。
+     */
+    private suspend fun skipAlreadyDownloadedWaiting(): Int {
+        if (!appSettingsRepository.isSkipDownloaded()) return 0
+
+        val waiting = _downloadTasks.value.filter { it.downloadState == DownloadState.WAITING }
+        if (waiting.isEmpty()) return 0
+
+        val completed = downloadTaskRepository.getSegmentAll()
+            .filter { it.downloadState == DownloadState.COMPLETED && it.savePath.isNotBlank() }
+            .associateBy { it.platformId to it.downloadMode }
+
+        var skipped = 0
+        waiting.forEach { task ->
+            val segment = task.downloadSegment
+            val existing = completed[segment.platformId to segment.downloadMode] ?: return@forEach
+            if (existing.segmentId == segment.segmentId) return@forEach
+            if (!fileOutputManager.canOpenSavePath(existing.savePath)) return@forEach
+
+            val reused = segment.copy(
+                savePath = existing.savePath,
+                qualityDescription = existing.qualityDescription,
+                fileSize = existing.fileSize,
+                downloadState = DownloadState.COMPLETED,
+            )
+            runCatching { downloadTaskRepository.updateSegment(reused) }
+            updateTaskState(task.copy(downloadSegment = reused), DownloadState.COMPLETED)
+            skipped++
+            fileOutputManager.logDiagnostic(
+                "跳过已下载",
+                "「${segment.title}」已存在（platformId=${segment.platformId} 模式=${segment.downloadMode}）",
+            )
+        }
+        return skipped
+    }
+
     private suspend fun startDownloadQueue(downloadService: DownloadService) {
         isDownloading = true
 
         while (true) {
+            // B4：每轮先看看有没有"已经下过"的等待任务可以直接收工（开了设置才生效）
+            runCatching { skipAlreadyDownloadedWaiting() }
             checkAndStartNextDownload()
             delay(QUEUE_CHECK_INTERVAL_MS)
 

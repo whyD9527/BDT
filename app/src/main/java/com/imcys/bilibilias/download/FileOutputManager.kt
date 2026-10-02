@@ -900,6 +900,21 @@ class FileOutputManager(
         moved
     }.getOrElse { false }
 
+    /**
+     * 这个 `savePath` 现在还能打开吗（B4 用它判断"已下载"是否还成立）。
+     *
+     * ⚠️ 失败方向是**安全的**：打不开就 return false → 调用方会**重新下载**，
+     * 不会出现"以为下过就不下了，结果文件其实没了"。
+     */
+    fun canOpenSavePath(savePath: String): Boolean = runCatching {
+        val uri = if (savePath.startsWith("content://")) {
+            android.net.Uri.parse(savePath)
+        } else {
+            File(savePath).toUri()
+        }
+        context.contentResolver.openFileDescriptor(uri, "r")?.use { true } ?: false
+    }.getOrElse { false }
+
     /** 轨迹文件是否有内容（界面用它区分"导出失败"和"还没产生日志"） */
     fun hasTraceLog(): Boolean = traceFile().let { it.exists() && it.length() > 0L }
 

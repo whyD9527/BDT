@@ -302,4 +302,6 @@
     <string name="batch_move_label">Subfolder name (e.g. bangumi)</string>
     <string name="batch_move_confirm">Move</string>
     <string name="dialog_cancel">Cancel</string>
+    <string name="skip_downloaded">Skip downloaded</string>
+    <string name="skip_downloaded_desc">Skip items already downloaded (file still present). Off by default.</string>
 </resources>

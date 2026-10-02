@@ -157,6 +157,7 @@ fun SettingScreen(
     // 下载策略（B5）。proto 里是 optional：没设置过 → 仅Wi-Fi=关、限速=不限
     val wifiOnlyDownload = if (appSettings.hasWifiOnlyDownload()) appSettings.wifiOnlyDownload else false
     val speedLimitKbps = if (appSettings.hasDownloadSpeedLimitKbps()) appSettings.downloadSpeedLimitKbps else 0
+    val skipDownloaded = if (appSettings.hasSkipDownloaded()) appSettings.skipDownloaded else false
 
     // 分片下载的两个设置。proto 里是 `optional`，"没设置过"（initial 的 getDefaultInstance
     // 也是这个状态）要按默认走，所以统一交给 resolve* 解析 —— 与下载侧同一套函数。
@@ -313,6 +314,18 @@ fun SettingScreen(
                 ) { check ->
                     haptics.switchHapticFeedback(check)
                     backupScope.launch { appSettingsRepository.updateWifiOnlyDownload(check) }
+                }
+            }
+
+            item {
+                SwitchSettingsItem(
+                    imageVector = Icons.Outlined.Policy,
+                    text = stringResource(R.string.skip_downloaded),
+                    description = stringResource(R.string.skip_downloaded_desc),
+                    checked = skipDownloaded,
+                ) { check ->
+                    haptics.switchHapticFeedback(check)
+                    backupScope.launch { appSettingsRepository.updateSkipDownloaded(check) }
                 }
             }
 

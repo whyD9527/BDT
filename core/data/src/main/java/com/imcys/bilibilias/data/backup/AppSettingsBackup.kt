@@ -38,6 +38,7 @@ data class AppSettingsBackup(
     val segmentedDownloadConcurrency: Int? = null,
     val wifiOnlyDownload: Boolean? = null,
     val downloadSpeedLimitKbps: Int? = null,
+    val skipDownloaded: Boolean? = null,
 ) {
 
     fun toJson(): String {
@@ -60,6 +61,7 @@ data class AppSettingsBackup(
         segmentedDownloadConcurrency?.let { o.put("segmentedDownloadConcurrency", it) }
         wifiOnlyDownload?.let { o.put("wifiOnlyDownload", it) }
         downloadSpeedLimitKbps?.let { o.put("downloadSpeedLimitKbps", it) }
+        skipDownloaded?.let { o.put("skipDownloaded", it) }
         return o.toString(2)
     }
 
@@ -88,6 +90,7 @@ data class AppSettingsBackup(
                 segmentedDownloadConcurrency = o.optIntOrNull("segmentedDownloadConcurrency"),
                 wifiOnlyDownload = o.optBooleanOrNull("wifiOnlyDownload"),
                 downloadSpeedLimitKbps = o.optIntOrNull("downloadSpeedLimitKbps"),
+                skipDownloaded = o.optBooleanOrNull("skipDownloaded"),
             )
         }
 
@@ -148,6 +151,11 @@ object AppSettingsBackupRules {
             } else {
                 null
             },
+            skipDownloaded = if (settings.hasSkipDownloaded()) {
+                settings.skipDownloaded
+            } else {
+                null
+            },
         )
 
     /**
@@ -171,6 +179,7 @@ object AppSettingsBackupRules {
         backup.segmentedDownloadConcurrency?.let { b.setSegmentedDownloadConcurrency(it) }
         backup.wifiOnlyDownload?.let { b.setWifiOnlyDownload(it) }
         backup.downloadSpeedLimitKbps?.let { b.setDownloadSpeedLimitKbps(it) }
+        backup.skipDownloaded?.let { b.setSkipDownloaded(it) }
 
         // 枚举按**名字**读回来；名字不认识（旧版/手改过）就保持原值，不猜
         backup.videoParsePlatform

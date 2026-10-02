@@ -65,6 +65,17 @@ class AppSettingsRepository(
         if (settings.hasDownloadSpeedLimitKbps()) settings.downloadSpeedLimitKbps else 0
     }
 
+    /** 「跳过已下载」（没设置过 = 关，见 proto 注释） */
+    val skipDownloadedFlow: Flow<Boolean> = appSettingsFlow.map { settings ->
+        if (settings.hasSkipDownloaded()) settings.skipDownloaded else false
+    }
+
+    suspend fun isSkipDownloaded(): Boolean = skipDownloadedFlow.first()
+
+    suspend fun updateSkipDownloaded(enabled: Boolean) {
+        dataStore.updateData { it.toBuilder().setSkipDownloaded(enabled).build() }
+    }
+
     suspend fun isWifiOnlyDownload(): Boolean = wifiOnlyDownloadFlow.first()
 
     suspend fun getDownloadSpeedLimitKbps(): Int = downloadSpeedLimitFlow.first()

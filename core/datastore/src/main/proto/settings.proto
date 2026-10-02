@@ -118,4 +118,9 @@ message AppSettings {
   optional bool wifi_only_download = 22;
   optional int32 download_speed_limit_kbps = 23;
 
+  // 「跳过已下载」（2026-10-02 B4）：开了之后，同一个 platformId + 下载模式如果已经有
+  // "完成且文件还在"的记录，就不再重下，直接复用那条记录。
+  // 默认**关**：新功能一律 opt-in，不能静默改变用户已有的下载行为。
+  optional bool skip_downloaded = 24;
+
 }
