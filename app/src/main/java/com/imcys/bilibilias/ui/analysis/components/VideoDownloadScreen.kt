@@ -434,7 +434,7 @@ fun UgcSeasonPageScreen(
                 ?: "",
             label = stringResource(R.string.analysis_select_part_video),
             values = episodes,
-            onValue = { downloadModeLabel(it) },
+            onValue = { it.title },
             onSelect = {
                 onSelectEpisodeId.invoke(it.id)
             },

@@ -536,7 +536,7 @@ private fun AdvancedSetting(
                     ASCommonExposedDropdownMenu(
                         modifier = Modifier.fillMaxWidth(),
                         values = downloadModeList,
-                        onValue = { downloadModeLabel(it) },
+                        onValue = { it.title },
                         label = stringResource(R.string.analysis_select_cache_mode),
                         text = selectDownloadMode.title,
                         onSelect = {

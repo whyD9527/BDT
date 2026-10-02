@@ -237,7 +237,7 @@ class NewDownloadManager(
                     runCatching {
                         downloadTaskRepository.updateSegment(segment.copy(downloadState = DownloadState.COMPLETED))
                     }
-                    trace("启动清理: 恢复已完成（记录已指向交付过的文件）segmentId=${segment.segmentId}")
+                    Log.d(TAG, "启动清理: 恢复已完成（记录已指向交付过的文件）segmentId=${segment.segmentId}")
                 }
 
                 DownloadStartupRules.StartupAction.DISCARD_KEEP_FILES -> {
