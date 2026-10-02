@@ -876,6 +876,30 @@ class FileOutputManager(
             .getOrElse { emptyList() }
             .any { it == displayName }
 
+    /**
+     * 把**已下载的文件**移到下载目录下的某个子目录（B2 批量移动）。
+     *
+     * 走 MediaStore 的 `RELATIVE_PATH` 更新（MediaProvider 支持的"移动"语义）：
+     * - 行的 `_ID` 不变 → **记录里的 `savePath`（content URI）依然有效**，
+     *   所以移动之后"已完成下载"里点开仍然能找到文件；
+     * - 不加 `(N)` 后缀问题：这里改的是**路径**不是显示名，不触发那台 ROM 的撞名改名逻辑。
+     *
+     * ⚠️ 返回 false 的常见原因：这条行不是本应用拥有的（别人的副本）——
+     * 那就需要系统确认或「所有文件访问」，界面据此提示。
+     */
+    fun moveDownloadFileToSubDir(uriString: String, subDirName: String): Boolean = runCatching {
+        val clean = subDirName.trim().trim('/')
+        if (clean.isEmpty() || clean.contains("..")) return@runCatching false
+        val target = "${DownloadDir.RELATIVE_PATH}/$clean/"
+        val values = ContentValues().apply {
+            put(MediaStore.Downloads.RELATIVE_PATH, target)
+        }
+        val moved = context.contentResolver
+            .update(Uri.parse(uriString), values, null, null) > 0
+        trace("批量移动: ${uriString.substringAfterLast("/")} → $target 结果=$moved")
+        moved
+    }.getOrElse { false }
+
     /** 轨迹文件是否有内容（界面用它区分"导出失败"和"还没产生日志"） */
     fun hasTraceLog(): Boolean = traceFile().let { it.exists() && it.length() > 0L }
 

@@ -139,6 +139,8 @@ fun DownloadScreen(route: DownloadRoute, onToBack: () -> Unit) {
 
     // 「文件已丢失」清单：列表变化时探一次（文件被外部删掉后，记录还在，但要让用户看得见）
     val missingFileIds by vm.missingFileIds.collectAsState()
+    var showMoveSelectedDialog by remember { mutableStateOf(false) }
+    var moveSubDirName by remember { mutableStateOf("") }
     val errorSegments by vm.errorSegments.collectAsState()
     LaunchedEffect(completedSegments) {
         vm.refreshMissingFiles(completedSegments)
@@ -204,6 +206,19 @@ fun DownloadScreen(route: DownloadRoute, onToBack: () -> Unit) {
         }
     }
 
+    if (showMoveSelectedDialog) {
+        MoveSelectedDialog(
+            name = moveSubDirName,
+            onNameChange = { moveSubDirName = it },
+            onConfirm = {
+                vm.moveSelectedTasks(selectDeleteList.toList(), moveSubDirName.trim())
+                showMoveSelectedDialog = false
+                moveSubDirName = ""
+            },
+            onDismiss = { showMoveSelectedDialog = false },
+        )
+    }
+
     DownloadScaffold(onToBack = onToBack) { paddingValues ->
         Column(Modifier.padding(paddingValues)) {
             AnimatedContent(downloadFinishEditState, label = "toolbar") { isEditing ->
@@ -212,7 +227,27 @@ fun DownloadScreen(route: DownloadRoute, onToBack: () -> Unit) {
                         completedSegments = completedSegments,
                         selectDeleteList = selectDeleteList,
                         onCancelEdit = { downloadFinishEditState = false },
-                        onShowDeleteDialog = { showDeleteDialog = true }
+                        onShowDeleteDialog = { showDeleteDialog = true },
+                        onShowMoveDialog = { showMoveSelectedDialog = true },
+                        onShareSelected = {
+                            // 批量分享：必须带 FLAG_GRANT_READ_URI_PERMISSION，
+                            // 否则接收方读不到 content://media/...（URI 授权是按 Intent 授的）
+                            val uris = selectDeleteList
+                                .mapNotNull { it.savePath.takeIf { p -> p.startsWith("content://") } }
+                                .map { android.net.Uri.parse(it) }
+                            if (uris.isEmpty()) {
+                                sendToastEventOnBlocking("选中的记录里没有可分享的文件")
+                            } else {
+                                runCatching {
+                                    val share = Intent(Intent.ACTION_SEND_MULTIPLE).apply {
+                                        type = "video/*"
+                                        putParcelableArrayListExtra(Intent.EXTRA_STREAM, ArrayList(uris))
+                                        addFlags(Intent.FLAG_GRANT_READ_URI_PERMISSION)
+                                    }
+                                    context.startActivity(Intent.createChooser(share, "分享选中的文件"))
+                                }.onFailure { sendToastEventOnBlocking("没有能接收分享的应用") }
+                            }
+                        },
                     )
                 } else {
                     PageChangeTools(
@@ -620,7 +655,9 @@ private fun EditTopTools(
     completedSegments: List<DownloadSegment>,
     selectDeleteList: SnapshotStateList<DownloadSegment>,
     onCancelEdit: () -> Unit,
-    onShowDeleteDialog: () -> Unit
+    onShowDeleteDialog: () -> Unit,
+    onShowMoveDialog: () -> Unit,
+    onShareSelected: () -> Unit,
 ) {
     Row(
         Modifier
@@ -650,6 +687,20 @@ private fun EditTopTools(
             },
         ) {
             Text(stringResource(R.string.download_select_all))
+        }
+
+        OutlinedButton(
+            shape = CardDefaults.shape,
+            onClick = onShowMoveDialog,
+        ) {
+            Text(stringResource(R.string.batch_move))
+        }
+
+        OutlinedButton(
+            shape = CardDefaults.shape,
+            onClick = onShareSelected,
+        ) {
+            Text(stringResource(R.string.batch_share))
         }
 
         Button(
@@ -728,4 +779,44 @@ private fun RetryAllFailedCard(
             TextButton(onClick = onRetry) { Text(stringResource(R.string.retry_all_failed)) }
         }
     }
+}
+
+
+/**
+ * 批量移动的目标子目录输入框（B2）。
+ *
+ * 只输入**子目录名**（如 `番剧`），完整路径是 `Download/BDT/<名字>/` ——
+ * 不允许 `..`：那等于让 UI 能写到下载目录外面去（FileOutputManager 里也兜了一层）。
+ */
+@Composable
+private fun MoveSelectedDialog(
+    name: String,
+    onNameChange: (String) -> Unit,
+    onConfirm: () -> Unit,
+    onDismiss: () -> Unit,
+) {
+    androidx.compose.material3.AlertDialog(
+        onDismissRequest = onDismiss,
+        title = { Text(stringResource(R.string.batch_move)) },
+        text = {
+            Column {
+                Text(stringResource(R.string.batch_move_hint), fontSize = 12.sp)
+                androidx.compose.material3.OutlinedTextField(
+                    value = name,
+                    onValueChange = onNameChange,
+                    singleLine = true,
+                    label = { Text(stringResource(R.string.batch_move_label)) },
+                )
+            }
+        },
+        confirmButton = {
+            TextButton(
+                onClick = onConfirm,
+                enabled = name.isNotBlank() && !name.contains(".."),
+            ) { Text(stringResource(R.string.batch_move_confirm)) }
+        },
+        dismissButton = {
+            TextButton(onClick = onDismiss) { Text(stringResource(R.string.dialog_cancel)) }
+        },
+    )
 }

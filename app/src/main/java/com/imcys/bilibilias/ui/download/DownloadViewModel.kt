@@ -318,6 +318,24 @@ class DownloadViewModel(
     /**
      * 删除多个下载任务及文件
      */
+    /**
+     * 批量移动选中的文件到下载目录下的子目录（B2）。
+     *
+     * 只移动文件、不动记录：content URI 不变，所以记录照旧有效（见 FileOutputManager 的注释）。
+     */
+    fun moveSelectedTasks(segments: List<DownloadSegment>, subDirName: String) {
+        if (segments.isEmpty()) return
+        viewModelScope.launch {
+            val moved = withContext(Dispatchers.IO) {
+                segments.count { fileOutputManager.moveDownloadFileToSubDir(it.savePath, subDirName) }
+            }
+            sendToast(
+                if (moved > 0) "已移动 $moved 个文件到 $subDirName/"
+                else "没有文件被移动（可能不是本应用的文件，需要「所有文件访问」或系统确认）"
+            )
+        }
+    }
+
     fun deleteSelectedTasks(segments: List<DownloadSegment>) {
         viewModelScope.launch(Dispatchers.IO) {
             segments.forEach { segment ->
