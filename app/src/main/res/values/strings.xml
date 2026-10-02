@@ -363,4 +363,20 @@
     <string name="delete_done">删除成功</string>
     <string name="delete_file_not_exist">文件不存在</string>
     <string name="delete_failed">删除失败，文件可能已经被删除或不存在</string>
+    <!-- i18n 批次 E4：首页（复用 home_announcement / cd_avatar / common_cancel / login_title） -->
+    <string name="home_bulletin_empty">暂无最新公告</string>
+    <string name="home_update_title">更新内容</string>
+    <string name="home_update_template">新增：\n%1$s\n修复：\n%2$s</string>
+    <string name="home_update_alpha_hint">Alpha版本请关注频道更新通知或GitHub Action构建。</string>
+    <string name="home_download_dir_hint">请在Download/%1$s目录下查看下载内容</string>
+    <string name="home_no_cache_task">暂无缓存任务</string>
+    <string name="cd_icon">图标</string>
+    <string name="cd_go">前往</string>
+    <string name="cd_close">关闭</string>
+    <string name="cd_download_list">下载列表</string>
+    <string name="cd_download_list_icon">下载列表图标</string>
+    <string name="cd_download_detail_list">下载详情列表</string>
+    <string name="cd_settings">设置</string>
+    <string name="cd_video_analysis">视频解析</string>
+    <string name="common_confirm_action">确认</string>
 </resources>

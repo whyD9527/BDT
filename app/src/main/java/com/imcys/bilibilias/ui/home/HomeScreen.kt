@@ -385,8 +385,8 @@ private fun HomeContent(
                                         .animateItem()
                                         .animateContentSize(),
                                     R.drawable.ic_brand_awareness_24px,
-                                    "公告",
-                                    bulletinInfo?.content ?: "暂无最新公告",
+                                    stringResource(R.string.home_announcement),
+                                    bulletinInfo?.content ?: stringResource(R.string.home_bulletin_empty),
                                     onClickClose = {
                                         closeBulletinDialogShow = true
                                     },
@@ -421,23 +421,22 @@ private fun HomeContent(
                                 val content = when (getASBuildType(BuildConfig.FLAVOR)) {
                                     ASBuildType.OFFICIAL,
                                     ASBuildType.BETA -> {
-                                        """
-                                    新增：
-                                    ${appUpdateInfo?.feat}
-                                    修复：
-                                    ${appUpdateInfo?.fix}
-                                """.trimIndent()
+                                        stringResource(
+                                            R.string.home_update_template,
+                                            appUpdateInfo?.feat.orEmpty(),
+                                            appUpdateInfo?.fix.orEmpty(),
+                                        )
                                     }
 
                                     ASBuildType.ALPHA -> appUpdateInfo?.feat
-                                        ?: "Alpha版本请关注频道更新通知或GitHub Action构建。"
+                                        ?: stringResource(R.string.home_update_alpha_hint)
                                 }
                                 CommonInfoCard(
                                     modifier = Modifier
                                         .animateItem()
                                         .animateContentSize(),
                                     R.drawable.ic_info_24px,
-                                    "更新内容",
+                                    stringResource(R.string.home_update_title),
                                     content,
                                     onClick = {
                                         context.openLink(appUpdateInfo?.url ?: "")
@@ -510,13 +509,13 @@ private fun HomeContent(
                                                         tool.icon?.let {
                                                             Icon(
                                                                 it,
-                                                                contentDescription = "图标",
+                                                                contentDescription = stringResource(R.string.cd_icon),
                                                                 modifier = Modifier
                                                             )
                                                         } ?: run {
                                                             Icon(
                                                                 painter = painterResource(tool.iconRes!!),
-                                                                contentDescription = "图标",
+                                                                contentDescription = stringResource(R.string.cd_icon),
                                                                 modifier = Modifier
                                                             )
                                                         }
@@ -529,7 +528,7 @@ private fun HomeContent(
                                                         ) {
                                                             Icon(
                                                                 Icons.AutoMirrored.Outlined.ArrowForward,
-                                                                contentDescription = "前往"
+                                                                contentDescription = stringResource(R.string.cd_go)
                                                             )
                                                         }
                                                     }
@@ -552,7 +551,7 @@ private fun HomeContent(
 
             item(key = "home_footer") {
                 Text(
-                    "请在Download/${com.imcys.bilibilias.download.DownloadDir.NAME}目录下查看下载内容",
+                    stringResource(R.string.home_download_dir_hint, com.imcys.bilibilias.download.DownloadDir.NAME),
                     fontSize = 14.sp,
                     fontWeight = FontWeight(330),
                     modifier = Modifier
@@ -659,12 +658,12 @@ private fun CloseBulletinDialog(
         },
         confirmButton = {
             ASTextButton(onClick = onClickConfirm) {
-                Text(text = "确认")
+                Text(text = stringResource(R.string.common_confirm_action))
             }
         },
         dismissButton = {
             ASTextButton(onClick = onClickDismiss) {
-                Text(text = "取消")
+                Text(text = stringResource(R.string.common_cancel))
             }
         }
     )
@@ -688,7 +687,7 @@ private fun BulletinDialog(
         },
         confirmButton = {
             ASTextButton(onClick = onClickConfirm) {
-                Text(text = "确认")
+                Text(text = stringResource(R.string.common_confirm_action))
             }
         },
     )
@@ -713,7 +712,7 @@ private fun DownloadListCard(
             Row(verticalAlignment = Alignment.CenterVertically) {
                 Icon(
                     Icons.Outlined.Download,
-                    contentDescription = "下载列表图标",
+                    contentDescription = stringResource(R.string.cd_download_list_icon),
                     tint = MaterialTheme.colorScheme.onSurface,
                     modifier = Modifier
                         .size(24.dp)
@@ -721,7 +720,7 @@ private fun DownloadListCard(
                 )
                 Spacer(Modifier.width(8.dp))
                 Text(
-                    "下载列表",
+                    stringResource(R.string.cd_download_list),
                     fontSize = 16.sp,
                     fontWeight = FontWeight.W400,
                     modifier = Modifier.alpha(0.72f),
@@ -732,7 +731,7 @@ private fun DownloadListCard(
                 }, modifier = Modifier.size(30.dp)) {
                     Icon(
                         Icons.AutoMirrored.Outlined.ArrowForward,
-                        contentDescription = "下载详情列表"
+                        contentDescription = stringResource(R.string.cd_download_detail_list)
                     )
                 }
             }
@@ -758,7 +757,7 @@ private fun DownloadListCard(
                         }
                 } else {
                     Text(
-                        "暂无缓存任务",
+                        stringResource(R.string.home_no_cache_task),
                         modifier = Modifier.alpha(0.72f),
                         fontSize = 14.sp,
                         fontWeight = FontWeight(330),
@@ -829,7 +828,7 @@ private fun HomeScaffold(
                                     modifier = Modifier
                                         .size(40.dp),
                                     shape = CircleShape,
-                                    contentDescription = "头像",
+                                    contentDescription = stringResource(R.string.cd_avatar),
                                     onClick = {
                                         haptics.performHapticFeedback(HapticFeedbackType.ContextClick)
                                         goToUserPage()
@@ -847,12 +846,12 @@ private fun HomeScaffold(
                                     }) {
                                         Icon(
                                             Icons.Outlined.AccountCircle,
-                                            contentDescription = "登录"
+                                            contentDescription = stringResource(R.string.login_title)
                                         )
                                     }
                                     Spacer(Modifier.width(2.dp))
                                     ASIconButton(onClick = goToSetting) {
-                                        Icon(Icons.Outlined.Settings, contentDescription = "设置")
+                                        Icon(Icons.Outlined.Settings, contentDescription = stringResource(R.string.cd_settings))
                                     }
                                 }
                             },
@@ -863,7 +862,7 @@ private fun HomeScaffold(
                                 }) {
                                     Icon(
                                         Icons.Outlined.AccountCircle,
-                                        contentDescription = "登录"
+                                        contentDescription = stringResource(R.string.login_title)
                                     )
                                 }
                             })
@@ -895,7 +894,7 @@ private fun HomeScaffold(
                                         animatedVisibilityScope = animatedContentScope
                                     ),
                                     imageVector = Icons.Outlined.Search,
-                                    contentDescription = "视频解析",
+                                    contentDescription = stringResource(R.string.cd_video_analysis),
                                 )
                             }
                         }
@@ -951,7 +950,7 @@ private fun CommonInfoCard(
                         ASIconButton(onClick = onClickClose, modifier = Modifier.size(30.dp)) {
                             Icon(
                                 Icons.Outlined.Close,
-                                contentDescription = "关闭"
+                                contentDescription = stringResource(R.string.cd_close)
                             )
                         }
                     }
@@ -999,7 +998,7 @@ private fun LoginInfoBottomDialog(
                     ) {
                         ASAsyncImage(
                             model = loginUserInfoState.data?.face,
-                            contentDescription = "头像",
+                            contentDescription = stringResource(R.string.cd_avatar),
                             modifier = Modifier.size(100.dp),
                             shape = MaterialShapes.Square.toShape()
                         )

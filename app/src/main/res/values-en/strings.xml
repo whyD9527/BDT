@@ -363,4 +363,20 @@
     <string name="delete_done">Deleted</string>
     <string name="delete_file_not_exist">File not found</string>
     <string name="delete_failed">Delete failed; the file may already be gone</string>
+    <!-- i18n batch E4: home screen -->
+    <string name="home_bulletin_empty">No announcement yet</string>
+    <string name="home_update_title">What is new</string>
+    <string name="home_update_template">Added:\n%1$s\nFixed:\n%2$s</string>
+    <string name="home_update_alpha_hint">For Alpha builds, follow the channel or GitHub Actions for updates.</string>
+    <string name="home_download_dir_hint">Find your downloads under Download/%1$s</string>
+    <string name="home_no_cache_task">No cached tasks yet</string>
+    <string name="cd_icon">Icon</string>
+    <string name="cd_go">Go</string>
+    <string name="cd_close">Close</string>
+    <string name="cd_download_list">Download list</string>
+    <string name="cd_download_list_icon">Download list icon</string>
+    <string name="cd_download_detail_list">Download details</string>
+    <string name="cd_settings">Settings</string>
+    <string name="cd_video_analysis">Video analysis</string>
+    <string name="common_confirm_action">Confirm</string>
 </resources>
