@@ -794,9 +794,11 @@ class FileOutputManager(
     fun exportTraceLog(): String? = runCatching {
         val src = traceFile()
         if (!src.exists() || src.length() == 0L) return@runCatching null
+        // ⚠️ 后缀必须与 MIME(text/plain) 一致：以前写成 `.log`，MediaProvider 会补成
+        // `.log.txt`（2026-10-02 真机看到的就是双后缀）。
         val name = "BDT-诊断日志-" +
             java.text.SimpleDateFormat("yyyyMMdd-HHmmss", java.util.Locale.ROOT).format(java.util.Date()) +
-            ".log"
+            ".txt"
 
         if (Build.VERSION.SDK_INT < Build.VERSION_CODES.Q) {
             val dir = DownloadDir.dir().apply { mkdirs() }

@@ -1,5 +1,6 @@
 package com.imcys.bilibilias.data.repository
 
+import com.imcys.bilibilias.data.download.naming.PageNamingRules
 import com.imcys.bilibilias.data.model.download.DownloadTaskTree
 import com.imcys.bilibilias.data.model.download.DownloadTreeNode
 import com.imcys.bilibilias.data.model.download.DownloadViewInfo
@@ -474,7 +475,9 @@ class DownloadTaskRepository(
         val segments = pages.map { page ->
 
             val mNamingConvention = namingConventionInfo.copy(
-                pTitle = page.part,
+                // ⚠️ 只有多 P 才填分 P 标题：单 P 的 `page.part` 基本等于视频标题本身，
+                // 填进去会渲染成「标题_标题.mp4」（2026-10-02 真机实测，见 PageNamingRules）
+                pTitle = PageNamingRules.partTitleForNaming(allPages.size, page.part),
                 p = (allPages.indexOf(page) + 1).toString(),
                 cid = page.cid.toString(),
             )
