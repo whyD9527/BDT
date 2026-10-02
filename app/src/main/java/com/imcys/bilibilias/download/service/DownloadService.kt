@@ -14,6 +14,7 @@ import androidx.core.app.ServiceCompat
 import com.imcys.bilibilias.MainActivity
 import com.imcys.bilibilias.R
 import com.imcys.bilibilias.common.utils.DOWNLOAD_NOTIFICATION_CHANNEL_ID
+import com.imcys.bilibilias.download.NewDownloadManager
 
 
 class DownloadService : Service() {
