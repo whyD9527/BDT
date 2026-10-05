@@ -15,8 +15,6 @@
 
     <!-- Login related strings -->
     <string name="login_title">لاگ ان</string>
-    <string name="login_qrcode_title">بیلیبیلی QR کوڈ لاگ ان</string>
-    <string name="login_cookie_title">بیلیبیلی کوکی لاگ ان</string>
     <string name="login_use_cookie">کوکی سے لاگ ان کریں</string>
     <string name="login_after_you_can">لاگ ان کے بعد آپ کر سکتے ہیں:</string>
     <string name="login_benefits"><![CDATA[· زیادہ اعلیٰ معیار اور زیادہ بٹ ریٹ ویڈیوز کی حمایت\n· ڈرامہ (Bangumi) کیشنگ کی سہولت\n· پریمیم ممبر فوائد سے استفادہ\n· رومنگ سروس سے لطف اندوزی]]></string>

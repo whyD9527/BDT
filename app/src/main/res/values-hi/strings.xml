@@ -16,8 +16,6 @@
 
     <!-- Login related strings -->
     <string name="login_title">लॉगिन</string>
-    <string name="login_qrcode_title">Bilibili QR कोड से लॉगइन</string>
-    <string name="login_cookie_title">Bilibili कुकी से लॉगइन</string>
     <string name="login_use_cookie">कुकी से लॉगिन करें</string>
     <string name="login_after_you_can">लॉगिन के बाद आप यह कर सकते हैं:</string>
     <string name="login_benefits"><![CDATA[·बेहतर गुणवत्ता वाले वीडियो का समर्थन\n·एनीमेशन कैश का समर्थन\n·प्रीमियम सदस्य फ़ायदे का उपयोग\n·रोमिंग सेवा का लाभ]]></string>

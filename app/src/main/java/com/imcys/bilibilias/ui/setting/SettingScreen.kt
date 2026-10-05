@@ -103,7 +103,6 @@ fun SettingScreen(
     onToBack: () -> Unit,
     onToAbout: () -> Unit = {},
     onToFeedback: () -> Unit = {},
-    onToSystemExpand: () -> Unit = {},
     onToStorageManagement: () -> Unit = {},
     onToNamingConvention: () -> Unit = {},
     onToLineConfig: () -> Unit = {},

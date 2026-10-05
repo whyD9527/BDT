@@ -16,8 +16,6 @@
 
     <!-- Login related strings -->
     <string name="login_title">Đăng nhập</string>
-    <string name="login_qrcode_title">Đăng nhập bằng mã QR Bilibili</string>
-    <string name="login_cookie_title">Đăng nhập bằng Cookie Bilibili</string>
     <string name="login_use_cookie">Đăng nhập bằng Cookie</string>
     <string name="login_after_you_can">Sau khi đăng nhập, bạn có thể:</string>
     <string name="login_benefits"><![CDATA[·Hỗ trợ video chất lượng cao hơn và bitrate cao hơn\n·Hỗ trợ lưu trữ anime\n·Sử dụng các quyền lợi thành viên cao cấp\n·Sử dụng dịch vụ chuyển vùng]]></string>

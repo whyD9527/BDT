@@ -65,6 +65,7 @@ import androidx.compose.runtime.getValue
 import androidx.compose.runtime.key
 import androidx.compose.runtime.mutableIntStateOf
 import androidx.compose.runtime.mutableStateOf
+import androidx.compose.runtime.saveable.rememberSaveable
 import androidx.compose.runtime.remember
 import androidx.compose.runtime.rememberCoroutineScope
 import androidx.compose.runtime.setValue
@@ -89,6 +90,7 @@ import com.imcys.bilibilias.R
 import com.imcys.bilibilias.common.data.ASBuildType
 import com.imcys.bilibilias.common.data.getASBuildType
 import com.imcys.bilibilias.common.utils.AppUtils.getVersion
+import com.imcys.bilibilias.common.utils.AsRegexUtil
 import com.imcys.bilibilias.common.utils.openLink
 import com.imcys.bilibilias.data.model.BILILoginUserModel
 import com.imcys.bilibilias.database.entity.BILIUsersEntity
@@ -146,6 +148,21 @@ internal fun HomeScreen(
     val downloadListState by vm.downloadListState.collectAsState()
     val appSettings by vm.appSettings.collectAsState(initial = AppSettings.getDefaultInstance())
     val windowsWidthSizeClass = rememberWidthSizeClass()
+
+    // #7 首页主输入智能分流：输入框现在真的能吃内容（以前是个点一下就跳解析页的空壳）
+    var homeInputText by rememberSaveable { mutableStateOf("") }
+    // 认得出是 B 站内容（BV/av/ep/ss/短链/用户空间）→ 直接带进解析页解析；
+    // 认不出来的不猜：照旧打开解析页（WebParser 是独立工具，不并进主输入）
+    val submitHomeInput: () -> Unit = {
+        val text = homeInputText.trim()
+        if (AsRegexUtil.parse(text) != null) {
+            homeInputText = ""
+            goToPage(AnalysisRoute(asInputText = text))
+        } else {
+            homeInputText = ""
+            goToAnalysis()
+        }
+    }
 
 
     ClipboardAutoHandler(
@@ -253,12 +270,10 @@ internal fun HomeScreen(
                                 horizontalAlignment = Alignment.CenterHorizontally
                             ) {
                                 Surface(
-                                    onClick = goToAnalysis,
                                     shape = CardDefaults.shape,
                                     modifier = Modifier.animateContentSize()
                                 ) {
-                                    ASCardTextField(
-                                        hint = stringResource(R.string.card_text_field_hint),
+                                    Row(
                                         modifier = Modifier
                                             .then(
                                                 if (windowsWidthSizeClass != WindowWidthSizeClass.Compact &&
@@ -272,24 +287,40 @@ internal fun HomeScreen(
                                                 ),
                                                 animatedVisibilityScope = animatedContentScope
                                             ),
-                                        value = "",
-                                        onValueChange = {},
-                                        enabled = false,
-                                        readOnly = true,
-                                        leadingIcon = {
-                                            Icon(
-                                                modifier = Modifier.sharedElement(
-                                                    sharedTransitionScope.rememberSharedContentState(
-                                                        key = "icon-input-analysis"
+                                        verticalAlignment = Alignment.CenterVertically
+                                    ) {
+                                        ASCardTextField(
+                                            hint = stringResource(R.string.card_text_field_hint),
+                                            modifier = Modifier.weight(1f),
+                                            value = homeInputText,
+                                            onValueChange = { homeInputText = it },
+                                            // ⚠️ 以前是 readOnly 的空壳，autoFocus 无所谓；
+                                            // 现在能输入了，进首页就自动弹键盘会挡住内容
+                                            autoFocus = false,
+                                            clearFocusWhenValueEmptied = true,
+                                            leadingIcon = {
+                                                Icon(
+                                                    modifier = Modifier.sharedElement(
+                                                        sharedTransitionScope.rememberSharedContentState(
+                                                            key = "icon-input-analysis"
+                                                        ),
+                                                        animatedVisibilityScope = animatedContentScope
                                                     ),
-                                                    animatedVisibilityScope = animatedContentScope
-                                                ),
-                                                imageVector = Icons.Outlined.Search,
+                                                    imageVector = Icons.Outlined.Search,
+                                                    tint = MaterialTheme.colorScheme.onPrimary,
+                                                    contentDescription = null
+                                                )
+                                            }
+                                        )
+                                        // 「去解析」按钮：认得出来就直接解析，认不出来就去解析页
+                                        ASIconButton(onClick = submitHomeInput) {
+                                            Icon(
+                                                imageVector = Icons.AutoMirrored.Outlined.ArrowForward,
                                                 tint = MaterialTheme.colorScheme.onPrimary,
-                                                contentDescription = null
+                                                contentDescription = stringResource(R.string.cd_parse_input)
                                             )
                                         }
-                                    )
+                                    }
                                 }
                                 Spacer(Modifier.height(20.dp))
                             }

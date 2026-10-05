@@ -16,8 +16,6 @@
 
     <!-- Login related strings -->
     <string name="login_title">ចូលគណនី</string>
-    <string name="login_qrcode_title">ចូលដោយ QR របស់ Bilibili</string>
-    <string name="login_cookie_title">ចូលដោយ Cookie របស់ Bilibili</string>
     <string name="login_use_cookie">ចូល​ដោយ Cookie</string>
     <string name="login_after_you_can">នៅពេលដែលអ្នកចូល អ្នកអាច:</string>
     <string name="login_benefits"><![CDATA[·គាំទ្រវីដេអូដែលមានគុណភាពខ្ពស់ និងអត្រាបញ្ជូនខ្ពស់\n·គាំទ្ររឿងកុនសំរាប់ផ្ទុក\n·ប្រើប្រាស់សិទ្ធិសមាជិកពិសេស\n·ប្រើសេវាកម្ម Roaming]]></string>

@@ -16,8 +16,6 @@
 
     <!-- Login related strings -->
     <string name="login_title">تسجيل الدخول</string>
-    <string name="login_qrcode_title">تسجيل الدخول برمز QR لـ Bilibili</string>
-    <string name="login_cookie_title">تسجيل الدخول عبر ملفات تعريف الارتباط لـ Bilibili</string>
     <string name="login_use_cookie">تسجيل الدخول بالكوكيز</string>
     <string name="login_after_you_can">بعد تسجيل الدخول يمكنك:</string>
     <string name="login_benefits"><![CDATA[·دعم فيديوهات بجودة أعلى ومعدل نقل أعلى\n·دعم تخزين الرسوم المتحركة\n·استخدام مزايا العضوية المميزة\n·استخدام خدمة التجوال]]></string>

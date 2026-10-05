@@ -34,6 +34,8 @@ import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.unit.dp
 import androidx.navigation3.runtime.NavKey
 import com.imcys.bilibilias.R
+import com.imcys.bilibilias.widget.ASMessageAction
+import com.imcys.bilibilias.widget.ASMessagePage
 import kotlinx.serialization.Serializable
 import org.koin.androidx.compose.koinViewModel
 
@@ -104,65 +106,28 @@ private fun DefaultScreen(
     paddingValues: PaddingValues,
     onRetry: () -> Unit = {}
 ) {
-
-    Column(
-        modifier = Modifier
-            .fillMaxSize()
-            .padding(paddingValues)
-            .padding(40.dp)
-            .verticalScroll(rememberScrollState()),
-        horizontalAlignment = Alignment.CenterHorizontally
-    ) {
-        Spacer(Modifier.height(40.dp))
-        Icon(
-            painter = painterResource(R.drawable.ic_cloud_alert_24px),
-            contentDescription = stringResource(R.string.cd_server_error_icon),
-            modifier = Modifier.size(64.dp),
-            tint = MaterialTheme.colorScheme.primary
-        )
-
-        Text(
-            text = stringResource(R.string.request_frequent_incident),
-            style = MaterialTheme.typography.headlineMedium,
-            modifier = Modifier.padding(top = 20.dp),
-        )
-        Text(
-            text = stringResource(R.string.request_frequent_server_busy),
-            style = MaterialTheme.typography.bodyLarge,
-            modifier = Modifier.padding(top = 20.dp),
-            textAlign = TextAlign.Center
-        )
-        Text(
-            text = stringResource(R.string.request_frequent_warning),
-            style = MaterialTheme.typography.bodyMedium,
-            modifier = Modifier.padding(top = 20.dp),
-            textAlign = TextAlign.Center
-        )
-
-        Button(
-            onClick = onRetry,
-            modifier = Modifier
-                .padding(top = 40.dp)
-                .fillMaxWidth(),
-            shape = CardDefaults.shape,
-        ) {
-            Text(text = stringResource(R.string.common_retry))
-        }
-
-        // 退出APP的按钮
-        OutlinedButton(
-            onClick = {
-                killProcess(android.os.Process.myPid())
-            },
-            modifier = Modifier
-                .padding(top = 16.dp)
-                .fillMaxWidth(),
-            shape = CardDefaults.shape,
-        ) {
-            Text(text = stringResource(R.string.request_frequent_exit_app))
-        }
-
-    }
+    // #6（2026-10-05）：排版收敛到通用提示页组件（与「大会员凭证失效」页共用一份实现）
+    ASMessagePage(
+        title = stringResource(R.string.request_frequent_incident),
+        modifier = Modifier.padding(paddingValues),
+        iconRes = R.drawable.ic_cloud_alert_24px,
+        messages = listOf(
+            stringResource(R.string.request_frequent_server_busy),
+            stringResource(R.string.request_frequent_warning),
+        ),
+        actions = listOf(
+            ASMessageAction(
+                text = stringResource(R.string.common_retry),
+                onClick = onRetry,
+            ),
+            // 退出APP的按钮
+            ASMessageAction(
+                text = stringResource(R.string.request_frequent_exit_app),
+                onClick = { killProcess(android.os.Process.myPid()) },
+                secondary = true,
+            ),
+        ),
+    )
 }
 
 @OptIn(ExperimentalMaterial3Api::class)

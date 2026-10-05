@@ -16,8 +16,6 @@
 
     <!-- Login related strings -->
     <string name="login_title">Вход</string>
-    <string name="login_qrcode_title">Вход по QR-коду Bilibili</string>
-    <string name="login_cookie_title">Вход по cookie Bilibili</string>
     <string name="login_use_cookie">Войти с помощью cookie</string>
     <string name="login_after_you_can">После входа вы сможете:</string>
     <string name="login_benefits"><![CDATA[·Поддержка видео с более высоким качеством и битрейтом\n·Поддержка кэширования аниме\n·Возможность использования премиальных прав\n·Возможность пользоваться услугой роуминга]]></string>

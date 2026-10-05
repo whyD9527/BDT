@@ -16,8 +16,6 @@
 
     <!-- Login related strings -->
     <string name="login_title">ログイン</string>
-    <string name="login_qrcode_title">ビリビリQRコードログイン</string>
-    <string name="login_cookie_title">ビリビリCookieログイン</string>
     <string name="login_use_cookie">Cookieでログイン</string>
     <string name="login_after_you_can">ログイン後できること：</string>
     <string name="login_benefits"><![CDATA[·より高い画質・高ビットレートの動画対応\n·アニメのキャッシュ対応\n·プレミアム会員特典の使用\n·ローミングサービスの利用]]></string>

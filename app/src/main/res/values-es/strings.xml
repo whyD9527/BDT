@@ -16,8 +16,6 @@
 
     <!-- Login related strings -->
     <string name="login_title">Iniciar Sesión</string>
-    <string name="login_qrcode_title">Inicio de sesión con código QR de BiliBili</string>
-    <string name="login_cookie_title">Inicio de sesión con Cookie de BiliBili</string>
     <string name="login_use_cookie">Iniciar sesión con Cookie</string>
     <string name="login_after_you_can">Después de iniciar sesión puedes:</string>
     <string name="login_benefits"><![CDATA[·Soportar vídeos con mayor calidad y tasa de bits\n·Soportar caché de anime\n·Soportar privilegios de gran miembro\n·Soportar servicio de roaming]]></string>

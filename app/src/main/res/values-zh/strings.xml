@@ -16,8 +16,6 @@
 
     <!-- Login related strings -->
     <string name="login_title">登录</string>
-    <string name="login_qrcode_title">B站扫码登录</string>
-    <string name="login_cookie_title">B站Cookie登录</string>
     <string name="login_use_cookie">使用Cookie登录</string>
     <string name="login_after_you_can">登录后你可以：</string>
     <string name="login_benefits"><![CDATA[·支持更高清、更高码率的视频\n·支持番剧缓存\n·支持使用大会员权益\n·支持享受漫游服务]]></string>

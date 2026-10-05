@@ -62,8 +62,6 @@ import com.imcys.bilibilias.ui.setting.contract.NamingConventionRoute
 import com.imcys.bilibilias.ui.setting.contract.NamingConventionScreen
 import com.imcys.bilibilias.ui.setting.developer.LineConfigRoute
 import com.imcys.bilibilias.ui.setting.developer.LineConfigScreen
-import com.imcys.bilibilias.ui.setting.expand.SystemExpandRoute
-import com.imcys.bilibilias.ui.setting.expand.SystemExpandScreen
 import com.imcys.bilibilias.ui.setting.layout.LayoutTypesetRoute
 import com.imcys.bilibilias.ui.setting.layout.LayoutTypesetScreen
 import com.imcys.bilibilias.ui.setting.navigation.SettingRoute
@@ -288,7 +286,6 @@ fun BILIBILAISNavDisplay() {
                         onToLayoutTypeset = { backStack.addWithReuse(LayoutTypesetRoute) },
                         onToAbout = { backStack.addWithReuse(AboutRouter) },
                         onToFeedback = { backStack.addWithReuse(FeedbackRoute) },
-                        onToSystemExpand = { backStack.addWithReuse(SystemExpandRoute) },
                         onToStorageManagement = { backStack.addWithReuse(StorageManagementRoute) },
                         onToNamingConvention = { backStack.addWithReuse(NamingConventionRoute) },
                         onToLineConfig = { backStack.addWithReuse(LineConfigRoute) },
@@ -358,13 +355,6 @@ fun BILIBILAISNavDisplay() {
                         frameExtractorRoute = it,
                         onToBack = { backStack.removeLastOrNullSafe() }
                     )
-                }
-                entry<SystemExpandRoute>(
-                    metadata = ListDetailSceneStrategy.detailPane()
-                ) {
-                    SystemExpandScreen(systemExpandRoute = it, onToBack = {
-                        backStack.removeLastOrNullSafe()
-                    })
                 }
                 entry<StorageManagementRoute>(
                     metadata = ListDetailSceneStrategy.detailPane()
