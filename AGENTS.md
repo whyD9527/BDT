@@ -57,3 +57,40 @@
 8. `SystemExpandRoute` 处置（收进"高级"折叠或删除，动手前 grep 确认无其它引用）。
 
 **每完成一批 → 本地校验 → 一次推送 → CI 双绿（Fallback to alphaDebug = skipped）→ 用户装包 → 真机逐条复验 → 发版。**
+
+### 剩余条目的可执行锚点（2026-10-05 实测定位，动手即可）
+
+> 说明：#1「工具卡片去前往」**已查证不成立** —— 工具卡片是 `Surface(onClick)` 整块可点，
+> 全仓没有裸"前往"字符串（只有 `update_go_download`＝前往下载、`roam_go_login`＝前往登录，均保留）。**已划掉**。
+
+**#2 存储"目录文件/孤儿文件"并入下载管理**（同源：都按名字扫下载目录）
+- 存储侧（`ui/setting/storage/StorageManagementScreen.kt`）：状态 `showLocalFilesDialog`(:163)、`localFiles`(:164)；
+  卡片 `title = R.string.download_dir_files`(:261) → `fileOutputManager.listDownloadFiles()`(:268) → 打开对话框(:277-301，
+  内含删除项 `localFiles.remove(file)`(:301)）；对话框实现 `private fun LocalFilesDialog(`(:~320 之后)
+- 下载侧（`ui/download/DownloadScreen.kt`）：`duplicateGroups`(:179)、`showDuplicateDialog`(:183)、
+  `DuplicateFilesCard(...)`(:316，已按需渲染)、`onClean = { showDuplicateDialog = true }`(:321)、对话框渲染(:417-424)、
+  `private fun DuplicateFilesCard(`(:450)
+- 做法：把 `LocalFilesDialog` 提到共享位置并改为可复用（`internal`/移入 `ui/download/`），
+  在 `DuplicateFilesCard` 里加第二个入口（如"列出目录文件"）指向它；随后**删除存储侧那张卡片与状态**，
+  存储页只留"空间占用 + 清缓存"。
+
+**#3 设置分组折叠**（`ui/setting/SettingScreen.kt`，`fun SettingScreen(`(:100) 起）
+- 目标四组：下载（下载与缓存＝合并 `缓存配置`+`缓存目录`+`存储管理`、命名规则、线路＝`线路配置`+`解析平台`、速度＝限速+分片并发）
+  / 外观（主题色、首页排版）/ 数据（备份与恢复合一、问题反馈）/ 关于（版本+检查更新、隐私政策、账户、许可）
+- 现成积木：`BaseSettingsItem(`（各行都在用）、分组标题形如 `Text("高级")`(:~2152 区域)；回调已在 `SettingScreen(` 参数里
+  （`onToStorageManagement`/`onToNamingConvention`/`onToLineConfig`/`onToSystemExpand`/`onToLayoutTypeset`…）
+
+**#4 四个用户列表页合一**：`LikeVideoRoute`、`BangumiFollowRoute`、`UserPlayHistoryRoute`、`WorkListRoute`
+  → 抽象一个通用列表页（来源枚举 + 分页），并改「我的」页四个入口指向它（`ui/user/**`）
+
+**#5 三个登录路由合一**：`LoginNavigation.kt` 里的 `LoginRoute`/`QRCodeLoginRoute`/`CookeLoginRoute`
+  → 合成一个「登录」页两个 Tab（扫码 / Cookie）；设置里「账户」行对齐
+
+**#6 两个错误页合一**：`PlayVoucherErrorNavigation.kt`、`RequestFrequentScreen.kt` → 抽通用提示页组件（文案/按钮参数化）
+
+**#7 首页主输入智能分流**：`ui/home/**` 的输入框 → B 站链接/番剧/短链直接解析；
+  普通网页仍走独立 `WebParserScreen`（已定：其 WebView 嗅探脆弱，不并入主输入）
+
+**#8 `SystemExpandRoute` 处置**：`ui/setting/expand/SystemExpandScreen.kt`（已补 `@Serializable`）
+  → 先 `grep -rn "SystemExpandRoute" --include=*.kt`（当前离线点：设置"高级"里一行 + 导航 entry），
+  决定收进折叠区或删除；删除时连 `onToSystemExpand` 参数一起清理
