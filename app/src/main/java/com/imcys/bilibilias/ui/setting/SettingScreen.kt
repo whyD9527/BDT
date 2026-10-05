@@ -51,6 +51,7 @@ import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
 import androidx.compose.runtime.rememberCoroutineScope
+import androidx.compose.runtime.saveable.rememberSaveable
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
@@ -79,7 +80,7 @@ import com.imcys.bilibilias.ui.widget.ASTopAppBar
 import com.imcys.bilibilias.ui.widget.AsBackIconButton
 import com.imcys.bilibilias.ui.widget.BILIBILIASTopAppBarStyle
 import com.imcys.bilibilias.ui.widget.BaseSettingsItem
-import com.imcys.bilibilias.ui.widget.CategorySettingsItem
+import com.imcys.bilibilias.ui.widget.CollapsibleCategorySettingsItem
 import com.imcys.bilibilias.ui.widget.SwitchSettingsItem
 import com.imcys.bilibilias.widget.dialog.PermissionRequestTipDialog
 import kotlinx.coroutines.Dispatchers
@@ -150,8 +151,15 @@ fun SettingScreen(
     var showLogoutLoading by remember { mutableStateOf(false) }
     var showPrivacyPolicy by remember { mutableStateOf(false) }
     var showPrivacyPolicyRefuseTip by remember { mutableStateOf(false) }
-    var showSegmentConcurrencyDialog by remember { mutableStateOf(false) }
-    var showSpeedLimitDialog by remember { mutableStateOf(false) }
+    // #3：下载速度（限速 + 分片并发）合成一个弹窗；备份与恢复合成一个弹窗
+    var showSpeedDialog by remember { mutableStateOf(false) }
+    var showBackupDialog by remember { mutableStateOf(false) }
+    // #3 四组折叠的展开状态。用 rememberSaveable：后台化回来不会全部塌回去。
+    // 下载组默认展开（最常用），其余三组折叠 —— 首屏从 ~20 行降到 ~7 行。
+    var downloadGroupExpanded by rememberSaveable { mutableStateOf(true) }
+    var appearanceGroupExpanded by rememberSaveable { mutableStateOf(false) }
+    var dataGroupExpanded by rememberSaveable { mutableStateOf(false) }
+    var aboutGroupExpanded by rememberSaveable { mutableStateOf(false) }
 
     // 下载策略（B5）。proto 里是 optional：没设置过 → 仅Wi-Fi=关、限速=不限
     val wifiOnlyDownload = if (appSettings.hasWifiOnlyDownload()) appSettings.wifiOnlyDownload else false
@@ -168,6 +176,51 @@ fun SettingScreen(
         else null
     )
 
+    // 「下载速度」一行的摘要：限速 +（开了分片下载时）并发数
+    val speedLimitText =
+        if (speedLimitKbps <= 0) stringResource(R.string.speed_limit_none) else "$speedLimitKbps KB/s"
+    val speedSummary = stringResource(R.string.setting_speed_limit_short, speedLimitText) +
+        if (segmentedEnabled) {
+            " · " + stringResource(R.string.setting_concurrency_short, segmentedConcurrency)
+        } else {
+            ""
+        }
+
+    // 「备份与恢复」的导出动作（原来挂在"备份设置"那一行上，现在弹窗里复用同一份实现）
+    val exportBackupSettings: () -> Unit = {
+        val settings = currentAppSettings
+        if (settings == null) {
+            Toast.makeText(backupContext, backupContext.getString(R.string.setting_not_loaded), Toast.LENGTH_SHORT).show()
+        } else {
+            backupScope.launch {
+                val name = withContext(Dispatchers.IO) {
+                    val ts = java.text.SimpleDateFormat(
+                        "yyyyMMdd-HHmmss", java.util.Locale.ROOT
+                    ).format(java.util.Date())
+                    val version = runCatching {
+                        backupContext.packageManager
+                            .getPackageInfo(backupContext.packageName, 0).versionName
+                    }.getOrNull().orEmpty()
+                    val backup = com.imcys.bilibilias.data.backup.AppSettingsBackupRules
+                        .from(settings, ts, version)
+                    backupFileOutputManager.exportTextToDownload(
+                        "BDT-设置备份-$ts.json",
+                        backup.toJson(),
+                    )
+                }
+                Toast.makeText(
+                    backupContext,
+                    if (name != null) {
+                        backupContext.getString(R.string.setting_backup_exported, name)
+                    } else {
+                        backupContext.getString(R.string.setting_backup_export_failed)
+                    },
+                    Toast.LENGTH_LONG,
+                ).show()
+            }
+        }
+    }
+
 
     SettingScaffold(scrollBehavior, onToBack) {
 
@@ -178,390 +231,247 @@ fun SettingScreen(
                 .nestedScroll(scrollBehavior.nestedScrollConnection),
         ) {
 
-            item {
-                CategorySettingsItem(
-                    text = stringResource(R.string.analysis_cache_config)
+            // ==================== 分组一：下载 ====================
+            // #3（2026-10-05）：原来 ~20 行平铺（缓存配置/缓存目录/存储管理 三个入口说的是一件事），
+            // 现在四组折叠：下载组默认展开（最常用），其余三组折叠，首屏 ~7 行。
+            item(key = "group_download") {
+                CollapsibleCategorySettingsItem(
+                    text = stringResource(R.string.setting_group_download),
+                    description = stringResource(R.string.setting_group_download_desc),
+                    expanded = downloadGroupExpanded,
+                    onToggle = { downloadGroupExpanded = !downloadGroupExpanded },
                 )
             }
-//            item {
-//                SwitchSettingsItem(
-//                    imageVector = Icons.Outlined.EnergySavingsLeaf,
-//                    text = "省电模式",
-//                    description = "开启后将不使用FFmpeg进行视频处理，改用原生API处理。",
-//                    checked = false,
-//                ) {
-//
-//                }
-//            }
-//
-//            item {
-//                SwitchSettingsItem(
-//                    painter = rememberVectorPainter(Icons.Outlined.AudioFile),
-//                    text = "音频转码",
-//                    description = "启用选择仅音频缓存可以得到mp3的音频文件",
-//                    checked = false,
-//                ) {
-//                }
-//            }
-
-//            item {
-//                BaseSettingsItem(
-//                    painter = rememberVectorPainter(Icons.Outlined.DriveFileRenameOutline),
-//                    text = "命名规则",
-//                    descriptionText = "使用自定义规则进行视频命名",
-//                    onClick = {
-//                    }
-//                )
-//            }
-
-            item {
-                BaseSettingsItem(
-                    painter = painterResource(R.drawable.ic_save_24px),
-                    text = stringResource(R.string.setting_storage_management),
-                    descriptionText = stringResource(R.string.setting_storage_management_desc),
-                    onClick = onToStorageManagement
-                )
-            }
-
-
-            item {
-                BaseSettingsItem(
-                    painter = rememberVectorPainter(Icons.Outlined.Save),
-                    text = stringResource(R.string.setting_cache_dir),
-                    descriptionText = com.imcys.bilibilias.download.DownloadDir.RELATIVE_PATH,
-                    onClick = {
-                    }
-                )
-            }
-
-
-
-            item {
-                BaseSettingsItem(
-                    painter = rememberVectorPainter(Icons.Outlined.Edit),
-                    text = stringResource(R.string.setting_naming_convention),
-                    descriptionText = stringResource(R.string.setting_naming_rule_desc),
-                    onClick = onToNamingConvention
-                )
-            }
-
-            item {
-                BaseSettingsItem(
-                    painter = rememberVectorPainter(Icons.Outlined.Save),
-                    text = stringResource(R.string.backup_settings),
-                    descriptionText = stringResource(R.string.backup_settings_desc),
-                    onClick = {
-                        val settings = currentAppSettings
-                        if (settings == null) {
-                            Toast.makeText(backupContext, backupContext.getString(R.string.setting_not_loaded), Toast.LENGTH_SHORT).show()
-                        } else {
-                            backupScope.launch {
-                                val name = withContext(Dispatchers.IO) {
-                                    val ts = java.text.SimpleDateFormat(
-                                        "yyyyMMdd-HHmmss", java.util.Locale.ROOT
-                                    ).format(java.util.Date())
-                                    val version = runCatching {
-                                        backupContext.packageManager
-                                            .getPackageInfo(backupContext.packageName, 0).versionName
-                                    }.getOrNull().orEmpty()
-                                    val backup = com.imcys.bilibilias.data.backup.AppSettingsBackupRules
-                                        .from(settings, ts, version)
-                                    backupFileOutputManager.exportTextToDownload(
-                                        "BDT-设置备份-$ts.json",
-                                        backup.toJson(),
-                                    )
-                                }
-                                Toast.makeText(
-                                    backupContext,
-                                    if (name != null) {
-                                        backupContext.getString(R.string.setting_backup_exported, name)
-                                    } else {
-                                        backupContext.getString(R.string.setting_backup_export_failed)
-                                    },
-                                    Toast.LENGTH_LONG,
-                                ).show()
-                            }
-                        }
-                    }
-                )
-            }
-
-            item {
-                BaseSettingsItem(
-                    painter = rememberVectorPainter(Icons.Outlined.Cloud),
-                    text = stringResource(R.string.restore_settings),
-                    descriptionText = stringResource(R.string.restore_settings_desc),
-                    onClick = { restoreSettingsLauncher.launch(arrayOf("application/json", "*/*")) }
-                )
-            }
-
-
-            item {
-                SwitchSettingsItem(
-                    imageVector = Icons.Outlined.Bolt,
-                    text = stringResource(R.string.setting_segmented_title),
-                    description = stringResource(R.string.setting_segmented_desc),
-                    checked = segmentedEnabled,
-                ) { check ->
-                    haptics.switchHapticFeedback(check)
-                    vm.updateSegmentedDownloadEnabled(check)
+            if (downloadGroupExpanded) {
+                // 「下载与缓存」＝ 合并原来的 缓存配置 + 缓存目录 + 存储管理：
+                // 三行本来就是一件事（都指向 Download/BDT），描述直接显示真实目录
+                item(key = "download_cache") {
+                    BaseSettingsItem(
+                        painter = painterResource(R.drawable.ic_save_24px),
+                        text = stringResource(R.string.setting_download_cache),
+                        descriptionText = com.imcys.bilibilias.download.DownloadDir.RELATIVE_PATH,
+                        onClick = onToStorageManagement
+                    )
                 }
-            }
 
-            item {
-                SwitchSettingsItem(
-                    imageVector = Icons.Outlined.Cloud,
-                    text = stringResource(R.string.wifi_only_download),
-                    description = stringResource(R.string.wifi_only_download_desc),
-                    checked = wifiOnlyDownload,
-                ) { check ->
-                    haptics.switchHapticFeedback(check)
-                    backupScope.launch { appSettingsRepository.updateWifiOnlyDownload(check) }
+                item(key = "naming_convention") {
+                    BaseSettingsItem(
+                        painter = rememberVectorPainter(Icons.Outlined.Edit),
+                        text = stringResource(R.string.setting_naming_convention),
+                        descriptionText = stringResource(R.string.setting_naming_rule_desc),
+                        onClick = onToNamingConvention
+                    )
                 }
-            }
 
-            item {
-                SwitchSettingsItem(
-                    imageVector = Icons.Outlined.Policy,
-                    text = stringResource(R.string.skip_downloaded),
-                    description = stringResource(R.string.skip_downloaded_desc),
-                    checked = skipDownloaded,
-                ) { check ->
-                    haptics.switchHapticFeedback(check)
-                    backupScope.launch { appSettingsRepository.updateSkipDownloaded(check) }
+                item(key = "line_config") {
+                    BaseSettingsItem(
+                        painter = rememberVectorPainter(Icons.Outlined.Cloud),
+                        text = stringResource(R.string.developer_line_config),
+                        descriptionText = stringResource(R.string.setting_line_config_desc),
+                        onClick = onToLineConfig
+                    )
                 }
-            }
 
-            item {
-                BaseSettingsItem(
-                    painter = rememberVectorPainter(Icons.Outlined.Speed),
-                    text = stringResource(R.string.download_speed_limit),
-                    descriptionText = if (speedLimitKbps <= 0) stringResource(R.string.speed_limit_none) else "$speedLimitKbps KB/s",
-                    onClick = { showSpeedLimitDialog = true }
-                )
-            }
+                item(key = "parse_platform") {
+                    BaseSettingsItem(
+                        painter = rememberVectorPainter(Icons.Outlined.Hub),
+                        text = stringResource(R.string.setting_parse_platform),
+                        descriptionText = stringResource(R.string.setting_parse_platform_desc),
+                        onClick = { onToPage(ParsePlatformRoute) }
+                    )
+                }
 
-            if (segmentedEnabled) {
-                item {
+                // 「下载速度」＝ 合并 限速 + 分片并发：两个数都是"下载多快"，合成一个弹窗选择
+                item(key = "download_speed") {
                     BaseSettingsItem(
                         painter = rememberVectorPainter(Icons.Outlined.Speed),
-                        text = stringResource(R.string.setting_segmented_concurrency_title),
-                        descriptionText = stringResource(R.string.setting_segmented_concurrency_desc, segmentedConcurrency),
-                        onClick = { showSegmentConcurrencyDialog = true }
+                        text = stringResource(R.string.setting_download_speed),
+                        descriptionText = speedSummary,
+                        onClick = { showSpeedDialog = true }
                     )
                 }
-            }
 
-
-            item {
-                CategorySettingsItem(
-                    text = stringResource(R.string.setting_theme_category)
-                )
-            }
-            item {
-                SwitchSettingsItem(
-                    imageVector = Icons.Outlined.Palette,
-                    text = stringResource(R.string.setting_dynamic_color),
-                    description = stringResource(R.string.setting_dynamic_color_desc),
-                    checked = appSettings.enabledDynamicColor,
-                ) { check ->
-                    haptics.switchHapticFeedback(check)
-                    vm.updateEnabledDynamicColor(check)
-                }
-            }
-
-            if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.TIRAMISU) {
-                item {
-                    CategorySettingsItem(
-                        text = stringResource(R.string.setting_permission_category)
-                    )
-                }
-            }
-
-            item {
-                DownloadPostNotifications()
-            }
-
-
-            item {
-                CategorySettingsItem(
-                    text = stringResource(R.string.setting_layout_category)
-                )
-            }
-
-            item {
-                BaseSettingsItem(
-                    painter = rememberVectorPainter(Icons.AutoMirrored.Outlined.ListAlt),
-                    text = stringResource(R.string.setting_home_layout),
-                    description = {},
-                    onClick = onToLayoutTypeset
-                )
-            }
-
-
-
-            item {
-                CategorySettingsItem(
-                    text = stringResource(R.string.setting_parse_category)
-                )
-            }
-
-            item {
-                BaseSettingsItem(
-                    painter = rememberVectorPainter(Icons.Outlined.Hub),
-                    text = stringResource(R.string.setting_parse_platform),
-                    descriptionText = stringResource(R.string.setting_parse_platform_desc),
-                    onClick = { onToPage(ParsePlatformRoute) }
-                )
-            }
-
-            item {
-                SwitchSettingsItem(
-                    imageVector = Icons.Default.ContentPaste,
-                    text = stringResource(R.string.setting_auto_parse),
-                    description = stringResource(R.string.setting_auto_parse_desc),
-                    checked = appSettings.enabledClipboardAutoHandling,
-                ) { check ->
-                    vm.updateClipboardAutoHandling(check)
-                }
-            }
-
-
-            item {
-                CategorySettingsItem(
-                    text = stringResource(R.string.setting_about_category)
-                )
-            }
-
-
-            item {
-                BaseSettingsItem(
-                    painter = rememberVectorPainter(Icons.Outlined.Group),
-                    text = stringResource(R.string.setting_about_item),
-                    descriptionText = stringResource(R.string.setting_about_desc),
-                    onClick = onToAbout
-                )
-
-            }
-
-
-            item {
-                BaseSettingsItem(
-                    painter = painterResource(R.drawable.ic_github_24px),
-                    text = stringResource(R.string.setting_github_repo),
-                    description = {},
-                    onClick = {
-                        val intent = Intent().apply {
-                            action = "android.intent.action.VIEW"
-                            // 原先指向原作者仓库 1250422131/bilibilias，改为本 fork 自己的地址
-                            data = "https://github.com/whyD9527/BDT".toUri()
-                        }
-                        context.startActivity(intent)
+                item(key = "segmented_download") {
+                    SwitchSettingsItem(
+                        imageVector = Icons.Outlined.Bolt,
+                        text = stringResource(R.string.setting_segmented_title),
+                        description = stringResource(R.string.setting_segmented_desc),
+                        checked = segmentedEnabled,
+                    ) { check ->
+                        haptics.switchHapticFeedback(check)
+                        vm.updateSegmentedDownloadEnabled(check)
                     }
-                )
+                }
+
+                item(key = "wifi_only_download") {
+                    SwitchSettingsItem(
+                        imageVector = Icons.Outlined.Cloud,
+                        text = stringResource(R.string.wifi_only_download),
+                        description = stringResource(R.string.wifi_only_download_desc),
+                        checked = wifiOnlyDownload,
+                    ) { check ->
+                        haptics.switchHapticFeedback(check)
+                        backupScope.launch { appSettingsRepository.updateWifiOnlyDownload(check) }
+                    }
+                }
+
+                item(key = "skip_downloaded") {
+                    SwitchSettingsItem(
+                        imageVector = Icons.Outlined.Policy,
+                        text = stringResource(R.string.skip_downloaded),
+                        description = stringResource(R.string.skip_downloaded_desc),
+                        checked = skipDownloaded,
+                    ) { check ->
+                        haptics.switchHapticFeedback(check)
+                        backupScope.launch { appSettingsRepository.updateSkipDownloaded(check) }
+                    }
+                }
             }
 
-//            item {
-//                BaseSettingsItem(
-//                    painter = painterResource(R.drawable.ic_licens_24px),
-//                    text = "第三方开源许可",
-//                    description = {},
-//                    onClick = {
-//
-//                    }
-//                )
-//            }
-
-//            item {
-//                CategorySettingsItem(
-//                    text = "投诉与反馈"
-//                )
-//            }
-//
-//            item {
-//                BaseSettingsItem(
-//                    painter = rememberVectorPainter(Icons.Outlined.MoodBad),
-//                    text = "投诉",
-//                    descriptionText = "向BDT投诉违规行为",
-//                    onClick = onToComplaint
-//                )
-//            }
-
-
-            item {
-                CategorySettingsItem(
-                    text = stringResource(R.string.setting_account_category)
+            // ==================== 分组二：外观 ====================
+            item(key = "group_appearance") {
+                CollapsibleCategorySettingsItem(
+                    text = stringResource(R.string.setting_group_appearance),
+                    description = stringResource(R.string.setting_group_appearance_desc),
+                    expanded = appearanceGroupExpanded,
+                    onToggle = { appearanceGroupExpanded = !appearanceGroupExpanded },
                 )
             }
+            if (appearanceGroupExpanded) {
+                item(key = "dynamic_color") {
+                    SwitchSettingsItem(
+                        imageVector = Icons.Outlined.Palette,
+                        text = stringResource(R.string.setting_dynamic_color),
+                        description = stringResource(R.string.setting_dynamic_color_desc),
+                        checked = appSettings.enabledDynamicColor,
+                    ) { check ->
+                        haptics.switchHapticFeedback(check)
+                        vm.updateEnabledDynamicColor(check)
+                    }
+                }
 
-            item {
-                // 合并后的**唯一**反馈/诊断入口：状态自检 + 设备与版本信息 + 诊断日志 + 一键导出反馈包
-                // （原先散在三处：存储管理导出日志、版本信息复制信息、工具列表的 BugReport；
-                //   2026-10-02 用户反馈"入口太散、还得自己找文件"→ 收敛到这里）
-                BaseSettingsItem(
-                    painter = rememberVectorPainter(Icons.Outlined.BugReport),
-                    text = stringResource(R.string.feedback_title),
-                    descriptionText = stringResource(R.string.feedback_subtitle),
-                    onClick = onToFeedback
-                )
-
-            }
-
-            item {
-                BaseSettingsItem(
-                    painter = rememberVectorPainter(Icons.Outlined.Policy),
-                    text = stringResource(R.string.common_privacy_policy),
-                    descriptionText = stringResource(
-                        R.string.setting_privacy_status,
-                        stringResource(
-                            when (appSettings.agreePrivacyPolicy) {
-                                Agreed -> R.string.setting_privacy_agreed
-                                Refuse -> R.string.setting_privacy_refused
-                                else -> R.string.setting_privacy_unselected
-                            }
-                        ),
-                    ),
-                    onClick = { showPrivacyPolicy = true }
-                )
-            }
-
-            if (uiState.isLogin) {
-                item {
+                item(key = "home_layout") {
                     BaseSettingsItem(
-                        painter = rememberVectorPainter(Icons.AutoMirrored.Default.Logout),
-                        text = stringResource(R.string.setting_logout),
-                        descriptionText = stringResource(R.string.setting_logout_desc),
-                        onClick = { showLogoutDialog = true }
+                        painter = rememberVectorPainter(Icons.AutoMirrored.Outlined.ListAlt),
+                        text = stringResource(R.string.setting_home_layout),
+                        description = {},
+                        onClick = onToLayoutTypeset
                     )
                 }
             }
 
-
-            item {
-                CategorySettingsItem(
-                    text = stringResource(R.string.setting_advanced_category)
+            // ==================== 分组三：数据 ====================
+            item(key = "group_data") {
+                CollapsibleCategorySettingsItem(
+                    text = stringResource(R.string.setting_group_data),
+                    description = stringResource(R.string.setting_group_data_desc),
+                    expanded = dataGroupExpanded,
+                    onToggle = { dataGroupExpanded = !dataGroupExpanded },
                 )
             }
+            if (dataGroupExpanded) {
+                // 「备份与恢复」合一：导出/导入都是一次性动作，一个弹窗里放两个按钮
+                item(key = "backup_and_restore") {
+                    BaseSettingsItem(
+                        painter = rememberVectorPainter(Icons.Outlined.Save),
+                        text = stringResource(R.string.setting_backup_and_restore),
+                        descriptionText = stringResource(R.string.setting_backup_and_restore_desc),
+                        onClick = { showBackupDialog = true }
+                    )
+                }
 
-            item {
-                BaseSettingsItem(
-                    painter = rememberVectorPainter(Icons.Outlined.Cloud),
-                    text = stringResource(R.string.developer_line_config),
-                    descriptionText = stringResource(R.string.setting_line_config_desc),
-                    onClick = onToLineConfig
-                )
+                item(key = "feedback") {
+                    // 唯一的反馈/诊断入口：状态自检 + 设备与版本信息 + 诊断日志 + 一键导出反馈包
+                    // （原先散在三处：存储管理导出日志、版本信息复制信息、工具列表的 BugReport）
+                    BaseSettingsItem(
+                        painter = rememberVectorPainter(Icons.Outlined.BugReport),
+                        text = stringResource(R.string.feedback_title),
+                        descriptionText = stringResource(R.string.feedback_subtitle),
+                        onClick = onToFeedback
+                    )
+                }
+
+                item(key = "clipboard_auto") {
+                    SwitchSettingsItem(
+                        imageVector = Icons.Default.ContentPaste,
+                        text = stringResource(R.string.setting_auto_parse),
+                        description = stringResource(R.string.setting_auto_parse_desc),
+                        checked = appSettings.enabledClipboardAutoHandling,
+                    ) { check ->
+                        vm.updateClipboardAutoHandling(check)
+                    }
+                }
+
+                item(key = "download_notification") {
+                    DownloadPostNotifications()
+                }
             }
 
+            // ==================== 分组四：关于 ====================
+            item(key = "group_about") {
+                CollapsibleCategorySettingsItem(
+                    text = stringResource(R.string.setting_group_about),
+                    description = stringResource(R.string.setting_group_about_desc),
+                    expanded = aboutGroupExpanded,
+                    onToggle = { aboutGroupExpanded = !aboutGroupExpanded },
+                )
+            }
+            if (aboutGroupExpanded) {
+                // 版本 + 检查更新都在「关于」页里（A-②）
+                item(key = "about") {
+                    BaseSettingsItem(
+                        painter = rememberVectorPainter(Icons.Outlined.Group),
+                        text = stringResource(R.string.setting_about_item),
+                        descriptionText = stringResource(R.string.setting_about_desc),
+                        onClick = onToAbout
+                    )
+                }
 
-//            item {
-//                BaseSettingsItem(
-//                    painter = rememberVectorPainter(Icons.Outlined.Extension),
-//                    text = "扩展能力",
-//                    descriptionText = "提交反馈时记得带上这个！",
-//                    onClick = onToSystemExpand
-//                )
-//            }
+                item(key = "privacy_policy") {
+                    BaseSettingsItem(
+                        painter = rememberVectorPainter(Icons.Outlined.Policy),
+                        text = stringResource(R.string.common_privacy_policy),
+                        descriptionText = stringResource(
+                            R.string.setting_privacy_status,
+                            stringResource(
+                                when (appSettings.agreePrivacyPolicy) {
+                                    Agreed -> R.string.setting_privacy_agreed
+                                    Refuse -> R.string.setting_privacy_refused
+                                    else -> R.string.setting_privacy_unselected
+                                }
+                            ),
+                        ),
+                        onClick = { showPrivacyPolicy = true }
+                    )
+                }
 
+                if (uiState.isLogin) {
+                    item(key = "logout") {
+                        BaseSettingsItem(
+                            painter = rememberVectorPainter(Icons.AutoMirrored.Default.Logout),
+                            text = stringResource(R.string.setting_logout),
+                            descriptionText = stringResource(R.string.setting_logout_desc),
+                            onClick = { showLogoutDialog = true }
+                        )
+                    }
+                }
+
+                item(key = "github_repo") {
+                    BaseSettingsItem(
+                        painter = painterResource(R.drawable.ic_github_24px),
+                        text = stringResource(R.string.setting_github_repo),
+                        description = {},
+                        onClick = {
+                            val intent = Intent().apply {
+                                action = "android.intent.action.VIEW"
+                                // 原先指向原作者仓库 1250422131/bilibilias，改为本 fork 自己的地址
+                                data = "https://github.com/whyD9527/BDT".toUri()
+                            }
+                            context.startActivity(intent)
+                        }
+                    )
+                }
+            }
         }
 
         // Dialog注册区域
@@ -588,17 +498,17 @@ fun SettingScreen(
             }
         )
 
-        // 下载限速选择（B5）：用标准 AlertDialog，别去凑旁边那个自定义组件的参数
-        if (showSpeedLimitDialog) {
+        // 下载速度（#3 合并：限速 + 分片并发，原来各占一行、各开一个弹窗）
+        if (showSpeedDialog) {
             androidx.compose.material3.AlertDialog(
-                onDismissRequest = { showSpeedLimitDialog = false },
-                title = { Text(stringResource(R.string.download_speed_limit)) },
+                onDismissRequest = { showSpeedDialog = false },
+                title = { Text(stringResource(R.string.setting_download_speed)) },
                 text = {
                     Column {
                         Text(stringResource(R.string.setting_speed_limit_hint))
                         listOf(0, 512, 1024, 2048, 4096).forEach { kbps ->
                             TextButton(onClick = {
-                                showSpeedLimitDialog = false
+                                showSpeedDialog = false
                                 backupScope.launch { appSettingsRepository.updateDownloadSpeedLimitKbps(kbps) }
                             }) {
                                 Text(
@@ -610,52 +520,79 @@ fun SettingScreen(
                                 )
                             }
                         }
+                        // 并发数只在开了分片下载时才有意义（与原来那个单独弹窗的条件一致）
+                        if (segmentedEnabled) {
+                            Text(stringResource(R.string.setting_segmented_concurrency_title))
+                            Text(
+                                stringResource(R.string.setting_concurrency_hint),
+                                style = MaterialTheme.typography.bodySmall,
+                                color = MaterialTheme.colorScheme.outline,
+                            )
+                            listOf(2, 4, 6, 8).forEach { option ->
+                                TextButton(onClick = {
+                                    vm.updateSegmentedDownloadConcurrency(option)
+                                    showSpeedDialog = false
+                                }) {
+                                    Text(
+                                        text = if (option == SegmentedDownloadPlan.DEFAULT_CONCURRENCY) {
+                                            stringResource(R.string.setting_concurrency_default, option)
+                                        } else {
+                                            "$option"
+                                        },
+                                        color = if (option == segmentedConcurrency) {
+                                            MaterialTheme.colorScheme.primary
+                                        } else {
+                                            MaterialTheme.colorScheme.onSurface
+                                        },
+                                    )
+                                }
+                            }
+                        }
                     }
                 },
                 confirmButton = {
-                    TextButton(onClick = { showSpeedLimitDialog = false }) { Text(stringResource(R.string.cd_close)) }
+                    TextButton(onClick = { showSpeedDialog = false }) { Text(stringResource(R.string.cd_close)) }
                 },
             )
         }
 
-        // 分片并发数选择
-        ASAlertDialog(
-            showState = showSegmentConcurrencyDialog,
-            title = { Text(stringResource(R.string.setting_segmented_concurrency_title)) },
-            text = {
-                Column(
-                    modifier = Modifier.fillMaxWidth(),
-                    horizontalAlignment = Alignment.CenterHorizontally
-                ) {
-                    Text(stringResource(R.string.setting_concurrency_hint))
-                    listOf(2, 4, 6, 8).forEach { option ->
+        // 备份与恢复（#3 合并：一行入口 → 弹窗里两个动作）
+        if (showBackupDialog) {
+            androidx.compose.material3.AlertDialog(
+                onDismissRequest = { showBackupDialog = false },
+                title = { Text(stringResource(R.string.setting_backup_and_restore)) },
+                text = {
+                    Column {
+                        Text(stringResource(R.string.setting_backup_and_restore_desc))
                         TextButton(onClick = {
-                            vm.updateSegmentedDownloadConcurrency(option)
-                            showSegmentConcurrencyDialog = false
+                            showBackupDialog = false
+                            exportBackupSettings()
                         }) {
-                            Text(
-                                text = if (option == SegmentedDownloadPlan.DEFAULT_CONCURRENCY) {
-                                    stringResource(R.string.setting_concurrency_default, option)
-                                } else {
-                                    "$option"
-                                },
-                                color = if (option == segmentedConcurrency) {
-                                    MaterialTheme.colorScheme.primary
-                                } else {
-                                    MaterialTheme.colorScheme.onSurface
-                                },
-                            )
+                            Text(stringResource(R.string.backup_settings))
                         }
+                        Text(
+                            stringResource(R.string.backup_settings_desc),
+                            style = MaterialTheme.typography.bodySmall,
+                            color = MaterialTheme.colorScheme.outline,
+                        )
+                        TextButton(onClick = {
+                            showBackupDialog = false
+                            restoreSettingsLauncher.launch(arrayOf("application/json", "*/*"))
+                        }) {
+                            Text(stringResource(R.string.restore_settings))
+                        }
+                        Text(
+                            stringResource(R.string.restore_settings_desc),
+                            style = MaterialTheme.typography.bodySmall,
+                            color = MaterialTheme.colorScheme.outline,
+                        )
                     }
-                }
-            },
-            onDismiss = { showSegmentConcurrencyDialog = false },
-            confirmButton = {
-                TextButton(onClick = { showSegmentConcurrencyDialog = false }) {
-                    Text(stringResource(R.string.common_cancel))
-                }
-            },
-        )
+                },
+                confirmButton = {
+                    TextButton(onClick = { showBackupDialog = false }) { Text(stringResource(R.string.cd_close)) }
+                },
+            )
+        }
 
         // 退出登录对话框
         ASAlertDialog(

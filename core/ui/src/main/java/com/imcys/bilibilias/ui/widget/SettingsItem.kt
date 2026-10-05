@@ -21,6 +21,8 @@ import androidx.compose.foundation.selection.selectable
 import androidx.compose.foundation.selection.toggleable
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material.icons.Icons
+import androidx.compose.material.icons.outlined.ExpandLess
+import androidx.compose.material.icons.outlined.ExpandMore
 import androidx.compose.material.icons.outlined.Info
 import androidx.compose.material3.Icon
 import androidx.compose.material3.LocalContentColor
@@ -431,6 +433,61 @@ fun CategorySettingsItem(text: String) {
         maxLines = 3,
         overflow = TextOverflow.Ellipsis,
     )
+}
+
+/**
+ * **可折叠**的分组标题（2026-10-05 / 设置分组折叠 #3）。
+ *
+ * 与 [CategorySettingsItem] 的区别：整行可点，右侧箭头显示展开状态。
+ * 设置页从"~20 行平铺"变成四组折叠后，首屏只需要放得下几行标题 ——
+ * 用户点哪组才展开哪组，比在长列表里翻找快得多。
+ *
+ * @param description 折叠状态下也能看到的一句摘要（可选）
+ */
+@OptIn(ExperimentalFoundationApi::class)
+@Composable
+fun CollapsibleCategorySettingsItem(
+    text: String,
+    expanded: Boolean,
+    onToggle: () -> Unit,
+    description: String? = null,
+) {
+    Row(
+        modifier = Modifier
+            .fillMaxWidth()
+            .combinedClickable(onLongClick = null) { onToggle() }
+            .padding(
+                start = 16.dp + 10.dp,
+                end = 20.dp,
+                top = 10.dp,
+                bottom = 5.dp
+            ),
+        verticalAlignment = Alignment.CenterVertically,
+    ) {
+        Column(modifier = Modifier.weight(1f)) {
+            Text(
+                text = text,
+                style = MaterialTheme.typography.titleMedium,
+                color = MaterialTheme.colorScheme.primary,
+                maxLines = 3,
+                overflow = TextOverflow.Ellipsis,
+            )
+            if (description != null) {
+                Text(
+                    text = description,
+                    style = MaterialTheme.typography.bodySmall,
+                    color = MaterialTheme.colorScheme.outline,
+                    maxLines = 2,
+                    overflow = TextOverflow.Ellipsis,
+                )
+            }
+        }
+        Icon(
+            imageVector = if (expanded) Icons.Outlined.ExpandLess else Icons.Outlined.ExpandMore,
+            contentDescription = null,
+            tint = MaterialTheme.colorScheme.primary,
+        )
+    }
 }
 
 @Composable
