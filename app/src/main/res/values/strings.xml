@@ -341,7 +341,7 @@
     <string name="duplicate_rechecked">已重新检查下载目录</string>
     <string name="duplicate_check">检查重复下载文件</string>
     <string name="duplicate_grant_and_check">授予视频权限并检查重复文件</string>
-    <string name="duplicate_check_hint">同一部视频若有多份副本，会在这里列出来由你确认删除（只删副本、保留正式名那份）</string>
+    <string name="duplicate_check_hint">有多种同名副本，可一键清理（只删副本）。</string>
     <string name="batch_share_empty">选中的记录里没有可分享的文件</string>
     <string name="batch_share_chooser_title">分享选中的文件</string>
     <string name="batch_share_no_app">没有能接收分享的应用</string>
@@ -368,8 +368,8 @@
     <string name="home_update_title">更新内容</string>
     <string name="home_update_template">新增：\n%1$s\n修复：\n%2$s</string>
     <string name="home_update_alpha_hint">Alpha版本请关注频道更新通知或GitHub Action构建。</string>
-    <string name="home_download_dir_hint">请在Download/%1$s目录下查看下载内容</string>
-    <string name="home_no_cache_task">暂无缓存任务</string>
+    <string name="home_download_dir_hint">下载内容在 Download/%1$s，完成后可在这里管理</string>
+    <string name="home_no_cache_task">还没有下载内容，粘贴链接就能开始</string>
     <string name="cd_icon">图标</string>
     <string name="cd_go">前往</string>
     <string name="cd_close">关闭</string>
@@ -578,7 +578,7 @@
     <string name="frame_extractor_importing">正在导入视频，请稍候...%1$d%%</string>
     <string name="frame_extractor_exporting">正在导出中，请不要退出...%1$d%%</string>
     <string name="frame_extractor_export">导出逐帧图片</string>
-    <string name="line_config_info">线路配置可在部分情况下重定向缓存资源的地址路径，从而加快缓存，但并不是任何时候都有用。</string>
+    <string name="line_config_info">换个线路，有时能明显更快。慢就点各行「检测」挑最快。</string>
     <string name="line_config_warning">如果你发现使用非自动线路后出现视频无法播放等问题，请切换回自动线路，这可能是内置的线路已经被废弃。</string>
     <string name="line_config_cdn_tip">这些加速由B站支持的CDN提供，全程不经过BDT服务器代理。 网速偏慢时，点各行「检测」测一下，再挑最快的线路（或直接点上方「选最快的」）。</string>
     <string name="line_config_detect">检测</string>
@@ -732,4 +732,9 @@
     <string name="clipboard_need_privacy_hint">已复制链接。同意隐私政策后可自动识别，无需手动粘贴。</string>
     <string name="download_slow_try_line_hint">网速偏慢？试试「设置 → 线路配置」换一条线路。</string>
     <string name="privacy_effective_date">生效日期：2026-10-03</string>
+    <!-- i18n：关于页 检查更新 -->
+    <string name="about_check_update">检查更新</string>
+    <string name="about_update_latest">已是最新</string>
+    <string name="about_update_found">发现新版本 %1$s</string>
+    <string name="about_need_privacy">需先同意隐私政策</string>
 </resources>

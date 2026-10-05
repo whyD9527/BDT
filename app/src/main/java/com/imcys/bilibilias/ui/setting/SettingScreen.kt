@@ -92,18 +92,15 @@ import org.koin.androidx.compose.koinViewModel
 fun SettingScreenPreview() {
     SettingScreen(
         onToBack = {},
-        onToComplaint = {},
         onToLayoutTypeset = {})
 }
 
 @OptIn(ExperimentalMaterial3Api::class, ExperimentalMaterial3ExpressiveApi::class)
 @Composable
 fun SettingScreen(
-    onToComplaint: () -> Unit,
     onToLayoutTypeset: () -> Unit,
     onToBack: () -> Unit,
     onToAbout: () -> Unit = {},
-    onToVersionInfo: () -> Unit = {},
     onToFeedback: () -> Unit = {},
     onToSystemExpand: () -> Unit = {},
     onToStorageManagement: () -> Unit = {},

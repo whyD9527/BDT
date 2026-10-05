@@ -1,5 +1,6 @@
 package com.imcys.bilibilias.ui.setting.about
 
+import kotlinx.coroutines.launch
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.PaddingValues
@@ -84,6 +85,11 @@ fun AboutContent(
     paddingValues: PaddingValues,
 ) {
     LazyColumn(
+        item {
+            // A-②：手动「检查更新」。**同样遵守隐私门槛**（未同意时不发请求）；
+            // 结果与失败原因都会写进诊断日志（download-trace.log 里搜「更新检查」即可核验）。
+            CheckUpdateButton()
+        }
         modifier = modifier
             .padding(paddingValues)
             .fillMaxSize(),
@@ -149,4 +155,45 @@ fun IconArea() {
         contentDescription = null,
         tint = MaterialTheme.colorScheme.primary,
     )
+}
+
+/** 关于页的「检查更新」按钮（A-②）。手动触发，但**仍受隐私门槛约束**。 */
+@Composable
+private fun CheckUpdateButton() {
+    val context = androidx.compose.ui.platform.LocalContext.current
+    val scope = androidx.compose.runtime.rememberCoroutineScope()
+    androidx.compose.material3.OutlinedButton(
+        onClick = {
+            scope.launch {
+                val koin = org.koin.core.context.GlobalContext.get()
+                val repo = koin.get<com.imcys.bilibilias.data.repository.AppSettingsRepository>()
+                val log = koin.get<com.imcys.bilibilias.download.FileOutputManager>()
+                val agreed = runCatching { repo.hasAgreedPrivacyPolicy() }.getOrDefault(false)
+                if (!agreed) {
+                    // 与自动检查同一门槛：未同意就不发请求（并留下日志）
+                    log.logDiagnostic("更新检查", "手动检查：未同意隐私政策，跳过（不发请求）")
+                    android.widget.Toast.makeText(
+                        context,
+                        context.getString(R.string.about_need_privacy),
+                        android.widget.Toast.LENGTH_SHORT,
+                    ).show()
+                    return@launch
+                }
+                val info = com.imcys.bilibilias.common.update.GitHubUpdateChecker.check(
+                    currentVersionName = com.imcys.bilibilias.BuildConfig.VERSION_NAME,
+                    abi = android.os.Build.SUPPORTED_ABIS.firstOrNull().orEmpty(),
+                    lastSkippedCode = runCatching { repo.getLastSkipUpdateVersionCode() }.getOrDefault(0),
+                ) { tag, message -> log.logDiagnostic(tag, message) }
+                android.widget.Toast.makeText(
+                    context,
+                    if (info != null) context.getString(R.string.about_update_found, info.tag)
+                    else context.getString(R.string.about_update_latest),
+                    android.widget.Toast.LENGTH_LONG,
+                ).show()
+            }
+        },
+        modifier = androidx.compose.ui.Modifier.fillMaxWidth(),
+    ) {
+        androidx.compose.material3.Text(stringResource(R.string.about_check_update))
+    }
 }

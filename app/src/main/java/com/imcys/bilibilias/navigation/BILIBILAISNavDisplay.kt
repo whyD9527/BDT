@@ -62,8 +62,6 @@ import com.imcys.bilibilias.ui.login.navigation.QRCodeLoginRoute
 import com.imcys.bilibilias.ui.setting.SettingScreen
 import com.imcys.bilibilias.ui.setting.about.AboutRouter
 import com.imcys.bilibilias.ui.setting.about.AboutScreen
-import com.imcys.bilibilias.ui.setting.complaint.ComplaintRoute
-import com.imcys.bilibilias.ui.setting.complaint.ComplaintScreen
 import com.imcys.bilibilias.ui.setting.contract.NamingConventionRoute
 import com.imcys.bilibilias.ui.setting.contract.NamingConventionScreen
 import com.imcys.bilibilias.ui.setting.developer.LineConfigRoute
@@ -77,8 +75,6 @@ import com.imcys.bilibilias.ui.setting.platform.ParsePlatformRoute
 import com.imcys.bilibilias.ui.setting.platform.ParsePlatformScreen
 import com.imcys.bilibilias.ui.setting.storage.StorageManagementRoute
 import com.imcys.bilibilias.ui.setting.storage.StorageManagementScreen
-import com.imcys.bilibilias.ui.setting.version.AppVersionInfoRoute
-import com.imcys.bilibilias.ui.setting.version.AppVersionInfoScreen
 import com.imcys.bilibilias.ui.tools.frame.FrameExtractorRoute
 import com.imcys.bilibilias.ui.tools.frame.FrameExtractorScreen
 import com.imcys.bilibilias.ui.tools.parser.WebParserRoute
@@ -307,10 +303,8 @@ fun BILIBILAISNavDisplay() {
                 ) {
                     SettingScreen(
                         onToBack = { backStack.removeLastOrNullSafe() },
-                        onToComplaint = { backStack.addWithReuse(ComplaintRoute) },
                         onToLayoutTypeset = { backStack.addWithReuse(LayoutTypesetRoute) },
                         onToAbout = { backStack.addWithReuse(AboutRouter) },
-                        onToVersionInfo = { backStack.addWithReuse(AppVersionInfoRoute) },
                         onToFeedback = { backStack.addWithReuse(FeedbackRoute) },
                         onToSystemExpand = { backStack.addWithReuse(SystemExpandRoute) },
                         onToStorageManagement = { backStack.addWithReuse(StorageManagementRoute) },
@@ -358,14 +352,7 @@ fun BILIBILAISNavDisplay() {
                         onToBack = { backStack.removeLastOrNullSafe() }
                     )
                 }
-                entry<ComplaintRoute>(
-                    metadata = ListDetailSceneStrategy.detailPane()
-                ) {
-                    ComplaintScreen(
-                        onToBack = { backStack.removeLastOrNullSafe() }
-                    )
-                }
-                entry<VideoCodingInfoRoute> {
+                                entry<VideoCodingInfoRoute> {
                     VideoCodingInfoScreen(
                         onToBack = { backStack.removeLastOrNullSafe() }
                     )
@@ -392,16 +379,7 @@ fun BILIBILAISNavDisplay() {
                         onToBack = { backStack.removeLastOrNullSafe() }
                     )
                 }
-                entry<AppVersionInfoRoute>(
-                    metadata = ListDetailSceneStrategy.detailPane()
-                ) {
-                    AppVersionInfoScreen(
-                        appVersionInfoRoute = it,
-                        onToBack = { backStack.removeLastOrNullSafe() }
-                    )
-                }
-
-                entry<FeedbackRoute>(
+                                entry<FeedbackRoute>(
                     metadata = ListDetailSceneStrategy.detailPane()
                 ) {
                     FeedbackScreen(

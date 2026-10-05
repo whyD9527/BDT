@@ -313,20 +313,22 @@ fun DownloadScreen(route: DownloadRoute, onToBack: () -> Unit) {
                 // 没有重复时也保留一个"检查"入口 —— 否则用户永远不知道有这个功能，
                 // 而权限（READ_MEDIA_VIDEO）没给时检测本就看不到别人创建的副本。
                 item(key = "duplicate_files_card") {
-                    DuplicateFilesCard(
-                        groupCount = duplicateGroups.size,
-                        removableCount = duplicateGroups.sumOf { it.removableNames.size },
-                        hasVideoPermission = hasVideoPermission,
-                        onClean = { showDuplicateDialog = true },
-                        onCheck = {
-                            if (hasVideoPermission) {
-                                vm.refreshDuplicateGroups()
-                                sendToastEventOnBlocking(context.getString(R.string.duplicate_rechecked))
-                            } else {
-                                videoPermissionLauncher.launch(Manifest.permission.READ_MEDIA_VIDEO)
-                            }
-                        },
-                    )
+                    if (duplicateGroups.isNotEmpty()) {
+                        DuplicateFilesCard(
+                            groupCount = duplicateGroups.size,
+                            removableCount = duplicateGroups.sumOf { it.removableNames.size },
+                            hasVideoPermission = hasVideoPermission,
+                            onClean = { showDuplicateDialog = true },
+                            onCheck = {
+                                if (hasVideoPermission) {
+                                    vm.refreshDuplicateGroups()
+                                    sendToastEventOnBlocking(context.getString(R.string.duplicate_rechecked))
+                                } else {
+                                    videoPermissionLauncher.launch(Manifest.permission.READ_MEDIA_VIDEO)
+                                }
+                            },
+                        )
+                    }
                 }
 
                 when (selectIndex) {

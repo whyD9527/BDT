@@ -341,7 +341,7 @@
     <string name="duplicate_rechecked">Download folder re-checked</string>
     <string name="duplicate_check">Check for duplicate downloads</string>
     <string name="duplicate_grant_and_check">Grant video permission and check</string>
-    <string name="duplicate_check_hint">If a video has several copies, they are listed here for you to confirm (only copies are deleted; the properly named file is kept)</string>
+    <string name="duplicate_check_hint">Duplicate copies found - clean them up (only copies are removed).</string>
     <string name="batch_share_empty">None of the selected records has a shareable file</string>
     <string name="batch_share_chooser_title">Share selected files</string>
     <string name="batch_share_no_app">No app can receive the share</string>
@@ -368,8 +368,8 @@
     <string name="home_update_title">What is new</string>
     <string name="home_update_template">Added:\n%1$s\nFixed:\n%2$s</string>
     <string name="home_update_alpha_hint">For Alpha builds, follow the channel or GitHub Actions for updates.</string>
-    <string name="home_download_dir_hint">Find your downloads under Download/%1$s</string>
-    <string name="home_no_cache_task">No cached tasks yet</string>
+    <string name="home_download_dir_hint">Downloads live in Download/%1$s - manage them here</string>
+    <string name="home_no_cache_task">Nothing here yet - paste a link to start</string>
     <string name="cd_icon">Icon</string>
     <string name="cd_go">Go</string>
     <string name="cd_close">Close</string>
@@ -578,7 +578,7 @@
     <string name="frame_extractor_importing">Importing video, please wait... %1$d%%</string>
     <string name="frame_extractor_exporting">Exporting, please do not exit... %1$d%%</string>
     <string name="frame_extractor_export">Export frames</string>
-    <string name="line_config_info">Line configuration can, in some cases, redirect where cached resources are fetched from to speed up caching, but it does not always help.</string>
+    <string name="line_config_info">Another line can be much faster. Tap Detect, then pick the fastest.</string>
     <string name="line_config_warning">If videos fail to play after switching to a non-automatic line, switch back to automatic; the built-in line may have been retired.</string>
     <string name="line_config_cdn_tip">This acceleration is provided by CDNs supported by Bilibili; traffic never goes through a BDT server. If downloads feel slow, tap Detect on each line and pick the fastest (or use Pick the fastest above).</string>
     <string name="line_config_detect">Test</string>
@@ -732,4 +732,9 @@
     <string name="clipboard_need_privacy_hint">Link copied. Agree to the privacy policy to detect it automatically.</string>
     <string name="download_slow_try_line_hint">Slow? Try another line in Settings → Line configuration.</string>
     <string name="privacy_effective_date">Effective date: 2026-10-03</string>
+    <!-- i18n: about - check for updates -->
+    <string name="about_check_update">Check for updates</string>
+    <string name="about_update_latest">You are up to date</string>
+    <string name="about_update_found">New version available: %1$s</string>
+    <string name="about_need_privacy">Agree to the privacy policy first</string>
 </resources>
