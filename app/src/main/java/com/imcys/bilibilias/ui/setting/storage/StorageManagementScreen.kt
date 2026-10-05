@@ -31,7 +31,6 @@ import android.provider.Settings
 import androidx.compose.runtime.DisposableEffect
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
-import androidx.compose.runtime.setValue
 import androidx.lifecycle.Lifecycle
 import androidx.lifecycle.LifecycleEventObserver
 import androidx.lifecycle.compose.LocalLifecycleOwner
@@ -50,9 +49,7 @@ import androidx.compose.foundation.verticalScroll
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.outlined.NorthEast
 import androidx.compose.material3.CardDefaults
-import androidx.compose.material3.CircularWavyProgressIndicator
 import androidx.compose.material3.ExperimentalMaterial3Api
-import androidx.compose.material3.ExperimentalMaterial3ExpressiveApi
 import androidx.compose.material3.Icon
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Scaffold
@@ -63,7 +60,6 @@ import androidx.compose.material3.windowsizeclass.WindowWidthSizeClass
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.collectAsState
-import androidx.compose.runtime.getValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.Color
@@ -162,9 +158,7 @@ fun StorageManagementSuccessScreen(
     val diagnosticScope = rememberCoroutineScope()
 
     // 诊断日志 / 下载目录文件（2026-10-02 A 组）
-    var showDiagnosticLogDialog by remember { mutableStateOf(false) }
     var showLocalFilesDialog by remember { mutableStateOf(false) }
-    var traceLines by remember { mutableStateOf<List<String>>(emptyList()) }
     val localFiles = remember { mutableStateListOf<com.imcys.bilibilias.download.FileOutputManager.DownloadFileEntry>() }
     // 已有下载记录的文件（用来标出"没有记录的孤儿文件"）
     val downloadTaskRepository: com.imcys.bilibilias.data.repository.DownloadTaskRepository = koinInject()
@@ -502,42 +496,6 @@ private fun StorageManagementScaffold(
  * 为什么要应用内能看：这台 ROM 会过滤 logcat，轨迹文件是唯一取证渠道；
  * 以前只能"导出到 Download 再用别的 App 打开"，多一步就常常没人看。
  */
-@Composable
-private fun DiagnosticLogDialog(
-    lines: List<String>,
-    onExport: () -> Unit,
-    onClear: () -> Unit,
-    onDismiss: () -> Unit,
-) {
-    androidx.compose.ui.window.Dialog(onDismissRequest = onDismiss) {
-        Surface(shape = CardDefaults.shape) {
-            Column(Modifier.padding(12.dp)) {
-                Text(stringResource(R.string.storage_diagnostic_log_title, lines.size), style = MaterialTheme.typography.titleMedium)
-                Spacer(Modifier.height(8.dp))
-                if (lines.isEmpty()) {
-                    Text(stringResource(R.string.storage_no_log))
-                } else {
-                    LazyColumn(Modifier.heightIn(max = 420.dp)) {
-                        items(lines) { line ->
-                            Text(
-                                text = line,
-                                fontSize = 10.sp,
-                                fontFamily = androidx.compose.ui.text.font.FontFamily.Monospace,
-                                modifier = Modifier.fillMaxWidth().padding(vertical = 1.dp),
-                            )
-                        }
-                    }
-                }
-                Spacer(Modifier.height(8.dp))
-                Row(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
-                    TextButton(onClick = onExport) { Text(stringResource(R.string.export_button)) }
-                    TextButton(onClick = onClear) { Text(stringResource(R.string.storage_clear)) }
-                    TextButton(onClick = onDismiss) { Text(stringResource(R.string.cd_close)) }
-                }
-            }
-        }
-    }
-}
 
 /**
  * 下载目录文件对话框（A2）：列出下载目录里的文件，「孤儿」= 没有任何下载记录指向它。

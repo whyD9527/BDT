@@ -10,22 +10,13 @@ import android.view.WindowManager
 import androidx.activity.ComponentActivity
 import androidx.activity.compose.setContent
 import androidx.activity.enableEdgeToEdge
-import androidx.activity.result.ActivityResult
-import androidx.activity.result.contract.ActivityResultContracts
 import androidx.compose.foundation.layout.Box
 import androidx.compose.material3.AlertDialog
-import androidx.compose.material3.SnackbarDuration
-import androidx.compose.material3.SnackbarHost
-import androidx.compose.material3.SnackbarHostState
-import androidx.compose.material3.SnackbarResult
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.LaunchedEffect
-import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
-import androidx.compose.runtime.setValue
-import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.tooling.preview.Preview
@@ -34,7 +25,6 @@ import com.imcys.bilibilias.common.event.AnalysisEvent
 import com.imcys.bilibilias.common.event.StartTarget
 import com.imcys.bilibilias.common.event.sendAnalysisEvent
 import com.imcys.bilibilias.common.event.sendStartTargetEvent
-import com.imcys.bilibilias.common.update.GooglePlayAppUpdateManage
 import com.imcys.bilibilias.common.utils.Manufacturers.XIAOMI
 import com.imcys.bilibilias.common.utils.createDownloadNotificationChannel
 import com.imcys.bilibilias.data.repository.AppSettingsRepository
@@ -72,11 +62,7 @@ class MainActivity : ComponentActivity() {
 
     private val appSettingsFlow: Flow<AppSettings> = appSettingsRepository.appSettingsFlow
 
-    // 更新相关
-    private var showUpdateSnackBar = MutableStateFlow(false)
-    private var showSkipVersion = MutableStateFlow(false)
-    private var googlePlaySkipVersionListener: () -> Unit = {}
-    private var performedInstallListen = {}
+    // 更新相关：状态在 githubUpdateInfo（GitHub 检查），Play 那条链已整段删除
 
     private var agreePrivacyPolicyState: AppSettings.AgreePrivacyPolicyState =
         AppSettings.AgreePrivacyPolicyState.Default
@@ -110,8 +96,6 @@ class MainActivity : ComponentActivity() {
                 },
             )
             var enabledDynamicColor by remember { mutableStateOf(false) }
-            val updateSnackBarHostState = remember { SnackbarHostState() }
-            val showSkipVersionState by showSkipVersion.collectAsState()
 
             LaunchedEffect(Unit) {
                 appSettingsFlow.collect {
@@ -119,40 +103,9 @@ class MainActivity : ComponentActivity() {
                 }
             }
 
-            LaunchedEffect(showUpdateSnackBar) {
-                if (!showUpdateSnackBar.value) return@LaunchedEffect
-                val result = updateSnackBarHostState.showSnackbar(
-                    message = getString(R.string.update_downloaded),
-                    actionLabel = getString(R.string.update_action),
-                    duration = SnackbarDuration.Short
-                )
-                when (result) {
-                    SnackbarResult.ActionPerformed -> {
-                        showUpdateSnackBar.value = false
-                        performedInstallListen.invoke()
-                    }
-
-                    SnackbarResult.Dismissed -> {
-                        showUpdateSnackBar.value = false
-                    }
-                }
-            }
-
             BILIBILIASTheme(dynamicColor = enabledDynamicColor) {
                 Box {
                     BILIBILIASAppScreen()
-                    SnackbarHost(
-                        hostState = updateSnackBarHostState,
-                        modifier = Modifier.align(Alignment.BottomCenter)
-                    )
-                    SkipVersionDialog(showSkipVersionState, onConfirm = {
-                        lifecycleScope.launch {
-                            googlePlaySkipVersionListener.invoke()
-                            showSkipVersion.value = false
-                        }
-                    }, onDismiss = {
-                        showSkipVersion.value = false
-                    })
                 }
             }
         }
@@ -279,41 +232,6 @@ class MainActivity : ComponentActivity() {
         }
     }
 
-    private val appUpdateLauncher =
-        registerForActivityResult(ActivityResultContracts.StartIntentSenderForResult()) { result: ActivityResult ->
-            // handle callback
-            if (result.resultCode != RESULT_OK) {
-                // 详见：https://developer.android.google.cn/guide/playcore/in-app-updates/kotlin-java?hl=zh-cn#setup
-                showSkipVersion.value = true
-            }
-        }
-
-    /**
-     * 处理Google Play更新
-     */
-    private fun GooglePlayAppUpdateManage.handleGooglePlayUpdate() {
-        lifecycleScope.launch(Dispatchers.IO) {
-            if (checkAppImmediateUpdate()) {
-                startUpdate(appUpdateLauncher, updateFinish = {
-                    showGooglePlayUpdateSnackBar()
-                })
-            }
-        }
-    }
-
-    /**
-     * 显示Google Play更新完成提示
-     */
-    private fun GooglePlayAppUpdateManage.showGooglePlayUpdateSnackBar() {
-        lifecycleScope.launch {
-            // 提示更新完成
-            showUpdateSnackBar.value = true
-            performedInstallListen = {
-                // 重启更新
-                completeUpdate()
-            }
-        }
-    }
 
 }
 

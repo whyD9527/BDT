@@ -1,32 +1,22 @@
 package com.imcys.bilibilias.ui.home
 
 import com.imcys.bilibilias.ui.setting.feedback.FeedbackRoute
-import android.content.ClipData
-import android.content.ClipboardManager
 import android.content.Context
-import android.widget.Toast
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Column
-import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.Spacer
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
-import androidx.compose.foundation.layout.width
 import androidx.compose.foundation.lazy.grid.GridCells
 import androidx.compose.foundation.lazy.grid.GridItemSpan
 import androidx.compose.foundation.lazy.grid.LazyVerticalGrid
 import androidx.compose.foundation.lazy.grid.items
-import androidx.compose.foundation.rememberScrollState
-import androidx.compose.foundation.verticalScroll
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.outlined.BugReport
-import androidx.compose.material.icons.outlined.CopyAll
 import androidx.compose.material.icons.outlined.VideoCameraBack
 import androidx.compose.material.icons.outlined.WebAsset
-import androidx.compose.material3.Badge
-import androidx.compose.material3.BadgedBox
 import androidx.compose.material3.CardDefaults
 import androidx.compose.material3.ExperimentalMaterial3ExpressiveApi
 import androidx.compose.material3.Icon
@@ -36,37 +26,18 @@ import androidx.compose.material3.Surface
 import androidx.compose.material3.Text
 import androidx.compose.material3.toShape
 import androidx.compose.runtime.Composable
-import androidx.compose.runtime.getValue
-import androidx.compose.runtime.mutableStateOf
-import androidx.compose.runtime.remember
-import androidx.compose.runtime.rememberCoroutineScope
-import androidx.compose.runtime.setValue
-import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.vector.ImageVector
-import androidx.compose.ui.hapticfeedback.HapticFeedbackType
-import androidx.compose.ui.platform.LocalContext
-import androidx.compose.ui.platform.LocalHapticFeedback
 import androidx.compose.ui.res.painterResource
 import androidx.annotation.StringRes
 import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.tooling.preview.Preview
 import androidx.compose.ui.unit.dp
-import androidx.compose.ui.unit.sp
 import androidx.navigation3.runtime.NavKey
-import com.imcys.bilibilias.BuildConfig
 import com.imcys.bilibilias.R
-import com.imcys.bilibilias.common.event.sendToastEvent
-import com.imcys.bilibilias.common.utils.DeviceInfoUtils
-import com.imcys.bilibilias.common.utils.openLink
 import com.imcys.bilibilias.ui.home.navigation.HomeRoute
 import com.imcys.bilibilias.ui.tools.frame.FrameExtractorRoute
 import com.imcys.bilibilias.ui.tools.parser.WebParserRoute
-import com.imcys.bilibilias.ui.widget.ASAlertDialog
-import com.imcys.bilibilias.ui.widget.ASIconButton
-import com.imcys.bilibilias.ui.widget.ASTextButton
-import com.imcys.bilibilias.ui.widget.tip.ASInfoTip
-import kotlinx.coroutines.launch
 
 @Composable
 fun ToolsScreen(vm: HomeViewModel, onToPage: (NavKey) -> Unit) {
@@ -120,7 +91,6 @@ enum class ToolInfo(
 @Composable
 private fun ToolsContent(vm: HomeViewModel, onToPage: (NavKey) -> Unit) {
 
-    var showFeedbackDialog by remember { mutableStateOf(false) }
 
     val videoTools = listOf(
         ToolInfo.FrameExtractor
@@ -190,102 +160,9 @@ private fun ToolsContent(vm: HomeViewModel, onToPage: (NavKey) -> Unit) {
 
     }
 
-    FeedbackDialog(showFeedbackDialog, onDismiss = {
-        showFeedbackDialog = false
-    })
-
+    
 }
 
-@Composable
-fun FeedbackDialog(showFeedbackDialog: Boolean, onDismiss: () -> Unit) {
-
-    val context = LocalContext.current
-    val scope = rememberCoroutineScope()
-    val haptics = LocalHapticFeedback.current
-
-    ASAlertDialog(
-        showState = showFeedbackDialog,
-        title = {
-            Text(stringResource(R.string.tools_feedback))
-        },
-        text = {
-            Column(
-                Modifier
-                    .fillMaxWidth()
-                    .verticalScroll(rememberScrollState()),
-                verticalArrangement = Arrangement.spacedBy(10.dp)
-            ) {
-
-                Spacer(Modifier)
-
-                ASInfoTip {
-                    Row(
-                        Modifier.fillMaxWidth(),
-                        verticalAlignment = Alignment.CenterVertically
-                    ) {
-                        Text(
-                            stringResource(R.string.tools_device_info_hint),
-                            fontSize = 14.sp,
-                            modifier = Modifier.weight(1f)
-                        )
-                        ASIconButton(onClick = {
-                            scope.launch {
-                                val copyText = DeviceInfoUtils.getDeviceInfoCopyString(context)
-                                haptics.performHapticFeedback(HapticFeedbackType.Confirm)
-                                val clipboard =
-                                    context.getSystemService(Context.CLIPBOARD_SERVICE) as ClipboardManager
-                                val clip = ClipData.newPlainText(context.getString(R.string.tools_version_info_clip_label), copyText)
-                                clipboard.setPrimaryClip(clip)
-                             sendToastEvent(context.getString(R.string.tools_copied_to_clipboard))
-                            }
-                        }) {
-                            Icon(Icons.Outlined.CopyAll, contentDescription = stringResource(R.string.cd_copy))
-                        }
-                    }
-                }
-
-                BadgedBox(badge = {
-                    Badge { Text(stringResource(R.string.common_recommend)) }
-                }) {
-                    Surface(
-                        shape = CardDefaults.shape,
-                        onClick = {
-                            context.openLink("https://github.com/whyD9527/BDT/issues")
-                        }
-                    ) {
-                        Row(
-                            modifier = Modifier.padding(10.dp),
-                            verticalAlignment = Alignment.CenterVertically
-                        ) {
-                            Icon(
-                                painter = painterResource(R.drawable.ic_github_24px),
-                                contentDescription = stringResource(R.string.cd_icon),
-                            )
-                            Spacer(Modifier.width(10.dp))
-                            Text(
-                                stringResource(R.string.tools_feedback_github_hint),
-                            )
-                        }
-                    }
-                }
-
-                // 「前往 QQ 频道反馈」「二次元爱好者交流群」两个入口已移除：
-                // 它们指向的是原作者自建的 QQ 频道与群，与个人自用构建无关。
-                // 反馈入口只保留指向本仓库的 GitHub issues。
-
-            }
-        },
-        onDismiss = onDismiss,
-        confirmButton = {
-            ASTextButton(onClick = {
-                onDismiss.invoke()
-            }) {
-                Text(stringResource(R.string.common_ok))
-            }
-        }
-
-    )
-}
 
 @OptIn(ExperimentalMaterial3ExpressiveApi::class)
 @Preview
