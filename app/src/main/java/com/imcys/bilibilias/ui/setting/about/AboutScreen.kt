@@ -85,17 +85,17 @@ fun AboutContent(
     paddingValues: PaddingValues,
 ) {
     LazyColumn(
-        item {
-            // A-②：手动「检查更新」。**同样遵守隐私门槛**（未同意时不发请求）；
-            // 结果与失败原因都会写进诊断日志（download-trace.log 里搜「更新检查」即可核验）。
-            CheckUpdateButton()
-        }
         modifier = modifier
             .padding(paddingValues)
             .fillMaxSize(),
         contentPadding = PaddingValues(16.dp),
         horizontalAlignment = Alignment.CenterHorizontally
     ) {
+        item {
+            // A-②：手动「检查更新」。**同样遵守隐私门槛**（未同意时不发请求）；
+            // 结果与失败原因都会写进诊断日志（download-trace.log 里搜「更新检查」即可核验）。
+            CheckUpdateButton()
+        }
         item {
             IconArea()
         }
