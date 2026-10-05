@@ -2,6 +2,7 @@ package com.imcys.bilibilias.data.download.record
 
 import org.junit.Assert.assertEquals
 import org.junit.Assert.assertFalse
+import org.junit.Assert.assertNotEquals
 import org.junit.Assert.assertTrue
 import org.junit.Test
 
@@ -56,5 +57,50 @@ class DownloadDirFilesRulesTest {
         val summary = DownloadDirFilesRules.summarize(emptyList(), setOf("a.mp4"))
         assertEquals(0, summary.total)
         assertEquals(0, summary.orphan)
+    }
+
+    // ---- 2026-10-05 真机复验发现的问题：目录清单里只剩"文件夹行"，真实文件一个都没有 ----
+
+    @Test
+    fun `RELATIVE_PATH 模式必须带完整 Download 前缀`() {
+        assertEquals("Download/BDT/%", DownloadDirFilesRules.relativePathPattern("Download/BDT"))
+        assertEquals("Download/BDT/%", DownloadDirFilesRules.relativePathPattern("/Download/BDT/"))
+        assertEquals(
+            "Download/BiliDownloader/%",
+            DownloadDirFilesRules.relativePathPattern("Download/BiliDownloader"),
+        )
+        // 回归点：以前是去掉 Download 前缀的 `BDT%` —— RELATIVE_PATH 是 `Download/BDT/xxx.mp4`，
+        // 那样一条真实文件都匹配不到（只剩满足 `_data LIKE '%/BDT%'` 的"文件夹行"）。
+        assertNotEquals("BDT%", DownloadDirFilesRules.relativePathPattern("Download/BDT"))
+    }
+
+    @Test
+    fun `_data 兜底模式带两侧通配`() {
+        assertEquals("%/Download/BDT/%", DownloadDirFilesRules.dataPathPattern("Download/BDT"))
+        assertEquals("%/Download/BDT/%", DownloadDirFilesRules.dataPathPattern("/Download/BDT/"))
+    }
+
+    @Test
+    fun `目录自己那一行要剔掉（0B、displayName=BDT、relativePath=Download BDT）`() {
+        assertTrue(
+            DownloadDirFilesRules.isDirectoryRow(
+                displayName = "BDT",
+                rowRelativePath = "Download/BDT/",
+                queriedRelativePath = "Download/BDT",
+                sizeBytes = 0L,
+            )
+        )
+        // 文件（有体积）不能因为名字恰好是 BDT 就被剔掉
+        assertFalse(
+            DownloadDirFilesRules.isDirectoryRow("BDT", "Download/BDT/", "Download/BDT", 1024L)
+        )
+        // 目录下真实文件的那一行
+        assertFalse(
+            DownloadDirFilesRules.isDirectoryRow("第1话.mp4", "Download/BDT/", "Download/BDT", 123L)
+        )
+        // 别的目录的同名行
+        assertFalse(
+            DownloadDirFilesRules.isDirectoryRow("BDT", "Download/", "Download/BDT", 0L)
+        )
     }
 }

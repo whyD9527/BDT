@@ -11,6 +11,7 @@ import android.provider.MediaStore
 import android.util.Log
 import androidx.core.net.toUri
 import com.imcys.bilibilias.common.crash.CrashLogRules
+import com.imcys.bilibilias.data.download.record.DownloadDirFilesRules
 import com.imcys.bilibilias.data.download.record.DownloadRecordReuseRules
 import com.imcys.bilibilias.data.download.record.SavePathProbeRules
 import com.imcys.bilibilias.data.download.naming.FileNameLengthRules
@@ -868,22 +869,59 @@ class FileOutputManager(
      *
      * ⚠️ 走 MediaStore 而不是 `File.listFiles()`：这台 ROM 上 app 对媒体库拥有的文件
      * `listFiles()` 会返回 null（2026-10-01 真机复现）。
+     *
+     * ⚠️⚠️ 匹配模式必须用**完整相对路径**（`Download/BDT/%`）—— 2026-10-05 真机复验：
+     * 原来先把 `Download/` 去掉再拼 `%`，得到 `BDT%`，`RELATIVE_PATH` 一条真实文件都匹配不到，
+     * 清单里只剩"文件夹行"（见 [DownloadDirFilesRules.relativePathPattern] 的注释）。
+     * 目录自己那一行也要剔掉，否则用户会看到一个 0 B 的「BDT」。
      */
     fun listDownloadFiles(relativePath: String = DownloadDir.RELATIVE_PATH): List<DownloadFileEntry> {
+        val rel = relativePath.trim('/')
+        val columns = arrayOf(
+            MediaStore.Downloads._ID,
+            MediaStore.Downloads.DISPLAY_NAME,
+            MediaStore.Downloads.SIZE,
+            MediaStore.Downloads.DATE_ADDED,
+            MediaStore.Downloads.RELATIVE_PATH,
+        )
+        val relativePattern = DownloadDirFilesRules.relativePathPattern(rel)
+        // 先按 RELATIVE_PATH 查；拿不到再退回 `_data` 前缀（个别 ROM 上 RELATIVE_PATH 为空的兼容路径）
+        val rows = queryDownloadFileRows(
+            columns,
+            "${MediaStore.Downloads.RELATIVE_PATH} LIKE ?",
+            arrayOf(relativePattern),
+        ).ifEmpty {
+            queryDownloadFileRows(
+                columns,
+                "${MediaStore.Downloads.RELATIVE_PATH} LIKE ? OR ${MediaStore.Downloads.DATA} LIKE ?",
+                arrayOf(relativePattern, DownloadDirFilesRules.dataPathPattern(rel)),
+            )
+        }
+        return rows
+            .filterNot {
+                DownloadDirFilesRules.isDirectoryRow(
+                    displayName = it.displayName,
+                    rowRelativePath = it.relativePath,
+                    queriedRelativePath = rel,
+                    sizeBytes = it.sizeBytes,
+                )
+            }
+            .distinctBy { it.uriString }
+    }
+
+    /** MediaStore 查询的公共部分：把游标行读成 [DownloadFileEntry]（失败一律返回空表，不抛） */
+    private fun queryDownloadFileRows(
+        columns: Array<String>,
+        selection: String,
+        args: Array<String>,
+    ): List<DownloadFileEntry> {
         val result = mutableListOf<DownloadFileEntry>()
         runCatching {
-            val like = DownloadRecordReuseRules.downloadDirRelativePath(relativePath) + "%"
             context.contentResolver.query(
                 MediaStore.Downloads.EXTERNAL_CONTENT_URI,
-                arrayOf(
-                    MediaStore.Downloads._ID,
-                    MediaStore.Downloads.DISPLAY_NAME,
-                    MediaStore.Downloads.SIZE,
-                    MediaStore.Downloads.DATE_ADDED,
-                    MediaStore.Downloads.RELATIVE_PATH,
-                ),
-                "${MediaStore.Downloads.RELATIVE_PATH} LIKE ? OR ${MediaStore.Downloads.DATA} LIKE ?",
-                arrayOf(like, "%/$like%"),
+                columns,
+                selection,
+                args,
                 "${MediaStore.Downloads.DATE_ADDED} DESC",
             )?.use { c ->
                 val idIdx = c.getColumnIndexOrThrow(MediaStore.Downloads._ID)
