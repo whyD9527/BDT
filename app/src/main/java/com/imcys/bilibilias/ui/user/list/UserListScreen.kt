@@ -113,7 +113,9 @@ fun UserListScreen(userListRoute: UserListRoute, onToBack: () -> Unit) {
                 count = itemList.itemCount,
                 key = { index -> itemList[index]?.uniqueKey ?: "index:$index" },
             ) { index ->
-                itemList[index]?.let { item -> UserListItemCard(item) }
+                // ⚠️ animateItem() 是 LazyGridItemScope 的成员扩展：只能在 items 的
+                // itemContent 里调用，搬进 UserListItemCard 会编译失败（Unresolved reference）
+                itemList[index]?.let { item -> UserListItemCard(item, Modifier.animateItem()) }
             }
 
             when (val refresh = itemList.loadState.refresh) {
@@ -156,11 +158,11 @@ fun UserListScreen(userListRoute: UserListRoute, onToBack: () -> Unit) {
 
 /** 一张卡片按条目类型分流（合并前三种卡片的用法保持不变） */
 @Composable
-private fun UserListItemCard(item: UserListItem) {
+private fun UserListItemCard(item: UserListItem, modifier: Modifier = Modifier) {
     when (item) {
         is UserVideoItem -> if (item.upName == null) {
             WorkCard(
-                modifier = Modifier.animateItem(),
+                modifier = modifier,
                 bvId = item.bvid,
                 title = item.title,
                 pic = item.pic,
@@ -169,7 +171,7 @@ private fun UserListItemCard(item: UserListItem) {
             )
         } else {
             UserWorkCard(
-                modifier = Modifier.animateItem(),
+                modifier = modifier,
                 bvId = item.bvid,
                 title = item.title,
                 pic = item.pic,
@@ -181,7 +183,7 @@ private fun UserListItemCard(item: UserListItem) {
         }
 
         is UserHistoryItem -> HistoryPlayVideoCard(
-            modifier = Modifier.animateItem(),
+            modifier = modifier,
             bvId = item.bvid,
             title = item.title,
             pic = item.pic,
@@ -192,6 +194,7 @@ private fun UserListItemCard(item: UserListItem) {
         )
 
         is UserBangumiItem -> BangumiCard(
+            modifier = modifier,
             seasonId = item.seasonId,
             title = item.title,
             intro = item.intro,

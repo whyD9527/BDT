@@ -16,8 +16,7 @@
 
     <!-- Login related strings -->
     <string name="login_title">Login</string>
-    <string name="login_qrcode_title">Bilibili QR Code Login</string>
-    <string name="login_cookie_title">Bilibili Cookie Login</string>
+    <string name="login_intro_title">About signing in</string>
     <string name="login_use_cookie">Login with Cookie</string>
     <string name="login_after_you_can">After logging in, you can:</string>
     <string name="login_benefits"><![CDATA[·Support higher quality and bitrate videos\n·Support anime caching\n·Support big member privileges\n·Support roaming services]]></string>
@@ -435,6 +434,7 @@
     <string name="setting_privacy_unselected">Not chosen</string>
     <string name="setting_privacy_status">Current status: %1$s. You can accept or decline our privacy policy here. While not agreed: no clipboard auto-detect, no update check. Effective date: 2026-10-03.</string>
     <string name="setting_logout_desc">Clear the login info and release the login session.</string>
+    <string name="setting_login_desc">Sign in to sync favorites and unlock higher quality</string>
     <string name="setting_line_config_desc">Try to improve your download experience.</string>
     <string name="setting_speed_limit_hint">The limit is an average rate; no extra waiting when your network is slower.</string>
     <string name="setting_concurrency_hint">More concurrent segments are faster, but too many may be rate-limited or rejected by the CDN.</string>

@@ -59,19 +59,6 @@ import com.imcys.bilibilias.widget.AsAutoError
 import kotlinx.coroutines.launch
 import kotlinx.serialization.Serializable
 import org.koin.androidx.compose.koinViewModel
-
-
-@Serializable
-data object CookeLoginRoute : NavKey
-
-@Composable
-fun CookeLoginScreen(cookeLoginRoute: CookeLoginRoute, onToBack: () -> Unit, onFinish: () -> Unit) {
-    val vm = koinViewModel<CookieLoginViewModel>()
-    CookeLoginScaffold(onToBack) { paddingValues ->
-        CookeLoginContent(vm, paddingValues, onFinish)
-    }
-}
-
 @Composable
 fun CookeLoginContent(
     vm: CookieLoginViewModel,
@@ -207,38 +194,5 @@ fun UserCard(modifier: Modifier = Modifier, mid: Long, name: String, level: Int,
                 Text(stringResource(R.string.login_level_format, level))
             }
         }
-    }
-}
-
-@OptIn(ExperimentalMaterial3Api::class)
-@Composable
-private fun CookeLoginScaffold(onToBack: () -> Unit, content: @Composable (PaddingValues) -> Unit) {
-    Scaffold(
-        containerColor = MaterialTheme.colorScheme.surfaceContainer,
-        topBar = {
-            Column {
-                ASTopAppBar(
-                    style = BILIBILIASTopAppBarStyle.Small,
-                    title = {
-                        Text(stringResource(R.string.login_cookie_title))
-                    },
-                    colors = TopAppBarDefaults.topAppBarColors(
-                        containerColor = MaterialTheme.colorScheme.surfaceContainer,
-                    ),
-                    navigationIcon = {
-                        ASIconButton(onClick = {
-                            onToBack.invoke()
-                        }) {
-                            Icon(
-                                Icons.AutoMirrored.Outlined.ArrowBack,
-                                contentDescription = stringResource(R.string.cd_back)
-                            )
-                        }
-                    }
-                )
-            }
-        },
-    ) {
-        content.invoke(it)
     }
 }

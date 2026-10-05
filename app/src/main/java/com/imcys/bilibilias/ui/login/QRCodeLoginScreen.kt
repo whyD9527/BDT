@@ -76,7 +76,7 @@ import com.imcys.bilibilias.di.ProvideKoinApplication
 import com.imcys.bilibilias.network.ApiStatus
 import com.imcys.bilibilias.network.NetWorkResult
 import com.imcys.bilibilias.network.model.QRCodeInfo
-import com.imcys.bilibilias.ui.login.navigation.QRCodeLoginRoute
+import com.imcys.bilibilias.ui.login.navigation.LoginRoute
 import com.imcys.bilibilias.ui.utils.rememberWidthSizeClass
 import com.imcys.bilibilias.ui.widget.ASIconButton
 import com.imcys.bilibilias.ui.widget.ASTopAppBar
@@ -86,31 +86,20 @@ import com.imcys.bilibilias.widget.ASAgreePrivacyPolicy
 import org.koin.androidx.compose.koinViewModel
 
 
-@Composable
-internal fun QRCodeLoginRoute(
-    onToBack: () -> Unit,
-    onBackHomePage: () -> Unit,
-) {
-    QRCodeLoginScreen(QRCodeLoginRoute(), onToBack, onBackHomePage, {})
-}
-
-
-@Preview
-@Composable
-fun QRCodeLoginScreenPreview() {
-    ProvideKoinApplication {
-        QRCodeLoginScreen(QRCodeLoginRoute(), {}, {}) {}
-    }
-}
-
-
+/**
+ * 扫码登录内容（合并后「登录」页的扫码 Tab，#5）。
+ *
+ * 与合并前的 `QRCodeLoginScreen` 差别只有两处：
+ * 1. **不再自带 Scaffold 与顶栏** —— 顶栏、Tab 都由 LoginScreen 提供；
+ * 2. 原来的 `onToBack` 分支（从漫游/解析页进来时原路返回）由外层算好，
+ *    这里只需要一个"成功后去哪"的回调 [onBackHomePage]。
+ */
 @OptIn(ExperimentalMaterial3Api::class, ExperimentalSharedTransitionApi::class)
 @Composable
-fun QRCodeLoginScreen(
-    route: QRCodeLoginRoute,
-    onToBack: () -> Unit,
+fun QRCodeLoginTabContent(
+    route: LoginRoute,
     onBackHomePage: () -> Unit,
-    onToCookieLogin: () -> Unit
+    modifier: Modifier = Modifier,
 ) {
     val vm = koinViewModel<QRCodeLoginViewModel>()
     val uiState = vm.uiState
@@ -156,13 +145,7 @@ fun QRCodeLoginScreen(
             is NetWorkResult.Success<*> -> {
                 vm.saveLoginInfo(loginUserInfoState.data) {
                     FirebaseExt.logLogin("QRCode")
-                    if (route.isFromRoam || route.isFromAnalysis) {
-                        // 如果是从漫游页面进入的，登录成功后直接返回
-                        onToBack()
-                    } else {
-                        // 否则返回首页
-                        onBackHomePage()
-                    }
+                    onBackHomePage()
                 }
             }
 
@@ -170,47 +153,44 @@ fun QRCodeLoginScreen(
         }
     }
 
-    QRLoginScaffold(onToBack, onToCookieLogin) {
-        Column(
-            Modifier
-                .padding(it)
-                .padding(horizontal = 24.dp)
-                .padding(bottom = 24.dp)
-        ) {
-            SharedTransitionLayout {
-                AnimatedContent(windowWidthSizeClass, label = "扫码登录内容区域") { size ->
-                    when (size) {
-                        WindowWidthSizeClass.Compact -> {
-                            QRCodeLoginContentWidthCompact(
-                                vm,
-                                route,
-                                uiState,
-                                qrCodeInfoState,
-                                agreePrivacyPolicy,
-                                updateAgreePrivacyPolicy = { state ->
-                                    agreePrivacyPolicy = state
-                                },
-                                animatedVisibilityScope = this@AnimatedContent,
-                                sharedTransitionScope = this@SharedTransitionLayout
-                            )
-                        }
-
-                        WindowWidthSizeClass.Medium, WindowWidthSizeClass.Expanded -> {
-                            QRCodeLoginContentWidthMediumAndExpanded(
-                                vm,
-                                route,
-                                uiState,
-                                qrCodeInfoState,
-                                agreePrivacyPolicy,
-                                updateAgreePrivacyPolicy = { state ->
-                                    agreePrivacyPolicy = state
-                                },
-                                animatedVisibilityScope = this@AnimatedContent,
-                                sharedTransitionScope = this@SharedTransitionLayout
-                            )
-                        }
-
+    Column(
+        modifier
+            .padding(horizontal = 24.dp)
+            .padding(bottom = 24.dp)
+    ) {
+        SharedTransitionLayout {
+            AnimatedContent(windowWidthSizeClass, label = "扫码登录内容区域") { size ->
+                when (size) {
+                    WindowWidthSizeClass.Compact -> {
+                        QRCodeLoginContentWidthCompact(
+                            vm,
+                            route,
+                            uiState,
+                            qrCodeInfoState,
+                            agreePrivacyPolicy,
+                            updateAgreePrivacyPolicy = { state ->
+                                agreePrivacyPolicy = state
+                            },
+                            animatedVisibilityScope = this@AnimatedContent,
+                            sharedTransitionScope = this@SharedTransitionLayout
+                        )
                     }
+
+                    WindowWidthSizeClass.Medium, WindowWidthSizeClass.Expanded -> {
+                        QRCodeLoginContentWidthMediumAndExpanded(
+                            vm,
+                            route,
+                            uiState,
+                            qrCodeInfoState,
+                            agreePrivacyPolicy,
+                            updateAgreePrivacyPolicy = { state ->
+                                agreePrivacyPolicy = state
+                            },
+                            animatedVisibilityScope = this@AnimatedContent,
+                            sharedTransitionScope = this@SharedTransitionLayout
+                        )
+                    }
+
                 }
             }
         }
@@ -221,7 +201,7 @@ fun QRCodeLoginScreen(
 @Composable
 fun QRCodeLoginContentWidthMediumAndExpanded(
     vm: QRCodeLoginViewModel,
-    route: QRCodeLoginRoute,
+    route: LoginRoute,
     uiState: QRCodeLoginViewModel.UIState,
     qrCodeInfoState: NetWorkResult<QRCodeInfo?>,
     agreePrivacyPolicy: Boolean,
@@ -283,7 +263,7 @@ fun QRCodeLoginContentWidthMediumAndExpanded(
 @Composable
 fun QRCodeLoginContentWidthCompact(
     vm: QRCodeLoginViewModel,
-    route: QRCodeLoginRoute,
+    route: LoginRoute,
     uiState: QRCodeLoginViewModel.UIState,
     qrCodeInfoState: NetWorkResult<QRCodeInfo?>,
     agreePrivacyPolicy: Boolean,
@@ -333,66 +313,6 @@ fun QRCodeLoginContentWidthCompact(
 
 }
 
-@OptIn(ExperimentalMaterial3Api::class)
-@Composable
-private fun QRLoginScaffold(
-    onToBack: () -> Unit,
-    onToCookieLogin: () -> Unit,
-    content: @Composable (PaddingValues) -> Unit
-) {
-    var expandedMenu by remember { mutableStateOf(false) }
-    Scaffold(
-        containerColor = MaterialTheme.colorScheme.surfaceContainer,
-        topBar = {
-            Column {
-                ASTopAppBar(
-                    style = BILIBILIASTopAppBarStyle.Small,
-                    title = {
-                        Text(stringResource(R.string.login_qrcode_title))
-                    },
-                    colors = TopAppBarDefaults.topAppBarColors(
-                        containerColor = MaterialTheme.colorScheme.surfaceContainer,
-                    ),
-                    navigationIcon = {
-                        ASIconButton(onClick = {
-                            onToBack.invoke()
-                        }) {
-                            Icon(
-                                Icons.AutoMirrored.Outlined.ArrowBack,
-                                contentDescription = stringResource(R.string.cd_back)
-                            )
-                        }
-                    },
-                    actions = {
-                        ASIconButton(onClick = {
-                            expandedMenu = !expandedMenu
-                        }) {
-                            Icon(
-                                Icons.Outlined.MoreVert,
-                                contentDescription = stringResource(R.string.cd_more_actions)
-                            )
-                        }
-                        DropdownMenu(
-                            expanded = expandedMenu,
-                            onDismissRequest = { expandedMenu = false },
-                            containerColor = MaterialTheme.colorScheme.surface
-                        ) {
-                            DropdownMenuItem(
-                                text = { Text(stringResource(R.string.login_use_cookie)) },
-                                onClick = {
-                                    expandedMenu = false
-                                    onToCookieLogin.invoke()
-                                }
-                            )
-                        }
-                    }
-                )
-            }
-        },
-    ) {
-        content.invoke(it)
-    }
-}
 
 @OptIn(ExperimentalSharedTransitionApi::class)
 @Composable
@@ -528,7 +448,7 @@ private fun ActionButton(
 @OptIn(ExperimentalMaterial3ExpressiveApi::class)
 @Composable
 private fun PlatformToggleButton(
-    route: QRCodeLoginRoute,
+    route: LoginRoute,
     selectedLoginPlatform: LoginPlatform,
     updateLoginPlatform: (LoginPlatform) -> Unit,
 ) {
@@ -584,7 +504,7 @@ private fun PlatformToggleButton(
 @Composable
 private fun QRCodeContent(
     modifier: Modifier = Modifier,
-    route: QRCodeLoginRoute,
+    route: LoginRoute,
     selectedLoginPlatform: LoginPlatform,
     qrCodeInfoState: NetWorkResult<QRCodeInfo?>,
     agreePrivacyPolicy: Boolean,

@@ -107,6 +107,7 @@ fun SettingScreen(
     onToStorageManagement: () -> Unit = {},
     onToNamingConvention: () -> Unit = {},
     onToLineConfig: () -> Unit = {},
+    onToLogin: () -> Unit = {},
     onToPage: (navKey: NavKey) -> Unit = {},
     onLogoutFinish: (Long) -> Unit = {},
 ) {
@@ -452,6 +453,16 @@ fun SettingScreen(
                             text = stringResource(R.string.setting_logout),
                             descriptionText = stringResource(R.string.setting_logout_desc),
                             onClick = { showLogoutDialog = true }
+                        )
+                    }
+                } else {
+                    // #5：没登录时给一条去登录的路（设置里的「账户」行与合并后的登录页对齐）
+                    item(key = "login") {
+                        BaseSettingsItem(
+                            painter = rememberVectorPainter(Icons.AutoMirrored.Outlined.AirplaneTicket),
+                            text = stringResource(R.string.login_title),
+                            descriptionText = stringResource(R.string.setting_login_desc),
+                            onClick = onToLogin
                         )
                     }
                 }

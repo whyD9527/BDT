@@ -9,7 +9,7 @@ import com.imcys.bilibilias.data.repository.UserInfoRepository
 import com.imcys.bilibilias.data.user.UserListKeyRules
 import com.imcys.bilibilias.network.ApiStatus
 import com.imcys.bilibilias.network.model.user.BILIUserBangumiFollowInfo
-import com.imcys.bilibilias.network.model.user.BILIUserVideoLikeInfo.LikeAndCoinItemData
+import com.imcys.bilibilias.network.model.user.LikeAndCoinItemData
 import kotlinx.coroutines.flow.last
 
 /**

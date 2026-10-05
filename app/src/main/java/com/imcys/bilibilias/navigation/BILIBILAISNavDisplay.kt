@@ -53,12 +53,8 @@ import com.imcys.bilibilias.ui.event.requestFrequent.RequestFrequentRoute
 import com.imcys.bilibilias.ui.event.requestFrequent.RequestFrequentScreen
 import com.imcys.bilibilias.ui.home.HomeScreen
 import com.imcys.bilibilias.ui.home.navigation.HomeRoute
-import com.imcys.bilibilias.ui.login.CookeLoginRoute
-import com.imcys.bilibilias.ui.login.CookeLoginScreen
 import com.imcys.bilibilias.ui.login.LoginScreen
-import com.imcys.bilibilias.ui.login.QRCodeLoginScreen
 import com.imcys.bilibilias.ui.login.navigation.LoginRoute
-import com.imcys.bilibilias.ui.login.navigation.QRCodeLoginRoute
 import com.imcys.bilibilias.ui.setting.SettingScreen
 import com.imcys.bilibilias.ui.setting.about.AboutRouter
 import com.imcys.bilibilias.ui.setting.about.AboutScreen
@@ -189,7 +185,7 @@ fun BILIBILAISNavDisplay() {
                         this@SharedTransitionLayout,
                         LocalNavAnimatedContentScope.current,
                         goToLogin = {
-                            backStack.addWithReuse(LoginRoute)
+                            backStack.addWithReuse(LoginRoute())
                         },
                         goToUserPage = { mid ->
                             backStack.addWithReuse(UserRoute(mid = mid))
@@ -208,24 +204,14 @@ fun BILIBILAISNavDisplay() {
                         }
                     )
                 }
+                // #5（2026-10-05）：扫码登录与 Cookie 登录合并成一个「登录」页的两个 Tab
                 entry<LoginRoute> {
                     LoginScreen(
-                        onToBack = { backStack.removeLastOrNullSafe() },
-                        goToQRCodeLogin = {
-                            backStack.addWithReuse(QRCodeLoginRoute())
-                        }
-                    )
-                }
-                entry<QRCodeLoginRoute> {
-                    QRCodeLoginScreen(
-                        it,
+                        route = it,
                         onToBack = { backStack.removeLastOrNullSafe() },
                         onBackHomePage = {
                             backStack.clear()
                             backStack.add(HomeRoute(isFormLogin = true))
-                        },
-                        onToCookieLogin = {
-                            backStack.add(CookeLoginRoute)
                         }
                     )
                 }
@@ -273,7 +259,7 @@ fun BILIBILAISNavDisplay() {
                             backStack.addWithReuse(VideoCodingInfoRoute)
                         },
                         onToLogin = {
-                            backStack.addWithReuse(QRCodeLoginRoute(isFromAnalysis = true))
+                            backStack.addWithReuse(LoginRoute(isFromAnalysis = true))
                         }
                     )
                 }
@@ -306,6 +292,7 @@ fun BILIBILAISNavDisplay() {
                         onToStorageManagement = { backStack.addWithReuse(StorageManagementRoute) },
                         onToNamingConvention = { backStack.addWithReuse(NamingConventionRoute) },
                         onToLineConfig = { backStack.addWithReuse(LineConfigRoute) },
+                        onToLogin = { backStack.addWithReuse(LoginRoute()) },
                         onLogoutFinish = {
                             backStack.firstOrNull {
                                 it is UserRoute && !it.isAnalysisUser
@@ -371,14 +358,6 @@ fun BILIBILAISNavDisplay() {
                         frameExtractorRoute = it,
                         onToBack = { backStack.removeLastOrNullSafe() }
                     )
-                }
-                entry<CookeLoginRoute> {
-                    CookeLoginScreen(cookeLoginRoute = it, onToBack = {
-                        backStack.removeLastOrNullSafe()
-                    }, onFinish = {
-                        backStack.clear()
-                        backStack.add(HomeRoute(isFormLogin = true))
-                    })
                 }
                 entry<SystemExpandRoute>(
                     metadata = ListDetailSceneStrategy.detailPane()
