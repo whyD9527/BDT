@@ -5,27 +5,12 @@ import androidx.compose.runtime.setValue
 import com.imcys.bilibilias.R
 import androidx.annotation.StringRes
 import androidx.compose.ui.res.stringResource
-import androidx.compose.foundation.layout.Spacer
-import androidx.compose.foundation.layout.height
-import androidx.compose.foundation.layout.heightIn
-import androidx.compose.foundation.lazy.LazyColumn
-import androidx.compose.foundation.lazy.items
-import androidx.compose.material3.TextButton
-import androidx.compose.runtime.mutableStateListOf
-import kotlinx.coroutines.flow.map
-import androidx.compose.runtime.rememberCoroutineScope
-import kotlinx.coroutines.Dispatchers
-import kotlinx.coroutines.launch
-import kotlinx.coroutines.withContext
-import org.koin.compose.koinInject
-import com.imcys.bilibilias.download.FileOutputManager
 import android.content.ActivityNotFoundException
 import android.content.Intent
 import android.util.Log
 import android.net.Uri
 import android.os.Environment
 import android.provider.DocumentsContract
-import android.widget.Toast
 import androidx.activity.compose.rememberLauncherForActivityResult
 import androidx.activity.result.contract.ActivityResultContracts
 import android.os.Build
@@ -155,21 +140,6 @@ fun StorageManagementSuccessScreen(
     onToDownloadList: () -> Unit,
     onSaveDownloadUri: (uri: Uri) -> Unit,
 ) {
-    // 诊断日志导出：这台 ROM 会过滤 app 自己的 logcat，出问题时需要能把完整轨迹带走
-    val fileOutputManager: FileOutputManager = koinInject()
-    val diagnosticScope = rememberCoroutineScope()
-
-    // 诊断日志 / 下载目录文件（2026-10-02 A 组）
-    var showLocalFilesDialog by remember { mutableStateOf(false) }
-    val localFiles = remember { mutableStateListOf<com.imcys.bilibilias.download.FileOutputManager.DownloadFileEntry>() }
-    // 已有下载记录的文件（用来标出"没有记录的孤儿文件"）
-    val downloadTaskRepository: com.imcys.bilibilias.data.repository.DownloadTaskRepository = koinInject()
-    val knownFileUris by remember {
-        downloadTaskRepository.getSegmentAll().map { segments ->
-            segments.mapNotNull { it.savePath.takeIf { savePath -> savePath.isNotBlank() } }.toSet()
-        }
-    }.collectAsState(initial = emptySet<String>())
-
     // 「所有文件访问」状态：进页面 + 从系统设置返回（ON_RESUME）都刷新一次
     var hasAllFilesAccess by remember { mutableStateOf(false) }
     val lifecycleOwner = LocalLifecycleOwner.current
@@ -257,62 +227,10 @@ fun StorageManagementSuccessScreen(
         }
 
 
-        StorageContent(
-            title = stringResource(R.string.download_dir_files),
-            dataNumStr = "",
-            description = stringResource(R.string.download_dir_files_desc),
-            buttonTextRes = R.string.view_button,
-            buttonColor = MaterialTheme.colorScheme.primary,
-            onClick = {
-                diagnosticScope.launch {
-                    val files = withContext(Dispatchers.IO) { fileOutputManager.listDownloadFiles() }
-                    localFiles.clear()
-                    localFiles.addAll(files)
-                    showLocalFilesDialog = true
-                }
-            },
-        )
-
-
-        if (showLocalFilesDialog) {
-            LocalFilesDialog(
-                files = localFiles,
-                knownUris = knownFileUris,
-                onOpen = { file ->
-                    runCatching {
-                        context.startActivity(
-                            Intent(Intent.ACTION_VIEW).apply {
-                                setDataAndType(Uri.parse(file.uriString), "video/*")
-                                addFlags(Intent.FLAG_GRANT_READ_URI_PERMISSION or Intent.FLAG_ACTIVITY_NEW_TASK)
-                            }
-                        )
-                    }.onFailure {
-                        Toast.makeText(context, context.getString(R.string.storage_no_app_to_open), Toast.LENGTH_SHORT).show()
-                    }
-                },
-                onDelete = { file ->
-                    diagnosticScope.launch {
-                        val ok = withContext(Dispatchers.IO) {
-                            runCatching {
-                                context.contentResolver.delete(Uri.parse(file.uriString), null, null) > 0
-                            }.getOrElse { false }
-                        }
-                        if (ok) {
-                            localFiles.remove(file)
-                            Toast.makeText(context, context.getString(R.string.storage_deleted), Toast.LENGTH_SHORT).show()
-                        } else {
-                            Toast.makeText(
-                                context,
-                                context.getString(R.string.storage_delete_failed_not_owned),
-                                Toast.LENGTH_LONG,
-                            ).show()
-                        }
-                    }
-                },
-                onDismiss = { showLocalFilesDialog = false },
-            )
-        }
-
+        // ⚠️ 这里原来还有一张「下载目录文件（含孤儿标记）」卡片。
+        // 它与下载管理的"重复检查"同源（都按名字扫 Download/BDT + 旧目录），
+        // 2026-10-05（#2）已并到**下载管理**首屏那张「下载目录检查」卡片里，
+        // 本页只留"空间占用 + 清缓存 + 权限"这几件只有设置里才该办的事。
         StorageContent(
             title = stringResource(R.string.storage_av_files),
             dataNumStr = StorageUtil.formatSize(data.downloadBytes),
@@ -489,68 +407,4 @@ private fun StorageManagementScaffold(
     }
 
 
-}
-
-
-/**
- * 诊断日志对话框（A3）：看轨迹、导出、清空。
- *
- * 为什么要应用内能看：这台 ROM 会过滤 logcat，轨迹文件是唯一取证渠道；
- * 以前只能"导出到 Download 再用别的 App 打开"，多一步就常常没人看。
- */
-
-/**
- * 下载目录文件对话框（A2）：列出下载目录里的文件，「孤儿」= 没有任何下载记录指向它。
- *
- * 直接解决两个真实现象：重装后记录没了、文件还在；改名后旧文件成了没人管的孤儿。
- */
-@Composable
-private fun LocalFilesDialog(
-    files: List<com.imcys.bilibilias.download.FileOutputManager.DownloadFileEntry>,
-    knownUris: Set<String>,
-    onOpen: (com.imcys.bilibilias.download.FileOutputManager.DownloadFileEntry) -> Unit,
-    onDelete: (com.imcys.bilibilias.download.FileOutputManager.DownloadFileEntry) -> Unit,
-    onDismiss: () -> Unit,
-) {
-    androidx.compose.ui.window.Dialog(onDismissRequest = onDismiss) {
-        Surface(shape = CardDefaults.shape) {
-            Column(Modifier.padding(12.dp)) {
-                val orphanCount = files.count { it.uriString !in knownUris }
-                Text(stringResource(R.string.storage_download_files_title, files.size, orphanCount),
-                    style = MaterialTheme.typography.titleMedium)
-                Spacer(Modifier.height(8.dp))
-                if (files.isEmpty()) {
-                    Text(stringResource(R.string.storage_dir_empty))
-                } else {
-                    LazyColumn(Modifier.heightIn(max = 420.dp)) {
-                        items(files) { file ->
-                            Row(
-                                Modifier.fillMaxWidth().padding(vertical = 6.dp),
-                                verticalAlignment = Alignment.CenterVertically,
-                            ) {
-                                Column(Modifier.weight(1f)) {
-                                    Text(file.displayName, fontSize = 12.sp, maxLines = 2)
-                                    Text(
-                                        text = StorageUtil.formatSize(file.sizeBytes) +
-                                            if (file.uriString in knownUris) {
-                                                " " + stringResource(R.string.storage_has_record)
-                                            } else {
-                                                " " + stringResource(R.string.storage_orphan)
-                                            },
-                                        fontSize = 10.sp,
-                                    )
-                                }
-                                TextButton(onClick = { onOpen(file) }) { Text(stringResource(R.string.storage_open)) }
-                                TextButton(onClick = { onDelete(file) }) { Text(stringResource(R.string.common_delete)) }
-                            }
-                        }
-                    }
-                }
-                Spacer(Modifier.height(8.dp))
-                Row(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
-                    TextButton(onClick = onDismiss) { Text(stringResource(R.string.cd_close)) }
-                }
-            }
-        }
-    }
 }

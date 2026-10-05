@@ -295,7 +295,7 @@
     <string name="diagnostic_log">诊断日志</string>
     <string name="diagnostic_log_desc">看最近 500 行交付/清理/失败轨迹（可导出、可清空）</string>
     <string name="download_dir_files">下载目录文件</string>
-    <string name="download_dir_files_desc">列出 Download/BDT 里的文件（含子目录），标出没有下载记录的孤儿文件</string>
+    <string name="download_dir_check_hint">检查重复副本、列出目录文件（标出无记录项）。</string>
     <string name="export_diagnostic_log">导出诊断日志</string>
     <string name="export_diagnostic_log_desc">把下载/清理的轨迹日志导出到 Download/BDT，排查问题时发给开发者</string>
     <string name="backup_settings">备份设置</string>
@@ -308,9 +308,8 @@
     <string name="speed_limit_none">不限速</string>
     <string name="retry_all_failed">全部重试</string>
     <string name="retry_failed_count">有 %1$d 个任务下载失败</string>
-    <string name="retry_failed_hint">失败原因已写进诊断日志（存储管理 → 诊断日志）</string>
+    <string name="retry_failed_hint">失败原因已写进诊断日志（设置 → 问题反馈）</string>
     <string name="file_missing">文件已丢失</string>
-    <string name="view_button">查看</string>
     <string name="export_button">导出</string>
     <string name="batch_move">移动到</string>
     <string name="batch_share">分享</string>

@@ -80,6 +80,7 @@ import com.imcys.bilibilias.common.event.sendToastEventOnBlocking
 import com.imcys.bilibilias.data.download.record.DownloadRecordDisplayRules
 import com.imcys.bilibilias.database.entity.download.DownloadSegment
 import com.imcys.bilibilias.datastore.AppSettings
+import com.imcys.bilibilias.download.FileOutputManager
 import com.imcys.bilibilias.ui.download.navigation.DownloadRoute
 import com.imcys.bilibilias.ui.widget.ASTextButton
 import com.imcys.bilibilias.ui.widget.ASTopAppBar
@@ -181,6 +182,11 @@ fun DownloadScreen(route: DownloadRoute, onToBack: () -> Unit) {
         vm.refreshDuplicateGroups()
     }
     var showDuplicateDialog by remember { mutableStateOf(false) }
+
+    // 下载目录文件清单（A-② / #2：与重复检查同一张卡片，同源扫描）
+    val downloadDirFiles by vm.downloadDirFiles.collectAsState()
+    val referencedDownloadNames by vm.referencedDownloadNames.collectAsState()
+    var showDownloadDirFilesDialog by remember { mutableStateOf(false) }
 
     // 「检查重复下载文件」需要 READ_MEDIA_VIDEO 才能看到**不是本 app 创建**的副本
     //（MediaStore 默认只返回本 app 拥有的行；上一版安装留下的副本就属于这一类）。
@@ -309,26 +315,30 @@ fun DownloadScreen(route: DownloadRoute, onToBack: () -> Unit) {
                 modifier = Modifier.padding(bottom = 10.dp, end = 10.dp, start = 10.dp),
                 verticalArrangement = Arrangement.spacedBy(11.dp)
             ) {
-                // ⚠️ 放在列表最前面：重复文件是"同一个视频多份 100MB 级副本"，提示要显眼；
-                // 没有重复时也保留一个"检查"入口 —— 否则用户永远不知道有这个功能，
-                // 而权限（READ_MEDIA_VIDEO）没给时检测本就看不到别人创建的副本。
+                // ⚠️ 常驻（不再"有重复才出现"）：这张卡片同时是**两个入口**的家 ——
+                // 重复副本的清理，以及"目录里到底有什么文件"的清单（原来在设置 → 存储管理，
+                // 与重复检查同源却分两处，用户找不到）。没有重复时给"检查"入口，
+                // 否则用户永远不知道有这个功能，而权限（READ_MEDIA_VIDEO）没给时
+                // 检测本就看不到别人创建的副本。
                 item(key = "duplicate_files_card") {
-                    if (duplicateGroups.isNotEmpty()) {
-                        DuplicateFilesCard(
-                            groupCount = duplicateGroups.size,
-                            removableCount = duplicateGroups.sumOf { it.removableNames.size },
-                            hasVideoPermission = hasVideoPermission,
-                            onClean = { showDuplicateDialog = true },
-                            onCheck = {
-                                if (hasVideoPermission) {
-                                    vm.refreshDuplicateGroups()
-                                    sendToastEventOnBlocking(context.getString(R.string.duplicate_rechecked))
-                                } else {
-                                    videoPermissionLauncher.launch(Manifest.permission.READ_MEDIA_VIDEO)
-                                }
-                            },
-                        )
-                    }
+                    DownloadDirCheckCard(
+                        groupCount = duplicateGroups.size,
+                        removableCount = duplicateGroups.sumOf { it.removableNames.size },
+                        hasVideoPermission = hasVideoPermission,
+                        onClean = { showDuplicateDialog = true },
+                        onCheck = {
+                            if (hasVideoPermission) {
+                                vm.refreshDuplicateGroups()
+                                sendToastEventOnBlocking(context.getString(R.string.duplicate_rechecked))
+                            } else {
+                                videoPermissionLauncher.launch(Manifest.permission.READ_MEDIA_VIDEO)
+                            }
+                        },
+                        onListDirFiles = {
+                            vm.refreshDownloadDirFiles()
+                            showDownloadDirFilesDialog = true
+                        },
+                    )
                 }
 
                 when (selectIndex) {
@@ -425,6 +435,17 @@ fun DownloadScreen(route: DownloadRoute, onToBack: () -> Unit) {
             )
         }
 
+        // 下载目录文件清单（含"无记录（孤儿）"标记；打开 / 删除都在这里）
+        if (showDownloadDirFilesDialog) {
+            DownloadDirFilesDialog(
+                files = downloadDirFiles,
+                knownNames = referencedDownloadNames,
+                onOpen = { file -> openDownloadDirFile(context, file) },
+                onDelete = { file -> vm.deleteDownloadDirFile(file) },
+                onDismiss = { showDownloadDirFilesDialog = false },
+            )
+        }
+
         // 删除确认对话框
         if (showDeleteDialog) {
             DeleteConfirmDialog(
@@ -440,68 +461,80 @@ fun DownloadScreen(route: DownloadRoute, onToBack: () -> Unit) {
 }
 
 /**
- * 「发现重复下载文件」提示卡。
+ * 「下载目录检查」卡片：**重复副本清理** + **目录文件清单**两个入口，常驻列表顶部。
  *
- * 2026-10-01 真机复现：这台 ROM 的 MediaStore 会把撞名的新文件改成 `xxx (1)/(2).mp4`，
- * 而 app 对这些 MediaProvider 拥有的文件删不动、按行删又常命中 0 —— 自动删除不可靠，
- * 于是改成"提示 + 用户确认"：默认保留正式名那份，只删副本。
+ * 合并理由（2026-10-05 / #2）：两件事同源（都按名字扫 Download/BDT 与旧目录
+ * Download/BiliDownloader），却一个在下载管理、一个在设置 → 存储管理；
+ * 用户想弄清"目录里这个不认识的文件是谁的"得先猜到去设置里找。
+ *
+ * 有重复时用 tertiaryContainer 强调 + 直接给「去清理」按钮（别让用户点两下）；
+ * 没有重复时只留两个文字入口，不占视觉重量。
  */
+@OptIn(ExperimentalLayoutApi::class)
 @Composable
-private fun DuplicateFilesCard(
+private fun DownloadDirCheckCard(
     groupCount: Int,
     removableCount: Int,
     hasVideoPermission: Boolean,
     onClean: () -> Unit,
     onCheck: () -> Unit,
+    onListDirFiles: () -> Unit,
 ) {
-    if (groupCount == 0) {
-        // 没有发现重复：给一个常驻入口（并说明为什么可能需要先授权）
-        Column(
-            modifier = Modifier
-                .fillMaxWidth()
-                .padding(horizontal = 4.dp, vertical = 2.dp),
-        ) {
-            TextButton(onClick = onCheck) {
-                Text(
-                    if (hasVideoPermission) stringResource(R.string.duplicate_check)
-                    else stringResource(R.string.duplicate_grant_and_check),
-                )
-            }
-            Text(
-                stringResource(R.string.duplicate_check_hint),
-                fontSize = 11.sp,
-                color = MaterialTheme.colorScheme.outline,
-            )
-        }
-        return
-    }
+    val hasDuplicates = groupCount > 0
     Card(
         modifier = Modifier.fillMaxWidth(),
         colors = CardDefaults.cardColors(
-            containerColor = MaterialTheme.colorScheme.tertiaryContainer,
+            containerColor = if (hasDuplicates) {
+                MaterialTheme.colorScheme.tertiaryContainer
+            } else {
+                MaterialTheme.colorScheme.surfaceContainerHigh
+            },
         ),
     ) {
-        Row(
+        Column(
             modifier = Modifier
                 .fillMaxWidth()
                 .padding(horizontal = 16.dp, vertical = 12.dp),
-            verticalAlignment = Alignment.CenterVertically,
         ) {
-            Column(Modifier.weight(1f)) {
-                Text(
-                    stringResource(R.string.duplicate_files_found, groupCount),
-                    fontSize = 15.sp,
-                    fontWeight = FontWeight.Medium,
-                )
-                Text(
-                    stringResource(R.string.duplicate_files_removable, removableCount),
-                    fontSize = 12.sp,
-                    color = MaterialTheme.colorScheme.onSurfaceVariant,
-                )
+            if (hasDuplicates) {
+                Row(verticalAlignment = Alignment.CenterVertically) {
+                    Column(Modifier.weight(1f)) {
+                        Text(
+                            stringResource(R.string.duplicate_files_found, groupCount),
+                            fontSize = 15.sp,
+                            fontWeight = FontWeight.Medium,
+                        )
+                        Text(
+                            stringResource(R.string.duplicate_files_removable, removableCount),
+                            fontSize = 12.sp,
+                            color = MaterialTheme.colorScheme.onSurfaceVariant,
+                        )
+                    }
+                    TextButton(onClick = onClean) {
+                        Text(stringResource(R.string.duplicate_files_clean))
+                    }
+                }
             }
-            TextButton(onClick = onClean) {
-                Text(stringResource(R.string.duplicate_files_clean))
+            // 两个入口用 FlowRow：英文/大字体下"授予视频权限并检查重复文件"很长，会自动换行
+            FlowRow(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
+                TextButton(onClick = onCheck) {
+                    Text(
+                        if (hasVideoPermission) stringResource(R.string.duplicate_check)
+                        else stringResource(R.string.duplicate_grant_and_check),
+                    )
+                }
+                TextButton(onClick = onListDirFiles) {
+                    Text(stringResource(R.string.download_dir_files))
+                }
             }
+            Text(
+                stringResource(
+                    if (hasDuplicates) R.string.duplicate_check_hint
+                    else R.string.download_dir_check_hint
+                ),
+                fontSize = 11.sp,
+                color = MaterialTheme.colorScheme.outline,
+            )
         }
     }
 }
@@ -605,6 +638,27 @@ private fun openFile(context: Context, segment: DownloadSegment) {
         context.startActivity(intent)
     }.onFailure {
         sendToastEventOnBlocking(context.getString(R.string.open_file_no_app))
+    }
+}
+
+/**
+ * 打开「下载目录文件」清单里的一个文件。
+ *
+ * 条目本身就带 MediaStore 的 content URI，所以不需要 FileProvider（与 [openFile]
+ * 处理 `file://` 记录的路径不同）；类型问得到就用真实类型，问不到按视频处理。
+ */
+private fun openDownloadDirFile(context: Context, file: FileOutputManager.DownloadFileEntry) {
+    val uri = file.uriString.toUri()
+    val type = context.contentResolver.getType(uri) ?: "video/*"
+    val intent = Intent(Intent.ACTION_VIEW).apply {
+        addFlags(Intent.FLAG_ACTIVITY_NEW_TASK)
+        addFlags(Intent.FLAG_GRANT_READ_URI_PERMISSION)
+        setDataAndType(uri, type)
+    }
+    runCatching {
+        context.startActivity(intent)
+    }.onFailure {
+        sendToastEventOnBlocking(context.getString(R.string.storage_no_app_to_open))
     }
 }
 // endregion

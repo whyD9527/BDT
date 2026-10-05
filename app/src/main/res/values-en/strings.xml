@@ -295,7 +295,7 @@
     <string name="diagnostic_log">Diagnostic log</string>
     <string name="diagnostic_log_desc">View the last 500 lines of delivery/cleanup/failure trace</string>
     <string name="download_dir_files">Files in download folder</string>
-    <string name="download_dir_files_desc">List files in Download/BDT and flag those with no download record</string>
+    <string name="download_dir_check_hint">Check duplicate copies, or list folder files (recordless ones flagged).</string>
     <string name="export_diagnostic_log">Export diagnostic log</string>
     <string name="export_diagnostic_log_desc">Export the delivery/cleanup trace to Download/BDT</string>
     <string name="backup_settings">Back up settings</string>
@@ -310,7 +310,6 @@
     <string name="retry_failed_count">%1$d task(s) failed</string>
     <string name="retry_failed_hint">The failure reason is written to the diagnostic log</string>
     <string name="file_missing">File missing</string>
-    <string name="view_button">View</string>
     <string name="export_button">Export</string>
     <string name="batch_move">Move to</string>
     <string name="batch_share">Share</string>

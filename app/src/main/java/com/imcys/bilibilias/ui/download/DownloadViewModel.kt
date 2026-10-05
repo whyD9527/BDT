@@ -12,6 +12,7 @@ import com.imcys.bilibilias.data.repository.DownloadTaskRepository
 import com.imcys.bilibilias.database.entity.download.DownloadSegment
 import com.imcys.bilibilias.database.entity.download.DownloadState
 import com.imcys.bilibilias.datastore.AppSettings
+import com.imcys.bilibilias.data.download.record.DownloadDirFilesRules
 import com.imcys.bilibilias.data.download.record.DownloadRecordDisplayRules
 import com.imcys.bilibilias.download.DownloadDir
 import com.imcys.bilibilias.data.download.output.BatchRenameRules
@@ -27,6 +28,7 @@ import kotlinx.coroutines.flow.MutableSharedFlow
 import kotlinx.coroutines.flow.SharingStarted
 import kotlinx.coroutines.flow.asSharedFlow
 import kotlinx.coroutines.flow.combine
+import kotlinx.coroutines.flow.first
 import kotlinx.coroutines.flow.map
 import kotlinx.coroutines.flow.stateIn
 import kotlinx.coroutines.launch
@@ -136,6 +138,90 @@ class DownloadViewModel(
         _pendingDeleteUris.value = emptyList()
         refreshDuplicateGroups()
     }
+
+    // region 下载目录文件（A-② / #2：原来在「设置 → 存储管理」，现并入下载管理同一张卡片）
+
+    /**
+     * 下载目录（新 + 旧）里的**全部**文件。
+     *
+     * 与重复检查同源（同一个 `listDownloadFiles` + 同一组目录）：用户在一张卡片上
+     * 既能清理重复副本、也能看清目录里到底有什么。
+     */
+    private val _downloadDirFiles = MutableStateFlow<List<FileOutputManager.DownloadFileEntry>>(emptyList())
+    val downloadDirFiles = _downloadDirFiles.asStateFlow()
+
+    /** 下载记录当前引用的显示名（用来标"无记录（孤儿）"） */
+    private val _referencedDownloadNames = MutableStateFlow<Set<String>>(emptySet())
+    val referencedDownloadNames = _referencedDownloadNames.asStateFlow()
+
+    /**
+     * 刷新下载目录清单。
+     *
+     * ⚠️ 与重复检查一样要扫**新目录 + 旧目录**：只扫新目录的话，改名（`BiliDownloader` → `BDT`）
+     * 前留下的文件永远不会被列出来 —— 而"重装/改名后留下的孤儿"正是这张清单要回答的问题。
+     *
+     * 每次刷新都写轨迹（`[目录文件] …`）：真机核验就靠这一行。
+     */
+    fun refreshDownloadDirFiles() {
+        viewModelScope.launch {
+            val (files, names) = withContext(Dispatchers.IO) {
+                // 记录引用的显示名：content:// 路径能问到真实显示名（file:// 问不到，跳过）
+                val names = runCatching {
+                    downloadTaskRepository.getSegmentAll().first()
+                        .mapNotNull { runCatching { fileOutputManager.displayNameOf(it.savePath) }.getOrNull() }
+                        .toSet()
+                }.getOrElse { emptySet<String>() }
+                val list = duplicateScanRelativePaths
+                    .flatMap { path ->
+                        runCatching { fileOutputManager.listDownloadFiles(path) }.getOrElse { emptyList() }
+                    }
+                    .distinctBy { it.uriString }
+                    .sortedByDescending { it.addedMs }
+                list to names
+            }
+            _downloadDirFiles.value = files
+            _referencedDownloadNames.value = names
+            val orphanCount = DownloadDirFilesRules.summarize(
+                dirFileDisplayNames = files.map { it.displayName },
+                referencedNames = names,
+            ).orphan
+            runCatching {
+                fileOutputManager.logDiagnostic(
+                    "目录文件",
+                    "列出 ${files.size} 个文件，其中 $orphanCount 个无记录（目录：${duplicateScanRelativePaths.joinToString("、")}）",
+                )
+            }
+        }
+    }
+
+    /**
+     * 删除下载目录里的一个文件（用户在该清单里点"删除"）。
+     *
+     * 删不动时**如实说**：本 app 没有"所有文件访问"时，媒体库里由系统/别的 App 拥有的行
+     * 只能走系统确认框，直接删会命中 0 行（这台 ROM 上踩过），所以不能报"已删除"。
+     */
+    fun deleteDownloadDirFile(file: FileOutputManager.DownloadFileEntry) {
+        viewModelScope.launch {
+            val deleted = withContext(Dispatchers.IO) {
+                runCatching {
+                    contentResolver.delete(android.net.Uri.parse(file.uriString), null, null) > 0
+                }.getOrElse { false }
+            }
+            runCatching {
+                fileOutputManager.logDiagnostic(
+                    "目录文件",
+                    "删除${if (deleted) "成功" else "失败"} 名称=${file.displayName}",
+                )
+            }
+            if (deleted) {
+                _downloadDirFiles.value = _downloadDirFiles.value.filterNot { it.uriString == file.uriString }
+                sendToast(R.string.storage_deleted)
+            } else {
+                sendToast(R.string.storage_delete_failed_not_owned)
+            }
+        }
+    }
+    // endregion
 
     // region 事件流
     private val _uiEvent = MutableSharedFlow<DownloadUiEvent>()
