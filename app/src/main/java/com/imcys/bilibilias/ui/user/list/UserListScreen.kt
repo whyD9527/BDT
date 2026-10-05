@@ -2,6 +2,7 @@ package com.imcys.bilibilias.ui.user.list
 
 import androidx.annotation.StringRes
 import androidx.compose.foundation.layout.Arrangement
+import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.IntrinsicSize
 import androidx.compose.foundation.layout.PaddingValues
@@ -36,6 +37,7 @@ import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.input.nestedscroll.nestedScroll
 import androidx.compose.ui.res.stringResource
+import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.tooling.preview.Preview
 import androidx.compose.ui.unit.dp
@@ -116,6 +118,33 @@ fun UserListScreen(userListRoute: UserListRoute, onToBack: () -> Unit) {
                 // ⚠️ animateItem() 是 LazyGridItemScope 的成员扩展：只能在 items 的
                 // itemContent 里调用，搬进 UserListItemCard 会编译失败（Unresolved reference）
                 itemList[index]?.let { item -> UserListItemCard(item, Modifier.animateItem()) }
+            }
+
+            // 空态（#4 合并后统一一处）：加载完成、没有失败、一条都没有 → 告诉用户这里为什么是空的。
+            // 原来四份实现都是"不显示任何东西"（真机复验：空追番列表就是一片空白）。
+            val refreshState = itemList.loadState.refresh
+            if (itemList.itemCount == 0 && refreshState is LoadState.NotLoading) {
+                item(span = { GridItemSpan(maxLineSpan) }) {
+                    Box(
+                        modifier = Modifier
+                            .fillMaxWidth()
+                            .padding(vertical = 40.dp),
+                        contentAlignment = Alignment.Center,
+                    ) {
+                        Text(
+                            text = stringResource(
+                                if (userListRoute.source.withSearch && query.isNotBlank()) {
+                                    R.string.user_list_empty_search
+                                } else {
+                                    userListRoute.source.emptyTextRes()
+                                }
+                            ),
+                            style = MaterialTheme.typography.bodyMedium,
+                            color = MaterialTheme.colorScheme.outline,
+                            textAlign = TextAlign.Center,
+                        )
+                    }
+                }
             }
 
             when (val refresh = itemList.loadState.refresh) {
@@ -232,6 +261,16 @@ private fun UserListSource.titleRes(): Int = when (this) {
     UserListSource.WORK -> R.string.work_list_title
     UserListSource.BANGUMI_FOLLOW -> R.string.user_bangumi
     UserListSource.HISTORY -> R.string.user_recent_play_title
+}
+
+/** 空态文案：每种来源说清"这里为什么是空的"（界面上不能只留一片白） */
+@StringRes
+private fun UserListSource.emptyTextRes(): Int = when (this) {
+    UserListSource.LIKE -> R.string.user_list_empty_like
+    UserListSource.COIN -> R.string.user_list_empty_coin
+    UserListSource.WORK -> R.string.user_list_empty_work
+    UserListSource.BANGUMI_FOLLOW -> R.string.user_list_empty_bangumi
+    UserListSource.HISTORY -> R.string.user_list_empty_history
 }
 
 @Preview

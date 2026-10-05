@@ -638,6 +638,12 @@
     <string name="like_page_coin">Coins</string>
     <string name="work_search_hint">Search uploads</string>
     <string name="work_list_title">Uploads</string>
+    <string name="user_list_empty_like">No liked videos yet</string>
+    <string name="user_list_empty_coin">No coins given yet</string>
+    <string name="user_list_empty_work">No uploads from this creator yet</string>
+    <string name="user_list_empty_bangumi">Not following any anime yet</string>
+    <string name="user_list_empty_history">No watch history yet</string>
+    <string name="user_list_empty_search">No matching uploads</string>
     <string name="privacy_agree_checkbox">I have read and agree to the privacy notice of this app</string>
     <string name="cd_frame_image">Frame image</string>
     <string name="list_detail_empty_hint">Choose an option on the right</string>

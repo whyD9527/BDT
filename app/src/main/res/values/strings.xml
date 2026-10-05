@@ -639,6 +639,13 @@
     <string name="like_page_coin">投币</string>
     <string name="work_search_hint">搜索投稿</string>
     <string name="work_list_title">投稿</string>
+    <!-- #4 合并后的用户列表页空态 -->
+    <string name="user_list_empty_like">还没有点赞过的视频</string>
+    <string name="user_list_empty_coin">还没有投过币的视频</string>
+    <string name="user_list_empty_work">这位 UP 还没有投稿</string>
+    <string name="user_list_empty_bangumi">还没有追番</string>
+    <string name="user_list_empty_history">还没有观看记录</string>
+    <string name="user_list_empty_search">没有找到相关投稿</string>
     <string name="privacy_agree_checkbox">我已阅读并同意本应用的隐私说明</string>
     <string name="cd_frame_image">帧图片</string>
     <string name="list_detail_empty_hint">请选择右侧选项</string>
