@@ -81,26 +81,30 @@ class DownloadDirFilesRulesTest {
     }
 
     @Test
-    fun `目录自己那一行要剔掉（0B、displayName=BDT、relativePath=Download BDT）`() {
+    fun `目录自己那一行要剔掉（0B 且名字等于被查目录名）`() {
         assertTrue(
             DownloadDirFilesRules.isDirectoryRow(
                 displayName = "BDT",
-                rowRelativePath = "Download/BDT/",
                 queriedRelativePath = "Download/BDT",
                 sizeBytes = 0L,
             )
         )
+        // 真机上这一行是走 `_data` 兜底进来的（RELATIVE_PATH 是父目录 `Download/`），
+        // 所以判定**不能**要求"行相对路径 == 查询目录" —— 这里用"不带行路径"的参数形态钉住它。
+        assertTrue(
+            DownloadDirFilesRules.isDirectoryRow("BDT", "/Download/BDT/", 0L)
+        )
         // 文件（有体积）不能因为名字恰好是 BDT 就被剔掉
         assertFalse(
-            DownloadDirFilesRules.isDirectoryRow("BDT", "Download/BDT/", "Download/BDT", 1024L)
+            DownloadDirFilesRules.isDirectoryRow("BDT", "Download/BDT", 1024L)
         )
         // 目录下真实文件的那一行
         assertFalse(
-            DownloadDirFilesRules.isDirectoryRow("第1话.mp4", "Download/BDT/", "Download/BDT", 123L)
+            DownloadDirFilesRules.isDirectoryRow("第1话.mp4", "Download/BDT", 123L)
         )
-        // 别的目录的同名行
+        // 别的目录：名字不等于被查目录名，不剔
         assertFalse(
-            DownloadDirFilesRules.isDirectoryRow("BDT", "Download/", "Download/BDT", 0L)
+            DownloadDirFilesRules.isDirectoryRow("BiliDownloader", "Download/BDT", 0L)
         )
     }
 }

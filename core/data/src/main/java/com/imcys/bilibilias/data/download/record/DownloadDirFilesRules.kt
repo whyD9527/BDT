@@ -52,19 +52,19 @@ object DownloadDirFilesRules {
     /**
      * 这一行是不是"目录本身"。
      *
-     * MediaStore 会把目录自己也算一行（`displayName = BDT`、`size = 0`、
-     * `relativePath = Download/BDT/`）。它不是文件，列进"目录文件"清单只会让人以为
-     * 目录里有个 0 B 的怪东西 —— 真机复验时那份清单里**只有**这一行。
+     * MediaStore 会把目录自己也算一行（`displayName = BDT`、`size = 0`）。它不是文件，
+     * 列进"目录文件"清单只会让人以为目录里有个 0 B 的怪东西 —— 真机复验时那份清单里
+     * **只有**这一行（`Download/BDT` 是空目录，却显示「共 1 个，其中 1 个没有记录」）。
+     *
+     * ⚠️ 只看 `名字 + 体积`，**不看 `relativePath`**：这一行在真机上是以
+     * `_data = /storage/emulated/0/Download/BDT`（走 `_data` 兜底命中）进来的，
+     * 它的 `RELATIVE_PATH` 是父目录的 `Download/`，不是 `Download/BDT/` ——
+     * 拿"行相对路径 == 查询目录"去判会漏掉它。
+     * 代价是"目录下恰好有个同名的 0 B 文件"也会被当成目录行忽略（可接受）。
      */
     fun isDirectoryRow(
         displayName: String,
-        rowRelativePath: String,
         queriedRelativePath: String,
         sizeBytes: Long,
-    ): Boolean {
-        val queried = queriedRelativePath.trim('/')
-        return sizeBytes == 0L &&
-            displayName == queried.substringAfterLast('/') &&
-            rowRelativePath.trim('/') == queried
-    }
+    ): Boolean = sizeBytes == 0L && displayName == queriedRelativePath.trim('/').substringAfterLast('/')
 }

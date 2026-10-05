@@ -901,7 +901,6 @@ class FileOutputManager(
             .filterNot {
                 DownloadDirFilesRules.isDirectoryRow(
                     displayName = it.displayName,
-                    rowRelativePath = it.relativePath,
                     queriedRelativePath = rel,
                     sizeBytes = it.sizeBytes,
                 )
