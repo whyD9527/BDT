@@ -29,11 +29,8 @@ import com.imcys.bilibilias.ui.setting.storage.StorageManagementViewModel
 import com.imcys.bilibilias.ui.tools.frame.FrameExtractorViewModel
 import com.imcys.bilibilias.ui.tools.parser.WebParserViewModel
 import com.imcys.bilibilias.ui.user.UserViewModel
-import com.imcys.bilibilias.ui.user.bangumifollow.BangumiFollowViewModel
 import com.imcys.bilibilias.ui.user.folder.UserFolderViewModel
-import com.imcys.bilibilias.ui.user.history.UserPlayHistoryViewModel
-import com.imcys.bilibilias.ui.user.like.LikeVideoViewModel
-import com.imcys.bilibilias.ui.user.work.WorkListViewModel
+import com.imcys.bilibilias.ui.user.list.UserListViewModel
 import org.koin.android.ext.koin.androidApplication
 import org.koin.android.ext.koin.androidContext
 import org.koin.core.module.dsl.viewModelOf
@@ -63,13 +60,10 @@ val appModule = module {
     viewModelOf(::AnalysisViewModel)
     viewModelOf(::DownloadViewModel)
     viewModelOf(::PlayVoucherErrorViewModel)
-    viewModelOf(::WorkListViewModel)
-    viewModelOf(::BangumiFollowViewModel)
+    viewModelOf(::UserListViewModel)
     viewModelOf(::UserFolderViewModel)
-    viewModelOf(::LikeVideoViewModel)
     viewModelOf(::SettingViewModel)
     viewModelOf(::LayoutTypesetViewModel)
-    viewModelOf(::UserPlayHistoryViewModel)
     viewModelOf(::FrameExtractorViewModel)
     viewModelOf(::CookieLoginViewModel)
     viewModelOf(::StorageManagementViewModel)

@@ -81,18 +81,12 @@ import com.imcys.bilibilias.ui.tools.parser.WebParserRoute
 import com.imcys.bilibilias.ui.tools.parser.WebParserScreen
 import com.imcys.bilibilias.ui.user.UserScreen
 import com.imcys.bilibilias.ui.user.UserViewModel
-import com.imcys.bilibilias.ui.user.bangumifollow.BangumiFollowRoute
-import com.imcys.bilibilias.ui.user.bangumifollow.BangumiFollowScreen
 import com.imcys.bilibilias.ui.user.folder.UserFolderRoute
 import com.imcys.bilibilias.ui.user.folder.UserFolderScreen
-import com.imcys.bilibilias.ui.user.history.UserPlayHistoryRoute
-import com.imcys.bilibilias.ui.user.history.UserPlayHistoryScreen
-import com.imcys.bilibilias.ui.user.like.LikePageType
-import com.imcys.bilibilias.ui.user.like.LikeVideoRoute
-import com.imcys.bilibilias.ui.user.like.LikeVideoScreen
+import com.imcys.bilibilias.ui.user.list.UserListRoute
+import com.imcys.bilibilias.ui.user.list.UserListScreen
+import com.imcys.bilibilias.ui.user.list.UserListSource
 import com.imcys.bilibilias.ui.user.navigation.UserRoute
-import com.imcys.bilibilias.ui.user.work.WorkListRoute
-import com.imcys.bilibilias.ui.user.work.WorkListScreen
 import org.koin.androidx.compose.koinViewModel
 
 /**
@@ -242,23 +236,25 @@ fun BILIBILAISNavDisplay() {
                         onToSettings = {
                             backStack.addWithReuse(SettingRoute)
                         },
+                        // #4（2026-10-05）：四个列表页合成一个通用列表页，
+                        // 「我的」这四个入口只是传不同的来源枚举
                         onToWorkList = { mid ->
-                            backStack.add(WorkListRoute(mid = mid))
+                            backStack.add(UserListRoute(source = UserListSource.WORK, mid = mid))
                         },
                         onToBangumiFollow = { mid ->
-                            backStack.add(BangumiFollowRoute(mid = mid))
+                            backStack.add(UserListRoute(source = UserListSource.BANGUMI_FOLLOW, mid = mid))
                         },
                         onToUserFolder = { mid ->
                             backStack.add(UserFolderRoute(mid = mid))
                         },
                         onToLikeVideo = { mid ->
-                            backStack.add(LikeVideoRoute(mid = mid, type = LikePageType.LIKE))
+                            backStack.add(UserListRoute(source = UserListSource.LIKE, mid = mid))
                         },
                         onToCoinVide = { mid ->
-                            backStack.add(LikeVideoRoute(mid = mid, type = LikePageType.COIN))
+                            backStack.add(UserListRoute(source = UserListSource.COIN, mid = mid))
                         },
                         onToPlayHistory = {
-                            backStack.add(UserPlayHistoryRoute)
+                            backStack.add(UserListRoute(source = UserListSource.HISTORY))
                         }
                     )
                 }
@@ -328,27 +324,16 @@ fun BILIBILAISNavDisplay() {
                         }
                     )
                 }
-                entry<WorkListRoute> {
-                    WorkListScreen(
-                        workListRoute = it,
-                        onToBack = { backStack.removeLastOrNullSafe() }
-                    )
-                }
-                entry<BangumiFollowRoute> {
-                    BangumiFollowScreen(
-                        bangumiFollowRoute = it,
+                // #4（2026-10-05）：点赞/投币/投稿/追番/历史 五个入口共用一个通用列表页
+                entry<UserListRoute> {
+                    UserListScreen(
+                        userListRoute = it,
                         onToBack = { backStack.removeLastOrNullSafe() }
                     )
                 }
                 entry<UserFolderRoute> {
                     UserFolderScreen(
                         userFolderRoute = it,
-                        onToBack = { backStack.removeLastOrNullSafe() }
-                    )
-                }
-                entry<LikeVideoRoute> {
-                    LikeVideoScreen(
-                        likeVideoRoute = it,
                         onToBack = { backStack.removeLastOrNullSafe() }
                     )
                 }
@@ -362,12 +347,6 @@ fun BILIBILAISNavDisplay() {
                 ) {
                     LayoutTypesetScreen(
                         layoutTypesetRoute = it,
-                        onToBack = { backStack.removeLastOrNullSafe() }
-                    )
-                }
-                entry<UserPlayHistoryRoute> {
-                    UserPlayHistoryScreen(
-                        userPlayHistoryRoute = it,
                         onToBack = { backStack.removeLastOrNullSafe() }
                     )
                 }
