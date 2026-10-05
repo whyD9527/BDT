@@ -53,7 +53,10 @@ def main() -> int:
     if not artifacts:
         print("这次 run 没有 artifact（可能失败在测试步骤，或还没打包完）")
         return 1
-    art = artifacts[0]
+    # ⚠️ 一次 run 会有多个 artifact（`room-schema` 只有 11 KB、`bilibilias-alpha-apk` 上百 MB）。
+    # 接口返回的顺序不保证把 APK 排在前面（2026-10-05 就取到了 room-schema，白跑一趟），
+    # 所以按体积取最大的那个 —— APK 永远是最大的。
+    art = max(artifacts, key=lambda a: a["size_in_bytes"])
     print(f"artifact: {art['name']}  {art['size_in_bytes'] / 1048576:.1f} MB")
 
     zip_api = f"https://api.github.com/repos/{REPO}/actions/artifacts/{art['id']}/zip"

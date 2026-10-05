@@ -46,19 +46,60 @@
 - A-⑤（部分）4 处长文案缩短（`duplicate_check_hint` / `line_config_info` / `home_no_cache_task` / `home_download_dir_hint`，均保留 `%1$s` 占位符不动调用点）；
 - A-④（部分）下载管理的「重复检查」卡片改为**只在真有重复时渲染**（`if (duplicateGroups.isNotEmpty())`）。
 
-**未完成（后续批次，按此顺序做）**
-1. 工具卡片去掉「前往」二次点击（工具列表本来就是同一个 `ToolInfo` 数据源，由 `HomeScreen:207 → ToolsScreen(vm, goToPage)` 渲染）；
-2. 存储管理的「下载目录文件/孤儿文件」并入下载管理的重复检查（`StorageManagementScreen` 的 `listDownloadFiles` 与 `DownloadScreen` 的 `duplicateGroups` 同源）；
-3. 设置分组折叠：下载（下载与缓存＝合并 `缓存配置`+`缓存目录`+`存储管理`、命名规则、线路＝`线路配置`+`解析平台`、速度＝限速+分片并发）/ 外观（主题色、首页排版）/ 数据（备份与恢复合一、问题反馈）/ 关于（版本+检查更新、隐私政策、账户、许可）—— 需要改写 `SettingScreen` 的列表结构，首屏 ~20 行 → 6~7 行；
-4. 四个用户列表页（`LikeVideoRoute`/`BangumiFollowRoute`/`UserPlayHistoryRoute`/`WorkListRoute`）合成一个通用列表页，并改「我的」页四个入口指向它；
-5. 三个登录路由（`LoginRoute`/`QRCodeLoginRoute`/`CookeLoginRoute`）合成一个「登录」页两个 Tab；
-6. 两个错误页（`PlayVoucherErrorRoute`/`RequestFrequentRoute`）抽成通用提示页组件；
-7. 首页主输入智能分流（B 站链接/番剧/短链直接解析；`WebParserScreen` 已定：保留为独立工具，不并入）；
-8. `SystemExpandRoute` 处置（收进"高级"折叠或删除，动手前 grep 确认无其它引用）。
+**本轮已完成（2026-10-05，均已推送、CI 真绿；⏳ 真机复验未做 → 因此还没发版）**
 
-**每完成一批 → 本地校验 → 一次推送 → CI 双绿（Fallback to alphaDebug = skipped）→ 用户装包 → 真机逐条复验 → 发版。**
+> 判据：CI run `37259406657`，`Run unit tests` ✓ / `Assemble alphaRelease` ✓ /
+> **`Fallback to alphaDebug` = skipped** ✓ / `Upload APKs` ✓。
+
+1. ~~工具卡片去掉「前往」二次点击~~ —— 已查证不成立（`Surface(onClick)` 整块可点），已划掉；
+2. **#2 存储「下载目录文件/孤儿文件」并入下载管理** —— `4ba2747b`：共享对话框
+   `ui/download/DownloadDirFilesDialog.kt`；下载页首屏卡片改为**常驻**的「下载目录检查」
+   （`DuplicateFilesCard` → `DownloadDirCheckCard`，两个入口：清理重复 / 列出目录文件）；
+   目录清单改扫**新目录 + 旧目录**（与重复检查同源）；抽纯规则 `DownloadDirFilesRules` + 5 个 JVM 单测；
+   存储管理页只留"空间占用 / 清缓存 / 权限"。轨迹新增 `[目录文件] 列出 N 个文件…` 与
+   `[目录文件] 删除成功|失败 名称=…`（真机核验就靠这两行）。
+3. **#3 设置分组折叠** —— `cd792b49`：新增 `CollapsibleCategorySettingsItem`（core:ui）+ 四组
+   下载 / 外观 / 数据 / 关于（下载组默认展开，展开状态 `rememberSaveable`）；
+   合并「缓存配置+缓存目录+存储管理」→ 一行「下载与缓存」；合并限速+分片并发 → 「下载速度」一个弹窗；
+   合并备份+恢复 → 一个弹窗；删掉 9 条因此失效的 `setting_*` 死文案。
+4. **#4 五个用户列表页合一** —— `8bf7a51d` + 编译修复 `f27293af`：`ui/user/list/`
+   （`UserListSource` 枚举 + `UserListRoute` + 通用 PagingSource/ViewModel/Screen）；
+   「我的」的投稿/追番/点赞/投币/历史五个入口共用一个页面；删 4 套 Screen+ViewModel 与 2 个 PagingSource；
+   导航 4 个 entry → 1 个；抽纯规则 `UserListKeyRules` + 6 个 JVM 单测（守 2026-09-15 H11 撞 key 崩溃）。
+5. **#5 三个登录路由合一** —— `f27293af` + 语言包修复 `e910a1ff`：一个「登录」页两个 Tab（扫码 / Cookie）；
+   原介绍页的"登录后可用 / 协议 / 特别说明"收进右上角 ⓘ；未登录时设置「关于」组多一行「登录」。
+6. **#6 两个错误页抽通用组件** —— `e910a1ff`：新增 `widget/ASMessagePage.kt`
+   （标题 / 图标 / 正文 / 页脚 / 按钮**全部参数化**），`PlayVoucherErrorPage` 与
+   `RequestFrequentScreen` 的默认态改用它，页面本身不再有排版代码。
+7. **#7 首页主输入智能分流** —— `e910a1ff`：首页输入框从"点一下就跳解析页的空壳"改成**真能输入**；
+   认出 B 站内容（BV / av / ep / ss / 短链 / 用户空间，判据复用 `AsRegexUtil`）→ **直接带进解析页解析**；
+   认不出来的不猜，照旧打开解析页。`WebParserScreen` 仍为独立工具，**不并入**主输入。
+8. **#8 `SystemExpandRoute` 处置** —— `e910a1ff`：查证就是空壳（Shizuku 开关 `checked = false`、
+   `onCheckedChange` 空实现，与已被删的 `ComplaintScreen` 同类）→ 删页面 / 路由 /
+   `onToSystemExpand` 参数 / 3 条专属文案。
+
+**剩下的一步**：用户装包 → 真机逐条复验（判据见 `docs/真机验证清单.md`）→ 通过后 bump
+`334 / 3.3.9` → 推 main → tag `v3.3.9` → Release 出签名 APK。
+
+### 本轮踩到的坑（CI 相关，都留了记录）
+
+- **删 string 必须同时删所有语言包**：只删 `values/` + `values-en/` 时，`values-ur` 等 10 个语言包
+  仍留着同一个 key → `lintVitalAlphaRelease` 报 `ExtraTranslation`（本轮 20 个）→ **release 构建失败**。
+  又因为工作流里 `Assemble alphaRelease` 带 continue-on-error、后面接一个"debug 兜底"步骤，
+  表现形式是 **`Fallback to alphaDebug = success`（而不是 skipped）** —— 这正是"不能只看
+  Assemble alphaRelease"那条判据要拦的情况。删 key 后务必扫一遍所有 `values-*/strings.xml`。
+- **`push_via_api.py --stage-all` 会推工作区的全部改动**：本轮有一次只想推 #4 的编译修复，
+  结果把当时正在改的 #5 一起推了（两批混进一个提交）。**推送前先看完整的"有差异文件"清单**。
+- **两处 Kotlin 细节**（各让 CI 红过一次）：`Modifier.animateItem()` 是 `Lazy*ItemScope` 的
+  **成员扩展**，只能在 `items { }` 的 itemContent 里调用；`LikeAndCoinItemData` 是
+  `network.model.user` 下的**顶层类**，不是 `BILIUserVideoLikeInfo` 的嵌套类。
+- `tools/fetch_ci_apk.py` 原来取 `artifacts[0]`，可能取到 11 KB 的 `room-schema`；
+  已改成取**体积最大**的 artifact（APK 永远是最大的）。
 
 ### 剩余条目的可执行锚点（2026-10-05 实测定位，动手即可）
+
+> **2026-10-05 更新：#1~#8 已全部处理完**（见上一节"本轮已完成"）。下面保留原始锚点位置，只做回溯用，
+> 不用再按它动手；下一个动作是"用户装包 → 真机复验 → 发版"。
 
 > 说明：#1「工具卡片去前往」**已查证不成立** —— 工具卡片是 `Surface(onClick)` 整块可点，
 > 全仓没有裸"前往"字符串（只有 `update_go_download`＝前往下载、`roam_go_login`＝前往登录，均保留）。**已划掉**。
