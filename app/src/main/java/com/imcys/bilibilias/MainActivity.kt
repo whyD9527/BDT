@@ -1,5 +1,7 @@
 package com.imcys.bilibilias
 
+import androidx.compose.runtime.getValue
+import androidx.compose.runtime.setValue
 import androidx.compose.foundation.verticalScroll
 import com.imcys.bilibilias.common.update.GitHubUpdateChecker
 import com.imcys.bilibilias.data.update.GitHubUpdateRules

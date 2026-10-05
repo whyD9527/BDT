@@ -1,5 +1,7 @@
 package com.imcys.bilibilias.ui.setting.storage
 
+import androidx.compose.runtime.getValue
+import androidx.compose.runtime.setValue
 import com.imcys.bilibilias.R
 import androidx.annotation.StringRes
 import androidx.compose.ui.res.stringResource
